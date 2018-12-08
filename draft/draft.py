@@ -13,7 +13,7 @@ class Draft:
     DATA_FOLDER = "data/draft"
     CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
 
-    CONFIG_DEFAULT = {}  # Structure: {server.id: {giveable_role: [authorized_roles]}}
+    CONFIG_DEFAULT = {}  # Structure: {server.id: {draftHelper: [authorized_roles]}}
 
     ASSIGN_ADDED = ":white_check_mark: Successfully assigned the `{}` role."
     ASSIGN_REMOVED = ":put_litter_in_its_place: Successfully removed the `{}` role."
