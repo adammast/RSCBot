@@ -1,0 +1,10 @@
+{
+    "AUTHOR" : "#s#8059",
+    "INSTALL_MSG" : "Enjoy your assign_roles cog!",
+    "NAME" : "Draft",
+    "SHORT" : "Allow draft helpers to place a drafted player onto a team",
+    "DESCRIPTION" : "Basically the Manage Roles permission, but specific to pairs of roles.\nFor example, allow role A to give role B to anyone else, but without allowing role A to give role C, D, etc.",
+    "TAGS" : ["role", "permission", "assign"],
+    "REQUIREMENTS" : [],
+    "HIDDEN" : false
+}
