@@ -1,9 +1,9 @@
 {
-    "AUTHOR" : "#s#8059",
-    "INSTALL_MSG" : "Enjoy your assign_roles cog!",
+    "AUTHOR" : "adammast",
+    "INSTALL_MSG" : "Hopefully this works!",
     "NAME" : "Draft",
-    "SHORT" : "Allow draft helpers to place a drafted player onto a team",
-    "DESCRIPTION" : "Basically the Manage Roles permission, but specific to pairs of roles.\nFor example, allow role A to give role B to anyone else, but without allowing role A to give role C, D, etc.",
+    "SHORT" : "Allow draft helpers to place drafted player onto a team",
+    "DESCRIPTION" : "Allow draft helpers to place drafted player onto a team. The draft helper role will need to be set and all members trying to use the draft command will need to have that role or and admin role.",
     "TAGS" : ["role", "permission", "assign"],
     "REQUIREMENTS" : [],
     "HIDDEN" : false
