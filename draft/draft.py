@@ -158,4 +158,4 @@ class Draft:
 
 
 def setup(bot):
-    bot.add_cog(AssignRoles(bot))
+    bot.add_cog(Draft(bot))
