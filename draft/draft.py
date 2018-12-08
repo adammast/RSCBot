@@ -63,7 +63,7 @@ class Draft:
                 notice = self.ASSIGN_ADDED.format(teamRole.name)
         await self.bot.send_message(msg.channel, notice)
 
-    @_assign.command(pass_context=True, no_pm=True)
+    @_draft.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def setDraftHelperRole(self, ctx, draftHelper_role: discord.Role):
         """Sets the draft helper role.
@@ -88,7 +88,7 @@ class Draft:
             notice = self.AUTHORIZE_SUCCESS.format(draftHelper_role.name, giveable_role.name)
         await self.bot.send_message(msg.channel, notice)
 
-    @_assign.command(pass_context=True, no_pm=True)
+    @_draft.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def deauthorize(self, ctx, authorized_role: discord.Role, giveable_role: discord.Role):
         """De-authorize one role to give another role
@@ -114,7 +114,7 @@ class Draft:
             notice = self.DEAUTHORIZE_SUCCESS.format(authorized_role.name, giveable_role.name)
         await self.bot.send_message(msg.channel, notice)
 
-    @_assign.command(pass_context=True, no_pm=True)
+    @_draft.command(pass_context=True, no_pm=True)
     @checks.mod_or_permissions(manage_server=True)
     async def list(self, ctx):
         """Send an embed showing which roles can be given by other roles"""
