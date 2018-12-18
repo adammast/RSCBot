@@ -40,8 +40,8 @@ class Test:
 
         if channelId:
             channel = server.get_channel(channelId)
+            message = "{0} was drafted onto the {1}".format(user.mention, teamRole.mention)
             await self.bot.add_roles(user, teamRole)
-            message = user.mention + " was drafted onto the @" + teamRole.name
             await self.bot.send_message(channel, message)
         else:
             await self.bot.say(":X: Transaction log channel not set")
@@ -54,7 +54,20 @@ class Test:
 
         server_dict.setdefault('Transaction Channel', tlog.id)
         self.save_data()
-        await self.bot.say("Transaction Log channel set to #" + tlog.name)
+        await self.bot.say("Transaction Log channel set to " + tlog.mention)
+
+    @commands.command(pass_context=True)
+    async def getTransactionLogChannel(self, ctx):
+        """Gets transaction-log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        channelId = server_dict['Transaction Channel']
+
+        if channelId:
+            channel = server.get_channel(channelId)
+            await self.bot.say("Transaction log channel set to {0}".format(channel.mention))
+        else:
+            await self.bot.say(":X: Transaction log channel not set")
 
     # Config
     def check_configs(self):
