@@ -13,14 +13,13 @@ class Test:
     def __init__(self, bot):
         self.bot = bot
         self.check_configs()
-
-    async def on_ready(self):
         global transactionLog
         try:
             with open('transactionLog.json') as f:
                 transactionLog = json.load(f)
         except:
             transactionLog = {}
+        
 
     @commands.command()
     async def mycom(self):
