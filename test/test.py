@@ -20,5 +20,10 @@ class Test:
 
         await self.bot.say("ONE PUNCH! And " + user.mention + " is out! ლ(ಠ益ಠლ)")
 
+    @commands.command()
+    async def draft(self, user : discord.Member, teamRole : discord.Role):
+        self.bot.add_roles(user, teamRole)
+        await self.bot.say(user.mention + " was drafted on to the " + teamRole.name)
+
 def setup(bot):
     bot.add_cog(Test(bot))
