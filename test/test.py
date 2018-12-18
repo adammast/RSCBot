@@ -35,7 +35,7 @@ class Test:
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.config.setdefault('Transaction Channel', {})
         channel = server_dict[server.id]
 
         if channel:
@@ -52,7 +52,7 @@ class Test:
 
         server_dict.setdefault('Transaction Channel', tlog.id)
         self.save_data()
-        await self.bot.say("Transaction Log channel set to " + tlog.name)
+        await self.bot.say("Transaction Log channel set to #" + tlog.name)
 
     # Config
     def check_configs(self):
