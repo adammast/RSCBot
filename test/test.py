@@ -14,5 +14,10 @@ class Test:
         #Your code will go here
         await self.bot.say("I can do stuff!")
 
+    async def punch(self, user : discord.Member):
+        """I will punch anyone! >.<"""
+
+        await self.bot.say("ONE PUNCH! And " + user.mention + " is out! ლ(ಠ益ಠლ)")
+
 def setup(bot):
     bot.add_cog(Test(bot))
