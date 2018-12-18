@@ -21,7 +21,7 @@ class Test:
         await self.bot.say("ONE PUNCH! And " + user.mention + " is out! ლ(ಠ益ಠლ)")
 
     @bot.command(pass_context=True)
-    @commands.has_role("Admin")
+    @commands.command()
     async def draft(self, user : discord.Member, teamRole : discord.Role):
         self.bot.add_roles(user, teamRole)
         await self.bot.say(user.mention + " was drafted onto the " + teamRole.name)
