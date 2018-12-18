@@ -36,12 +36,13 @@ class Test:
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
-        channel = server_dict['Transaction Channel']
+        channelId = server_dict['Transaction Channel']
 
-        if channel:
+        if channelId:
+            channel = server.get_channel(channel)
             await self.bot.add_roles(user, teamRole)
-            # message = user.mention + " was drafted onto the @" + teamRole.name
-            await self.bot.say(server.get_channel(channel), "message")
+            message = user.mention + " was drafted onto the @" + teamRole.name
+            await self.bot.say(channel, message)
         else:
             await self.bot.say(":X: Transaction log channel not set")
 
