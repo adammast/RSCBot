@@ -37,7 +37,7 @@ class Draft:
     # Events
 
     # Commands
-    @commands.group(name="assign", pass_context=True, invoke_without_command=True, no_pm=True)
+    @commands.group(name="draft", pass_context=True, invoke_without_command=True, no_pm=True)
     async def _draft(self, ctx, user: discord.User, teamRole: discord.Role, gm: discord.User):
         """Assign a team role to a user as well as the league role"""
         msg = ctx.message

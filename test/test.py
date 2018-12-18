@@ -14,6 +14,7 @@ class Test:
         #Your code will go here
         await self.bot.say("I can do stuff!")
 
+    @commands.command()
     async def punch(self, user : discord.Member):
         """I will punch anyone! >.<"""
 
