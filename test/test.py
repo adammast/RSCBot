@@ -42,7 +42,7 @@ class Test:
             channel = server.get_channel(channelId)
             await self.bot.add_roles(user, teamRole)
             message = user.mention + " was drafted onto the @" + teamRole.name
-            await self.bot.say(channel, message)
+            await self.bot.send_message(channel, message)
         else:
             await self.bot.say(":X: Transaction log channel not set")
 
