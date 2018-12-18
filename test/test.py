@@ -39,7 +39,7 @@ class Test:
         channelId = server_dict['Transaction Channel']
 
         if channelId:
-            channel = server.get_channel(channel)
+            channel = server.get_channel(channelId)
             await self.bot.add_roles(user, teamRole)
             message = user.mention + " was drafted onto the @" + teamRole.name
             await self.bot.say(channel, message)
