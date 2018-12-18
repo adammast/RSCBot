@@ -49,8 +49,8 @@ class Draft:
 
         if teamRole.is_everyone:
             notice = self.ASSIGN_NO_EVERYONE
-        elif 'Draft Helper' not in server_dict:  # No role authorized to give this role.
-            notice = self.AUTHORIZE_EMPTY.format(teamRole.name)
+        # elif 'Draft Helper' not in server_dict:  # No role authorized to give this role.
+        #     notice = self.AUTHORIZE_EMPTY.format(teamRole.name)
         # Check if any of the author's roles is authorized to grant the role.
         elif not any(r.id in server_dict['Draft Helper'] for r in author.roles):
             notice = self.AUTHORIZE_MISMATCH.format(author.mention, teamRole.name)
