@@ -52,7 +52,7 @@ class Test:
 
         server_dict.setdefault('Transaction Channel', tlog.id)
         self.save_data()
-        await self.bot.say("Transaction Log channel set to " + tlog)
+        await self.bot.say("Transaction Log channel set to " + tlog.name)
 
     # Config
     def check_configs(self):
