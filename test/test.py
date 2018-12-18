@@ -35,8 +35,8 @@ class Test:
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         server = ctx.message.server
-        server_dict = self.config.setdefault('Transaction Channel', {})
-        channel = server_dict[server.id]
+        server_dict = self.config.setdefault(server.id, {})
+        channel = server_dict['Transaction Channel']
 
         if channel:
             await self.bot.add_roles(user, teamRole)
