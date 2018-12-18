@@ -35,7 +35,7 @@ class Draft:
 
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
-        """Sets transaction-log channel"""
+        """Sets the transaction-log channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
@@ -45,7 +45,7 @@ class Draft:
 
     @commands.command(pass_context=True)
     async def getTransactionLogChannel(self, ctx):
-        """Gets transaction-log channel"""
+        """Gets the transaction-log channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
         channelId = server_dict['Transaction Channel']
@@ -55,6 +55,19 @@ class Draft:
             await self.bot.say("Transaction log channel set to {0}".format(channel.mention))
         else:
             await self.bot.say(":X: Transaction log channel not set")
+
+    @commands.command(pass_context=True)
+    async def removeTransactionLogChannel(self, ctx):
+        """Removes the transaction-log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        channelId = server_dict.pop('Transaction Channel', None)
+        if channelId:
+            channel = server.get_channel(channelId)
+            await self.bot.say("Transaction log channel no longer set to {0}".format(channel.mention))
+        else:
+            await self.bot.say(":X: Transaction log channel was not set")
 
     # Config
     def check_configs(self):
