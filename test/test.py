@@ -4,25 +4,20 @@ import os
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
+from cogs.utils import checks
 
 class Test:
     """My custom cog that does stuff!"""
 
-    transactionLog = {}
+    DATA_FOLDER = "data/test"
+    CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
+
+    CONFIG_DEFAULT = {}
 
     def __init__(self, bot):
         self.bot = bot
         self.check_configs()
-        
-
-    async def on_ready(self):
-        global transactionLog
-        try:
-            with open('transactionLog.json') as f:
-                transactionLog = json.load(f)
-        except:
-            transactionLog = {}
-        
+        self.load_data()     
 
     @commands.command()
     async def mycom(self):
@@ -39,18 +34,47 @@ class Test:
 
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
-        await self.bot.add_roles(user, teamRole)
         server = ctx.message.server
-        channel = transactionLog[server.id]
-        await self.bot.say(server.get_channel(channel), user.mention + " was drafted onto the " + teamRole)
+        server_dict = self.config.setdefault(server.id, {})
+        channel = server_dict[server.id]
+
+        if channel:
+            await self.bot.add_roles(user, teamRole)
+            await self.bot.say(server.get_channel(channel), user.mention + " was drafted onto the " + teamRole)
+        else:
+            await self.bot.say(":X: Transaction log channel not set")
 
     @commands.command(pass_context=True)
-    async def setTransactionLogChannel(self, ctx, tlog:discord.Channel):
+    async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Sets transaction-log channel"""
-        transactionLog[ctx.message.server.id] = tlog.id
-        await self.bot.say("Transaction Log channel set")
-        with open('transactionLog.json', 'w+') as f:
-            json.dump(transactionLog, f)
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        server_dict.setdefault('Transaction Channel', tlog.id)
+        await self.save_data()
+        await self.bot.say("Transaction Log channel set to " + tlog)
+
+    # Config
+    def check_configs(self):
+        self.check_folders()
+        self.check_files()
+
+    def check_folders(self):
+        if not os.path.exists(self.DATA_FOLDER):
+            os.makedirs(self.DATA_FOLDER, exist_ok=True)
+
+    def check_files(self):
+        self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
+
+    def check_file(self, file, default):
+        if not dataIO.is_valid_json(file):
+            dataIO.save_json(file, default)
+
+    def load_data(self):
+        self.config = dataIO.load_json(self.CONFIG_FILE_PATH)
+
+    def save_data(self):
+        dataIO.save_json(self.CONFIG_FILE_PATH, self.config)
 
 def setup(bot):
     bot.add_cog(Test(bot))
