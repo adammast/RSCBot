@@ -56,7 +56,7 @@ class Transactions:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    message = "{0} was signed by the {1}.".format(user.mention, teamRole.mention)
+                    message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                     await self.bot.send_message(channel, message)
@@ -83,7 +83,7 @@ class Transactions:
         try:
             franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
             await self.bot.remove_roles(user, teamRole, franchiseRole)
-            await self.bot.change_nickname(user, "FA | {1}".format(user.name))
+            await self.bot.change_nickname(user, "FA | {0}".format(user.name))
             freeAgentRole = self.find_role(server.roles, server_dict['Free Agent'])
             await self.bot.add_roles(user, freeAgentRole)
         except KeyError:
@@ -96,7 +96,7 @@ class Transactions:
         try:
             channelId = server_dict['Transaction Channel']
             channel = server.get_channel(channelId)
-            message = "{0} was cut by the {1}. He will now be on waivers.".format(user.mention, teamRole.mention)
+            message = "{0} was cut by the {1}. He will now be on waivers".format(user.mention, teamRole.mention)
             await self.bot.send_message(channel, message)
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")

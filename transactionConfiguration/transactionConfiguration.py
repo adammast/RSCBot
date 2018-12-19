@@ -178,9 +178,9 @@ class TransactionConfiguration:
         try:
             server_dict.setdefault('Free Agent', freeAgentRole.id)
             self.save_data()
-            await self.bot.say(":white_check_mark: League role now set to {0}".format(freeAgentRole.name))
+            await self.bot.say(":white_check_mark: Free agent role now set to {0}".format(freeAgentRole.name))
         except:
-            await self.bot.say(":x: Error setting league role to {0}".format(freeAgentRole.name))
+            await self.bot.say(":x: Error setting free agent role to {0}".format(freeAgentRole.name))
 
     @commands.command(pass_context=True)
     async def getFreeAgentRole(self, ctx):
@@ -191,14 +191,14 @@ class TransactionConfiguration:
         try:
             freeAgentRoleId = server_dict['Free Agent']
         except KeyError:
-            await self.bot.say(":x: League role not currently set")
+            await self.bot.say(":x: Free agent role not currently set")
         else:
             try:
                 freeAgentRole = self.find_role(server.roles, freeAgentRoleId)
             except LookupError:
-                await self.bot.say(":x: Could not find league role with id of {0}".format(freeAgentRoleId))
+                await self.bot.say(":x: Could not find free agent role with id of {0}".format(freeAgentRoleId))
             else:
-                await self.bot.say("League role currently set to {0}".format(freeAgentRole.name))
+                await self.bot.say("Free agent role currently set to {0}".format(freeAgentRole.name))
 
     @commands.command(pass_context=True)
     async def unsetFreeAgentRole(self, ctx):
