@@ -1,12 +1,10 @@
 import discord
 import os.path
 import os
-import get
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
 from cogs.utils import checks
-from discord.utils
 
 class Draft:
     """Used to draft players onto teams and give the the appropriate roles"""
