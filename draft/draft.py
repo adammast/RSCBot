@@ -49,7 +49,7 @@ class Draft:
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
-        if ctx.message.member.permissions.has('ADMINISTRATOR'):
+        if ctx.author.permissions.has('ADMINISTRATOR'):
             server = ctx.message.server
             server_dict = self.config.setdefault(server.id, {})
 
@@ -79,7 +79,7 @@ class Draft:
     @commands.command(pass_context=True)
     async def unsetTransactionLogChannel(self, ctx):
         """Unassignes the transaction-log channel"""
-        if ctx.message.member.permissions.has('ADMINISTRATOR'):
+        if ctx.author.permissions.has('ADMINISTRATOR'):
             server = ctx.message.server
             server_dict = self.config.setdefault(server.id, {})
 
@@ -95,7 +95,7 @@ class Draft:
     @commands.command(pass_context=True)
     async def setLeagueRole(self, ctx, leagueRole : discord.Role):
         """Assigns the specified role as the "League" role so it can be given to all the players that are drafted"""
-        if ctx.message.member.permissions.has('ADMINISTRATOR'):
+        if ctx.author.permissions.has('ADMINISTRATOR'):
             server = ctx.message.server
             server_dict = self.config.setdefault(server.id, {})
 
@@ -129,7 +129,7 @@ class Draft:
     @commands.command(pass_context=True)
     async def unsetLeagueRole(self, ctx):
         """Unassignes the league role"""
-        if ctx.message.member.permissions.has('ADMINISTRATOR'):
+        if ctx.author.permissions.has('ADMINISTRATOR'):
             server = ctx.message.server
             server_dict = self.config.setdefault(server.id, {})
 
