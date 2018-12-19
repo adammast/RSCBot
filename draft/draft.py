@@ -32,7 +32,10 @@ class Draft:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                    if teamRole in user.roles:
+                        message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
+                    else:
+                        message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.add_roles(user, teamRole, leagueRole)
                     await self.bot.send_message(channel, message)
                 except LookupError:
