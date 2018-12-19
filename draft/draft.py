@@ -23,10 +23,9 @@ class Draft:
     async def pop(self, ctx):
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
-        try:
-            await self.bot.say("Next item in dictionary {0}".format(server_dict.pop()))
-        except:
-            await self.bot.say("Something went wrong, I'm a dumb bot with a poop butt")
+        
+        for x in server_dict:
+            await self.bot.say("Next thing in dictionary {0}".format(x))
 
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
