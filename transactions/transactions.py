@@ -115,13 +115,6 @@ class Transactions:
         self.load_data()
         server_dict = self.config.setdefault(server.id, {})
 
-        if teamRole in user.roles:
-            await self.bot.remove_roles(user, teamRole)
-            message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
-        else:
-            await self.bot.add_roles(user, teamRole)
-            message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
-
         try:
             channelId = server_dict['Transaction Channel']
             try:
@@ -129,6 +122,12 @@ class Transactions:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
+                    if teamRole in user.roles:
+                        await self.bot.remove_roles(user, teamRole)
+                        message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
+                    else:
+                        await self.bot.add_roles(user, teamRole)
+                        message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.add_roles(user, leagueRole)
                     await self.bot.send_message(channel, message)
                 except LookupError:
