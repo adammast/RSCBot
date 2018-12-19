@@ -25,7 +25,7 @@ class Draft:
         server_dict = self.config.setdefault(server.id, {})
         
         for x in server_dict:
-            await self.bot.say("Next thing in dictionary {0}".format(x))
+            await self.bot.say("Next thing in dictionary = {0}, value = {1}".format(x, server_dict[x]))
 
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
