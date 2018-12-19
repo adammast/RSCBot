@@ -42,6 +42,7 @@ class TransactionConfiguration:
             
         try:
             franchise_dict[gmName] = role.id
+            self.save_data()
             await self.bot.say("Franchise role for {0} = {1}".format(gmName, role.mention))
         except IndexError:
             await self.bot.say(":x: Error adding info to the franchise role dictionary")
@@ -75,6 +76,7 @@ class TransactionConfiguration:
 
         try:
             franchise_dict.clear()
+            self.save_data()
             await self.bot.say(":white_check_mark: All franchise roles have been removed from dictionary")
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the franchise role dictionary")

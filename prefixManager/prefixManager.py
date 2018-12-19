@@ -1,7 +1,6 @@
 import discord
 import os.path
 import os
-import re
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -16,12 +15,6 @@ class PrefixManager:
     CONFIG_DEFAULT = {}
 
     @commands.command(pass_context=True)
-    async def getGMNameFromRole(self, ctx, role : discord.Role):
-        await self.bot.say("Role name = {0}".format(role.name))
-        gmName = re.findall(r'(?<=\()\w*\b', role.name)
-        await self.bot.say("GM name is {0}".format(gmName[0]))
-
-    @commands.command(pass_context=True)
     async def setPrefixes(self, ctx, *nameAndPrefix):
         """Used to set prefixes for the given role name"""
         server = ctx.message.server
@@ -32,6 +25,7 @@ class PrefixManager:
             keyValuePair = arg.split('=')
             try:
                 prefix_dict[keyValuePair[0]] = keyValuePair[1]
+                self.save_data()
                 await self.bot.say("Prefix for {0} = {1}".format(keyValuePair[0], keyValuePair[1]))
             except IndexError:
                 await self.bot.say(":x: Error finding key value pair in arguments")
@@ -62,6 +56,7 @@ class PrefixManager:
 
         try:
             prefix_dict.clear()
+            self.save_data()
             await self.bot.say(":white_check_mark: All prefixes have been removed from dictionary")
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
