@@ -15,13 +15,13 @@ class PrefixManager:
     CONFIG_DEFAULT = {}
 
     @commands.command(pass_context=True)
-    async def setPrefixes(self, ctx, *nameAndPrefix):
+    async def setPrefixes(self, ctx, *gmNameAndPrefix):
         """Used to set prefixes for the given role name"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        for arg in nameAndPrefix:
+        for arg in gmNameAndPrefix:
             keyValuePair = arg.split('=')
             try:
                 prefix_dict[keyValuePair[0]] = keyValuePair[1]

@@ -24,8 +24,26 @@ class Draft:
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server = ctx.message.server
+        self.load_data()
         server_dict = self.config.setdefault(server.id, {})
         franchise_dict = server_dict.setdefault("Franchise roles", {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
+        gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        try:
+            franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
+        except KeyError:
+            await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
+            return
+        except LookupError:
+            await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
+            return
+
+        try:
+            prefix = prefix_dict[gmName]
+        except KeyError:
+            await self.bot.say(":x: No prefix found in dictionary for {0}".format(gmName))
+            return
         
         try:
             channelId = server_dict['Transaction Channel']
@@ -34,19 +52,13 @@ class Draft:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
-                    try:
-                        franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
-                        if teamRole in user.roles:
-                            message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
-                        else:
-                            message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-                        await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
-                        await self.bot.send_message(channel, message)
-                    except KeyError:
-                        await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
-                    except LookupError:
-                        await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
+                    if teamRole in user.roles:
+                        message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
+                    else:
+                        message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                    await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
+                    await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
+                    await self.bot.send_message(channel, message)
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             except KeyError:
