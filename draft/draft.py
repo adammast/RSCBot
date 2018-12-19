@@ -36,8 +36,7 @@ class Draft:
                 await self.bot.say(":x: League role not currently set")
             else:
                 try:
-                    leagueRole = ctx.message.guild.roles.get(leagueRoleId)
-                    #leagueRole = self.find_role(server.roles, leagueRoleId)
+                    leagueRole = self.find_role(server.roles, leagueRoleId)
                 except LookupError:
                     await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
                 else:
@@ -112,8 +111,7 @@ class Draft:
             await self.bot.say(":x: League role not currently set")
         else:
             try:
-                leagueRole = ctx.message.guild.roles.get(leagueRoleId)
-                #leagueRole = self.find_role(server.roles, leagueRoleId)
+                leagueRole = self.find_role(server.roles, leagueRoleId)
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
             else:
@@ -128,8 +126,7 @@ class Draft:
         leagueRoleId = server_dict.pop('League Role', None)
         if leagueRoleId:
             try:
-                leagueRole = ctx.message.guild.roles.get(leagueRoleId)
-                #leagueRole = self.find_role(server.roles, leagueRoleId)
+                leagueRole = self.find_role(server.roles, leagueRoleId)
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
             else:
@@ -137,11 +134,11 @@ class Draft:
         else:
             await self.bot.say(":x: League role has not been set")
 
-    # def find_role(roles, roleId):
-    #     for role in roles:
-    #         if role.id == roleId:
-    #             return role
-    #     raise LookupError('roleId not found in server roles')
+    def find_role(roles, roleId):
+        for role in roles:
+            if role.id == roleId:
+                return role
+        raise LookupError('roleId not found in server roles')
 
     # Config
     def check_configs(self):
