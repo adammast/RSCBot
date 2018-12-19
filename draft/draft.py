@@ -21,44 +21,47 @@ class Draft:
 
     @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
+        """Assigns the team role to a user when they are drafted and posts to the assigned channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
-        channelId = server_dict['Transaction Channel']
-
-        if channelId:
+        
+        try:
+            channelId = server_dict['Transaction Channel']
+        except KeyError:
+            await self.bot.say(":X: Transaction log channel not set")
+        else:
             channel = server.get_channel(channelId)
             message = "{0} was drafted onto the {1}".format(user.mention, teamRole.mention)
             await self.bot.add_roles(user, teamRole)
-            await self.bot.send_message(channel, message)
-        else:
-            await self.bot.say(":X: Transaction log channel not set")
+            await self.bot.send_message(channel, message)          
 
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
-        """Sets the transaction-log channel"""
+        """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
         server_dict.setdefault('Transaction Channel', tlog.id)
         self.save_data()
-        await self.bot.say("Transaction Log channel set to " + tlog.mention)
+        await self.bot.say(":white_check_mark: Transaction log channel now set to {0}".format(tlog.mention))
 
     @commands.command(pass_context=True)
     async def getTransactionLogChannel(self, ctx):
         """Gets the transaction-log channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
-        channelId = server_dict['Transaction Channel']
-
-        if channelId:
-            channel = server.get_channel(channelId)
-            await self.bot.say("Transaction log channel set to {0}".format(channel.mention))
+        
+        try:
+            channelId = server_dict['Transaction Channel']
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
         else:
-            await self.bot.say(":X: Transaction log channel not set")
+             channel = server.get_channel(channelId)
+             await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
 
     @commands.command(pass_context=True)
-    async def removeTransactionLogChannel(self, ctx):
-        """Removes the transaction-log channel"""
+    async def unsetTransactionLogChannel(self, ctx):
+        """Unassignes the transaction-log channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
@@ -67,7 +70,7 @@ class Draft:
             channel = server.get_channel(channelId)
             await self.bot.say("Transaction log channel no longer set to {0}".format(channel.mention))
         else:
-            await self.bot.say(":X: Transaction log channel was not set")
+            await self.bot.say(":x: Transaction log channel has not  been set")
 
     # Config
     def check_configs(self):
