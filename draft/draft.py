@@ -4,6 +4,7 @@ import os
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
+from cogs.utils import checks
 
 class Draft:
     """Used to draft players onto teams and give the the appropriate roles"""

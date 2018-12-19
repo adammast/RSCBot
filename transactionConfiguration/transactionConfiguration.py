@@ -4,6 +4,7 @@ import os
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
+from cogs.utils import checks
 
 class TransactionConfiguration:
     """Used to set information used across all or most transactions such as the transaction log channel, the league role, 
