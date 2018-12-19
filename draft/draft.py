@@ -28,7 +28,7 @@ class Draft:
         try:
             channelId = server_dict['Transaction Channel']
         except KeyError:
-            await self.bot.say(":X: Transaction log channel not set")
+            await self.bot.say(":x: Transaction log channel not set")
         else:
             channel = server.get_channel(channelId)
             message = "{0} was drafted onto the {1}".format(user.mention, teamRole.mention)
@@ -68,9 +68,9 @@ class Draft:
         channelId = server_dict.pop('Transaction Channel', None)
         if channelId:
             channel = server.get_channel(channelId)
-            await self.bot.say("Transaction log channel no longer set to {0}".format(channel.mention))
+            await self.bot.say(":white_check_mark: Transaction log channel no longer set to {0}".format(channel.mention))
         else:
-            await self.bot.say(":x: Transaction log channel has not  been set")
+            await self.bot.say(":x: Transaction log channel has not been set")
 
     # Config
     def check_configs(self):
