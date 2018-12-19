@@ -1,6 +1,7 @@
 import discord
 import os.path
 import os
+import re
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -13,6 +14,12 @@ class PrefixManager:
     CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
 
     CONFIG_DEFAULT = {}
+
+    @commands.command(pass_context=True)
+    async def getGMNameFromRole(self, ctx, role : discord.role):
+        name = role.name
+        gmName = re.search(r"(?<=\()\w*(?=\s)", name)
+        self.bot.say("GM name is {0}".format(gmName))
 
     @commands.command(pass_context=True)
     async def setPrefixes(self, ctx, *nameAndPrefix):
