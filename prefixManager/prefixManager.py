@@ -30,7 +30,7 @@ class PrefixManager:
                 await self.bot.say(":x: Error finding key value pair in arguments")
 
     @commands.command(pass_context=True)
-    async def getPrefixes(self, ctx, *nameAndPrefix):
+    async def getPrefixes(self, ctx):
         """Used to set prefixes for the given role name"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
