@@ -15,11 +15,32 @@ class PrefixManager:
     CONFIG_DEFAULT = {}
 
     @commands.command(pass_context=True)
-    async def arrayTest(self, ctx, *nameAndPrefix):
-        """Used to test passing in key value pairs for prefixes"""
+    async def setPrefixes(self, ctx, *nameAndPrefix):
+        """Used to set prefixes for the given role name"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
         for arg in nameAndPrefix:
             keyValuePair = arg.split('=')
-            await self.bot.say("Prefix for {0} = {1}".format(keyValuePair[0], keyValuePair[1]))
+            try:
+                prefix_dict[keyValuePair[0]] = keyValuePair[1]
+                await self.bot.say("Prefix for {0} = {1}".format(keyValuePair[0], keyValuePair[1]))
+            except IndexError:
+                await self.bot.say(":x: Error finding key value pair in arguments")
+
+    @commands.command(pass_context=True)
+    async def getPrefixes(self, ctx, *nameAndPrefix):
+        """Used to set prefixes for the given role name"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
+        for key, value in prefix_dict:
+            try:
+                await self.bot.say("Prefix for {0} = {1}".format(key, value))
+            except IndexError:
+                await self.bot.say(":x: Error finding key value pair in prefix dictionary")
 
     def find_role(self, roles, roleId):
         for role in roles:
