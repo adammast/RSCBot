@@ -17,9 +17,9 @@ class PrefixManager:
 
     @commands.command(pass_context=True)
     async def getGMNameFromRole(self, ctx, role : discord.Role):
-        name = role.name
-        gmName = re.findall(r'(?<=\()\w*\b', name)
-        self.bot.say("GM name is {0}".format(gmName[0]))
+        self.bot.say("Role name = {0}".format(role.name))
+        gmName = re.search(r'(?<=\()\w*\b', role.name)
+        self.bot.say("GM name is {0}".format(gmName))
 
     @commands.command(pass_context=True)
     async def setPrefixes(self, ctx, *nameAndPrefix):
