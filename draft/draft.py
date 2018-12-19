@@ -47,6 +47,7 @@ class Draft:
                     await self.bot.send_message(channel, message)       
 
     @commands.command(pass_context=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server
@@ -74,6 +75,7 @@ class Draft:
              await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
 
     @commands.command(pass_context=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def unsetTransactionLogChannel(self, ctx):
         """Unassignes the transaction-log channel"""
         server = ctx.message.server
@@ -87,6 +89,7 @@ class Draft:
             await self.bot.say(":x: Transaction log channel has not been set")
 
     @commands.command(pass_context=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def setLeagueRole(self, ctx, leagueRole : discord.Role):
         """Assigns the specified role as the "League" role so it can be given to all the players that are drafted"""
         server = ctx.message.server
@@ -118,6 +121,7 @@ class Draft:
                 await self.bot.say("League role currently set to {0}".format(leagueRole.name))
 
     @commands.command(pass_context=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def unsetLeagueRole(self, ctx):
         """Unassignes the league role"""
         server = ctx.message.server
