@@ -33,16 +33,20 @@ class Draft:
             await self.bot.say(":x: Transaction log channel not set")
         else:
             try:
-                roleId = server_dict['League Role']
+                leagueRoleId = server_dict['League Role']
             except KeyError:
                 await self.bot.say(":x: League role not currently set")
             else:
                 channel = server.get_channel(channelId)
-                role = self.find_role(server.roles, role_id)
-                message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-                await self.bot.add_roles(user, teamRole)
-                await self.bot.add_roles(user, role)
-                await self.bot.send_message(channel, message)          
+                try:
+                    leagueRole = self.find_role(server.roles, leagueRoleId)
+                except:
+                    await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+                else:
+                    message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                    await self.bot.add_roles(user, teamRole)
+                    await self.bot.add_roles(user, leagueRole)
+                    await self.bot.send_message(channel, message)       
 
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
@@ -104,12 +108,16 @@ class Draft:
         server_dict = self.config.setdefault(server.id, {})
         
         try:
-            roleId = server_dict['League Role']
+            leagueRoleId = server_dict['League Role']
         except KeyError:
             await self.bot.say(":x: League role not currently set")
         else:
-             role = self.find_role(server.roles, role_id)
-             await self.bot.say("League role currently set to {0}".format(role.name))
+            try:
+                leagueRole = self.find_role(server.roles, leagueRoleId)
+            except:
+                await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+            else:
+                await self.bot.say("League role currently set to {0}".format(leagueRole.name))
 
     @commands.command(pass_context=True)
     async def unsetLeagueRole(self, ctx):
@@ -117,10 +125,14 @@ class Draft:
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
-        roleId = server_dict.pop('League Role', None)
-        if roleId:
-            role = self.find_role(server.roles, role_id)
-            await self.bot.say(":white_check_mark: League role no longer set to {0}".format(role.name))
+        leagueRoleId = server_dict.pop('League Role', None)
+        if leagueRoleId:
+            try:
+                leagueRole = self.find_role(server.roles, leagueRoleId)
+            except:
+                await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+            else:
+                await self.bot.say(":white_check_mark: League role no longer set to {0}".format(leagueRole.name))
         else:
             await self.bot.say(":x: League role has not been set")
 
@@ -128,6 +140,7 @@ class Draft:
         for role in roles:
             if role.id == roleId:
                 return role
+        raise ValueError('roleId not found in server roles')
 
     # Config
     def check_configs(self):
