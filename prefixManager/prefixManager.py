@@ -36,7 +36,7 @@ class PrefixManager:
         server_dict = self.config.setdefault(server.id, {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        for key, value in prefix_dict:
+        for key, value in prefix_dict.items():
             try:
                 await self.bot.say("Prefix for {0} = {1}".format(key, value))
             except IndexError:
