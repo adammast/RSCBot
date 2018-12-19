@@ -36,7 +36,8 @@ class Draft:
                 await self.bot.say(":x: League role not currently set")
             else:
                 try:
-                    leagueRole = self.find_role(server.roles, leagueRoleId)
+                    allRoles = server.roles
+                    leagueRole = self.find_role(allRoles, leagueRoleId)
                 except LookupError:
                     await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
                 else:
@@ -111,7 +112,8 @@ class Draft:
             await self.bot.say(":x: League role not currently set")
         else:
             try:
-                leagueRole = self.find_role(server.roles, leagueRoleId)
+                allRoles = server.roles
+                leagueRole = self.find_role(allRoles, leagueRoleId)
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
             else:
@@ -126,7 +128,8 @@ class Draft:
         leagueRoleId = server_dict.pop('League Role', None)
         if leagueRoleId:
             try:
-                leagueRole = self.find_role(server.roles, leagueRoleId)
+                allRoles = server.roles
+                leagueRole = self.find_role(allRoles, leagueRoleId)
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
             else:
