@@ -1,6 +1,7 @@
 import discord
 import os.path
 import os
+import re
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -24,6 +25,7 @@ class Draft:
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
         
         try:
             channelId = server_dict['Transaction Channel']
@@ -32,12 +34,19 @@ class Draft:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    if teamRole in user.roles:
-                        message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
-                    else:
-                        message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-                    await self.bot.add_roles(user, teamRole, leagueRole)
-                    await self.bot.send_message(channel, message)
+                    gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+                    try:
+                        franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
+                        if teamRole in user.roles:
+                            message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
+                        else:
+                            message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                        await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
+                        await self.bot.send_message(channel, message)
+                    except KeyError:
+                        await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
+                    except LookupError:
+                        await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             except KeyError:
