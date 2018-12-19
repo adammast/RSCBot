@@ -34,6 +34,41 @@ class TransactionConfiguration:
             await self.bot.say(":x: Transaction log channel not set")
 
     @commands.command(pass_context=True)
+    async def setFranchiseRoles(self, ctx, *nameAndPrefix):
+        """Used to set the franchise roles for the given GM names"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        prefix_dict = server_dict.setdefault("Franchise roles", {})
+
+        for arg in nameAndPrefix:
+            keyValuePair = arg.split('=')
+            try:
+                prefix_dict[keyValuePair[0]] = keyValuePair[1].id
+                await self.bot.say("Franchise role for {0} = {1}".format(keyValuePair[0], keyValuePair[1].mention))
+            except IndexError:
+                await self.bot.say(":x: Error finding key value pair in arguments")
+
+    @commands.command(pass_context=True)
+    async def getFranchiseRoles(self, ctx):
+        """Used to get all franchise roles in the franchise dictionary"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
+
+        if(len(franchise_dict.items()) > 0):
+            for key, value in franchise_dict.items():
+                try:
+                    try:
+                        franchiseRole = self.find_role(server.roles, value)
+                        await self.bot.say("Franchise role for {0} = {1}".format(key, franchiseRole.mention))
+                    except LookupError:
+                        await self.bot.say(":x: Could not find franchise role with id of {0}".format(value))
+                except IndexError:
+                    await self.bot.say(":x: Error finding key value pair in franchise role dictionary")
+        else:
+            await self.bot.say(":x: No franchise roles are set in the dictionary")
+
+    @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server
@@ -100,7 +135,7 @@ class TransactionConfiguration:
             try:
                 leagueRole = self.find_role(server.roles, leagueRoleId)
             except LookupError:
-                await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+                await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             else:
                 await self.bot.say("League role currently set to {0}".format(leagueRole.name))
 
