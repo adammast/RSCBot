@@ -20,14 +20,6 @@ class Draft:
         self.load_data()
 
     @commands.command(pass_context=True)
-    async def pop(self, ctx):
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        
-        for x in server_dict:
-            await self.bot.say("Next thing in dictionary = {0}, value = {1}".format(x, server_dict[x]))
-
-    @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server = ctx.message.server
@@ -35,9 +27,6 @@ class Draft:
         
         try:
             channelId = server_dict['Transaction Channel']
-        except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
-        else:
             try:
                 leagueRoleId = server_dict['League Role']
                 try:
@@ -45,15 +34,28 @@ class Draft:
                     channel = server.get_channel(channelId)
                     message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.add_roles(user, teamRole, leagueRole)
-                    #await self.bot.add_roles(user, leagueRole)
                     await self.bot.send_message(channel, message)
                 except LookupError:
-                    await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+                    await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             except KeyError:
                 await self.bot.say(":x: League role not currently set")
-                
-                           
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
+            
 
+    @commands.command(pass_context=True)
+    async def announce(self, ctx, message):
+        """Posts the message to the transaction log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        try:
+            channelId = server_dict['Transaction Channel']
+            channel = server.get_channel(channelId)
+            await self.bot.send_message(channel, message)
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
+                                          
     def find_role(self, roles, roleId):
         for role in roles:
             if role.id == roleId:
