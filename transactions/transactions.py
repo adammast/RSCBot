@@ -126,9 +126,8 @@ class Transactions:
                         await self.bot.remove_roles(user, teamRole)
                         message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
                     else:
-                        await self.bot.add_roles(user, teamRole)
+                        await self.bot.add_roles(user, teamRole, leagueRole)
                         message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
-                    await self.bot.add_roles(user, leagueRole)
                     await self.bot.send_message(channel, message)
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
