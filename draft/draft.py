@@ -56,6 +56,9 @@ class Draft:
                         message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
                     else:
                         message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                    freeAgentRole = self.find_role(server.roles, server_dict['Free Agent'])
+                    if freeAgentRole in user.roles:
+                        await self.bot.remove_roles(user, freeAgentRole)
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                     await self.bot.send_message(channel, message)
