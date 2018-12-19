@@ -7,7 +7,7 @@ from discord.ext import commands
 from cogs.utils import checks
 
 class PrefixManager:
-    """Used to set team and role prefixes and give to members on those teams or with those roles"""
+    """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
     DATA_FOLDER = "data/transactionConfiguration"
     CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
@@ -16,6 +16,7 @@ class PrefixManager:
 
     @commands.command(pass_context=True)
     async def arrayTest(self, ctx, **keyValuePair):
+        """Used to test passing in key value pairs for prefixes"""
         for key, value in keyValuePair.items():
             await self.bot.say("Prefix for {0} = {1}".format(key, value))
 
