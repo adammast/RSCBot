@@ -36,11 +36,15 @@ class PrefixManager:
         server_dict = self.config.setdefault(server.id, {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        for key, value in prefix_dict.items():
-            try:
-                await self.bot.say("Prefix for {0} = {1}".format(key, value))
-            except IndexError:
-                await self.bot.say(":x: Error finding key value pair in prefix dictionary")
+        if(len(prefix_dict.items()) > 0):
+            for key, value in prefix_dict.items():
+                try:
+                    await self.bot.say("Prefix for {0} = {1}".format(key, value))
+                except IndexError:
+                    await self.bot.say(":x: Error finding key value pair in prefix dictionary")
+        else:
+            await self.bot.say(":x: No prefixes are set in the dictionary")
+        
 
     @commands.command(pass_context=True)
     async def clearPrefixes(self, ctx):
@@ -49,7 +53,11 @@ class PrefixManager:
         server_dict = self.config.setdefault(server.id, {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        prefix_dict.clear()
+        try:
+            prefix_dict.clear()
+            await self.bot.say(":white_check_mark: All prefixes have been removed from dictionary")
+        except:
+            await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
 
     def find_role(self, roles, roleId):
         for role in roles:
