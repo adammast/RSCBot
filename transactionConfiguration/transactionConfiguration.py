@@ -21,6 +21,19 @@ class TransactionConfiguration:
         self.load_data()
 
     @commands.command(pass_context=True)
+    async def announce(self, ctx, message):
+        """Posts the message to the transaction log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        try:
+            channelId = server_dict['Transaction Channel']
+            channel = server.get_channel(channelId)
+            await self.bot.send_message(channel, message)
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
+
+    @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server

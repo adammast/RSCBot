@@ -44,20 +44,6 @@ class Draft:
                 await self.bot.say(":x: League role not currently set")
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
-            
-
-    @commands.command(pass_context=True)
-    async def announce(self, ctx, message):
-        """Posts the message to the transaction log channel"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-
-        try:
-            channelId = server_dict['Transaction Channel']
-            channel = server.get_channel(channelId)
-            await self.bot.send_message(channel, message)
-        except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
                                           
     def find_role(self, roles, roleId):
         for role in roles:
