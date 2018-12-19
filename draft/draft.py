@@ -30,10 +30,17 @@ class Draft:
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
         else:
-            channel = server.get_channel(channelId)
-            message = "{0} was drafted onto the {1}".format(user.mention, teamRole.mention)
-            await self.bot.add_roles(user, teamRole)
-            await self.bot.send_message(channel, message)          
+            try:
+                roleId = server_dict['League Role']
+            except KeyError:
+                await self.bot.say(":x: League role not currently set")
+            else:
+                channel = server.get_channel(channelId)
+                role = server.get_role(roleId)
+                message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+                await self.bot.add_roles(user, teamRole)
+                await self.bot.add_roles(user, role)
+                await self.bot.send_message(channel, message)          
 
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
@@ -41,9 +48,12 @@ class Draft:
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
-        server_dict.setdefault('Transaction Channel', tlog.id)
-        self.save_data()
-        await self.bot.say(":white_check_mark: Transaction log channel now set to {0}".format(tlog.mention))
+        try:
+            server_dict.setdefault('Transaction Channel', tlog.id)
+            self.save_data()
+            await self.bot.say(":white_check_mark: Transaction log channel now set to {0}".format(tlog.mention))
+        except:
+            await self.bot.say(":x: Error setting transaction log channel to {0}".format(tlog.mention))
 
     @commands.command(pass_context=True)
     async def getTransactionLogChannel(self, ctx):
@@ -54,7 +64,7 @@ class Draft:
         try:
             channelId = server_dict['Transaction Channel']
         except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
+            await self.bot.say(":x: Transaction log channel not currently set")
         else:
              channel = server.get_channel(channelId)
              await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
@@ -71,6 +81,46 @@ class Draft:
             await self.bot.say(":white_check_mark: Transaction log channel no longer set to {0}".format(channel.mention))
         else:
             await self.bot.say(":x: Transaction log channel has not been set")
+
+    @commands.command(pass_context=True)
+    async def setLeagueRole(self, ctx, leagueRole : discord.Role):
+        """Assigns the specified role as the "League" role so it can be given to all the players that are drafted"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        try:
+            server_dict.setdefault('League Role', leagueRole.id)
+            self.save_data()
+            await self.bot.say(":white_check_mark: League role now set to {0}".format(leagueRole.name))
+        except:
+            await self.bot.say(":x: Error setting league role to {0}".format(leagueRole.name))
+
+    @commands.command(pass_context=True)
+    async def getLeagueRole(self, ctx):
+        """Gets the transaction-log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        
+        try:
+            roleId = server_dict['League Role']
+        except KeyError:
+            await self.bot.say(":x: League role not currently set")
+        else:
+             role = server.get_role(roleId)
+             await self.bot.say("League role currently set to {0}".format(role.name))
+
+    @commands.command(pass_context=True)
+    async def unsetLeagueRole(self, ctx):
+        """Unassignes the transaction-log channel"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        roleId = server_dict.pop('League Role', None)
+        if roleId:
+            channel = server.get_channel(channelId)
+            await self.bot.say(":white_check_mark: League role no longer set to {0}".format(role.name))
+        else:
+            await self.bot.say(":x: League role has not been set")
 
     # Config
     def check_configs(self):
