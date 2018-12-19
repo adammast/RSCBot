@@ -40,19 +40,19 @@ class Draft:
         else:
             try:
                 leagueRoleId = server_dict['League Role']
-            except KeyError:
-                await self.bot.say(":x: League role not currently set")
-            else:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
-                except LookupError:
-                    await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
-                else:
                     channel = server.get_channel(channelId)
                     message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-                    await self.bot.add_roles(user, teamRole)
-                    await self.bot.add_roles(user, leagueRole)
-                    await self.bot.send_message(channel, message)       
+                    await self.bot.add_roles(user, teamRole, leagueRole)
+                    #await self.bot.add_roles(user, leagueRole)
+                    await self.bot.send_message(channel, message)
+                except LookupError:
+                    await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
+            except KeyError:
+                await self.bot.say(":x: League role not currently set")
+                
+                           
 
     def find_role(self, roles, roleId):
         for role in roles:
