@@ -31,7 +31,7 @@ class PrefixManager:
 
     @commands.command(pass_context=True)
     async def getPrefixes(self, ctx):
-        """Used to set prefixes for the given role name"""
+        """Used to get all prefixes in the prefix dictionary"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
@@ -41,6 +41,15 @@ class PrefixManager:
                 await self.bot.say("Prefix for {0} = {1}".format(key, value))
             except IndexError:
                 await self.bot.say(":x: Error finding key value pair in prefix dictionary")
+
+    @commands.command(pass_context=True)
+    async def clearPrefixes(self, ctx):
+        """Used to clear the prefix dictionary"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
+        prefix_dict.clear()
 
     def find_role(self, roles, roleId):
         for role in roles:
