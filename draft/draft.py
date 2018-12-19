@@ -38,7 +38,7 @@ class Draft:
                 await self.bot.say(":x: League role not currently set")
             else:
                 channel = server.get_channel(channelId)
-                role = server.get_role(roleId)
+                role = self.find_role(server.roles, role_id)
                 message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
                 await self.bot.add_roles(user, teamRole)
                 await self.bot.add_roles(user, role)
@@ -108,8 +108,7 @@ class Draft:
         except KeyError:
             await self.bot.say(":x: League role not currently set")
         else:
-             role = get(guild.roles, id=role_id)
-             role = server.get_role(roleId)
+             role = self.find_role(server.roles, role_id)
              await self.bot.say("League role currently set to {0}".format(role.name))
 
     @commands.command(pass_context=True)
@@ -120,10 +119,15 @@ class Draft:
 
         roleId = server_dict.pop('League Role', None)
         if roleId:
-            channel = server.get_channel(channelId)
+            role = self.find_role(server.roles, role_id)
             await self.bot.say(":white_check_mark: League role no longer set to {0}".format(role.name))
         else:
             await self.bot.say(":x: League role has not been set")
+
+    def find_role(roles, roleId):
+        for role in roles:
+            if role.id == roleId:
+                return role
 
     # Config
     def check_configs(self):
