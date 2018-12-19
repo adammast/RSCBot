@@ -9,7 +9,7 @@ class TransactionConfiguration:
     """Used to set information used across all or most transactions such as the transaction log channel, the league role, 
     and the team prefixes"""
 
-    DATA_FOLDER = "data/transactions"
+    DATA_FOLDER = "data/transactionConfiguration"
     CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
 
     CONFIG_DEFAULT = {}

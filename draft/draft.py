@@ -8,7 +8,7 @@ from discord.ext import commands
 class Draft:
     """Used to draft players onto teams and give the the appropriate roles"""
 
-    DATA_FOLDER = "data/transactions"
+    DATA_FOLDER = "data/transactionConfiguration"
     CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
 
     CONFIG_DEFAULT = {}
