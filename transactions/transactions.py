@@ -22,7 +22,7 @@ class Transactions:
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
-        """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
+        """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         if teamRole in user.roles:
             await self.bot.say(":x: {0} is already on the {1}".format(user.mention, teamRole.mention))
             return
@@ -56,7 +56,7 @@ class Transactions:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
+                    message = "{0} was signed by the {1}.".format(user.mention, teamRole.mention)
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                     await self.bot.send_message(channel, message)
@@ -67,8 +67,39 @@ class Transactions:
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
 
-    # @commands.command(pass_context=True)
-    # async def cut(self, ctx, user : discord.Member, teamRole : discord.Role):
+    @commands.command(pass_context=True)
+    async def cut(self, ctx, user : discord.Member, teamRole : discord.Role):
+        """Removes the team role and franchise role, and adds the free agent prefix to a user and posts to the assigned channel"""
+        if teamRole not in user.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, teamRole.mention))
+            return
+
+        server = ctx.message.server
+        self.load_data()
+        server_dict = self.config.setdefault(server.id, {})
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
+
+        gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        try:
+            franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
+            await self.bot.remove_roles(user, teamRole, franchiseRole)
+            await self.bot.change_nickname(user, "FA | {1}".format(user.name))
+            freeAgentRole = self.find_role(server.roles, server_dict['Free Agent'])
+            await self.bot.add_roles(user, freeAgentRole)
+        except KeyError:
+            await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
+            return
+        except LookupError:
+            await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
+            return
+        
+        try:
+            channelId = server_dict['Transaction Channel']
+            channel = server.get_channel(channelId)
+            message = "{0} was cut by the {1}. He will now be on waivers.".format(user.mention, teamRole.mention)
+            await self.bot.send_message(channel, message)
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
 
     # @commands.command(pass_context=True)
     # async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, 

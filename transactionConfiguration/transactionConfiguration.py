@@ -169,6 +169,54 @@ class TransactionConfiguration:
         else:
             await self.bot.say(":x: League role has not been set")
 
+    @commands.command(pass_context=True)
+    async def setFreeAgentRole(self, ctx, freeAgentRole : discord.Role):
+        """Assigns the specified role as the free agent role so it can be given to all the players that are cut"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        try:
+            server_dict.setdefault('Free Agent', freeAgentRole.id)
+            self.save_data()
+            await self.bot.say(":white_check_mark: League role now set to {0}".format(freeAgentRole.name))
+        except:
+            await self.bot.say(":x: Error setting league role to {0}".format(freeAgentRole.name))
+
+    @commands.command(pass_context=True)
+    async def getFreeAgentRole(self, ctx):
+        """Gets the free agent role"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        
+        try:
+            freeAgentRoleId = server_dict['Free Agent']
+        except KeyError:
+            await self.bot.say(":x: League role not currently set")
+        else:
+            try:
+                freeAgentRole = self.find_role(server.roles, freeAgentRoleId)
+            except LookupError:
+                await self.bot.say(":x: Could not find league role with id of {0}".format(freeAgentRoleId))
+            else:
+                await self.bot.say("League role currently set to {0}".format(freeAgentRole.name))
+
+    @commands.command(pass_context=True)
+    async def unsetFreeAgentRole(self, ctx):
+        """Unassignes the free agent role"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+
+        freeAgentRoleId = server_dict.pop('Free Agent', None)
+        if freeAgentRoleId:
+            try:
+                freeAgentRole = self.find_role(server.roles, freeAgentRoleId)
+            except LookupError:
+                await self.bot.say(":x: Could not find role with id of {0}".format(freeAgentRoleId))
+            else:
+                await self.bot.say(":white_check_mark: Free agent role no longer set to {0}".format(freeAgentRole.name))
+        else:
+            await self.bot.say(":x: Free agent role has not been set")
+
     def find_role(self, roles, roleId):
         for role in roles:
             if role.id == roleId:
