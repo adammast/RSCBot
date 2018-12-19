@@ -34,19 +34,17 @@ class TransactionConfiguration:
             await self.bot.say(":x: Transaction log channel not set")
 
     @commands.command(pass_context=True)
-    async def setFranchiseRoles(self, ctx, *nameAndPrefix):
+    async def setFranchiseRole(self, ctx, gmName, role : discord.Role):
         """Used to set the franchise roles for the given GM names"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
-        prefix_dict = server_dict.setdefault("Franchise roles", {})
-
-        for arg in nameAndPrefix:
-            keyValuePair = arg.split('=')
-            try:
-                prefix_dict[keyValuePair[0]] = keyValuePair[1].id
-                await self.bot.say("Franchise role for {0} = {1}".format(keyValuePair[0], keyValuePair[1].mention))
-            except IndexError:
-                await self.bot.say(":x: Error finding key value pair in arguments")
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
+            
+        try:
+            franchise_dict[gmName] = role.id
+            await self.bot.say("Franchise role for {0} = {1}".format(gmName, role.mention))
+        except IndexError:
+            await self.bot.say(":x: Error adding info to the franchise role dictionary")
 
     @commands.command(pass_context=True)
     async def getFranchiseRoles(self, ctx):
