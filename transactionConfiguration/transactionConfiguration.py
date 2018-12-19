@@ -69,6 +69,19 @@ class TransactionConfiguration:
             await self.bot.say(":x: No franchise roles are set in the dictionary")
 
     @commands.command(pass_context=True)
+    async def clearFranchiseRoles(self, ctx):
+        """Used to clear the franchise role dictionary"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
+
+        try:
+            franchise_dict.clear()
+            await self.bot.say(":white_check_mark: All franchise roles have been removed from dictionary")
+        except:
+            await self.bot.say(":x: Something went wrong when trying to clear the franchise role dictionary")
+
+    @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server
