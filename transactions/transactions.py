@@ -108,8 +108,36 @@ class Transactions:
     # async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, 
     #     user2 : discord.Member, newTeamRole2 : discord.Role):
 
-    # @commands.command(pass_context=True)
-    # async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
+    @commands.command(pass_context=True)
+    async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
+        """Adds the team role to the user and posts to the assigned channel"""
+        server = ctx.message.server
+        self.load_data()
+        server_dict = self.config.setdefault(server.id, {})
+
+        if teamRole in user.roles:
+            await self.bot.remove_roles(user, teamRole)
+            message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
+        else:
+            await self.bot.add_roles(user, teamRole)
+            message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
+
+        try:
+            channelId = server_dict['Transaction Channel']
+            try:
+                leagueRoleId = server_dict['League Role']
+                try:
+                    leagueRole = self.find_role(server.roles, leagueRoleId)
+                    channel = server.get_channel(channelId)
+                    await self.bot.add_roles(user, leagueRole)
+                    await self.bot.send_message(channel, message)
+                except LookupError:
+                    await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
+            except KeyError:
+                await self.bot.say(":x: League role not currently set")
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
+
 
     def find_role(self, roles, roleId):
         for role in roles:
