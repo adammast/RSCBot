@@ -20,6 +20,15 @@ class Draft:
         self.load_data()
 
     @commands.command(pass_context=True)
+    async def pop(self, ctx):
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        try:
+            await self.bot.say("Next item in dictionary {0}".format(server_dict.pop()))
+        except:
+            await self.bot.say("Something went wrong, I'm a dumb bot with a poop butt")
+
+    @commands.command(pass_context=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server = ctx.message.server
@@ -65,9 +74,7 @@ class Draft:
         self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
 
     def check_file(self, file, default):
-        await self.bot.say("Looking for config file for draft cog at {0}".format(file))
         if not dataIO.is_valid_json(file):
-            await self.bot.say("Couldn't find config file for draft cog")
             dataIO.save_json(file, default)
 
     def load_data(self):
