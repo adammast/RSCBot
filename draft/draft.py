@@ -65,7 +65,9 @@ class Draft:
         self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
 
     def check_file(self, file, default):
+        await self.bot.say("Looking for config file for draft cog at {0}".format(file))
         if not dataIO.is_valid_json(file):
+            await self.bot.say("Couldn't find config file for draft cog")
             dataIO.save_json(file, default)
 
     def load_data(self):
