@@ -1,10 +1,12 @@
 import discord
 import os.path
 import os
+import get
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
 from cogs.utils import checks
+from discord.utils
 
 class Draft:
     """Used to draft players onto teams and give the the appropriate roles"""
@@ -97,7 +99,7 @@ class Draft:
 
     @commands.command(pass_context=True)
     async def getLeagueRole(self, ctx):
-        """Gets the transaction-log channel"""
+        """Gets the league role"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
         
@@ -106,12 +108,13 @@ class Draft:
         except KeyError:
             await self.bot.say(":x: League role not currently set")
         else:
+             role = get(guild.roles, id=role_id)
              role = server.get_role(roleId)
              await self.bot.say("League role currently set to {0}".format(role.name))
 
     @commands.command(pass_context=True)
     async def unsetLeagueRole(self, ctx):
-        """Unassignes the transaction-log channel"""
+        """Unassignes the league role"""
         server = ctx.message.server
         server_dict = self.config.setdefault(server.id, {})
 
