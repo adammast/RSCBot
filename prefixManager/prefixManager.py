@@ -15,9 +15,9 @@ class PrefixManager:
     CONFIG_DEFAULT = {}
 
     @commands.command(pass_context=True)
-    async def arrayTest(self, ctx, teamPrefixes):
-        for team in teamPrefixes:
-            await self.bot.say("Key = {0}, Value = {1}".format(team[0], team[1]))
+    async def arrayTest(self, ctx, **keyValuePair):
+        for key, value in keyValuePair.items():
+            await self.bot.say("Prefix for {0} = {1}".format(key, value))
 
     def find_role(self, roles, roleId):
         for role in roles:
