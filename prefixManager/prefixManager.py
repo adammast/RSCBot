@@ -15,10 +15,11 @@ class PrefixManager:
     CONFIG_DEFAULT = {}
 
     @commands.command(pass_context=True)
-    async def arrayTest(self, ctx, **keyValuePair):
+    async def arrayTest(self, ctx, *nameAndPrefix):
         """Used to test passing in key value pairs for prefixes"""
-        for key, value in keyValuePair.items():
-            await self.bot.say("Prefix for {0} = {1}".format(key, value))
+        for arg in nameAndPrefix:
+            keyValuePair = nameAndPrefix.split(=)
+            await self.bot.say("Prefix for {0} = {1}".format(keyValuePair[0], keyValuePair[1]))
 
     def find_role(self, roles, roleId):
         for role in roles:
