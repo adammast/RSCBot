@@ -29,13 +29,13 @@ class Transactions:
         
         server_dict = self.get_server_dict(ctx)
 
-        channel = self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict)
         if channel is not None:
-            leagueRole = self.get_league_role(server_dict, ctx.message.server)
+            leagueRole = await self.get_league_role(server_dict, ctx.message.server)
             if leagueRole is not None:
-                franchiseRole = self.get_franchise_role(server_dict, ctx.message.server, teamRole)
+                franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
                 if franchiseRole is not None:
-                    prefix = self.get_prefix(server_dict, teamRole)
+                    prefix = await self.get_prefix(server_dict, teamRole)
                     if prefix is not None:
                         message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                         freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
@@ -54,11 +54,11 @@ class Transactions:
 
         server_dict = self.get_server_dict(ctx)
 
-        channel = self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict)
         if channel is not None:
-            franchiseRole = self.get_franchise_role(server_dict, ctx.message.server, teamRole)
+            franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
             if franchiseRole is not None:
-                prefix = self.get_prefix(server_dict, teamRole)
+                prefix = await self.get_prefix(server_dict, teamRole)
                 if prefix is not None:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
                     await self.bot.change_nickname(user, "FA | {0}".format(user.name))
@@ -80,13 +80,13 @@ class Transactions:
 
         server_dict = self.get_server_dict(ctx)
 
-        channel = self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict)
         if channel is not None:
-            franchiseRole1 = self.get_franchise_role(server_dict, ctx.message.server, newTeamRole)
-            franchiseRole2 = self.get_franchise_role(server_dict, ctx.message.server, newTeamRole2)
+            franchiseRole1 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole)
+            franchiseRole2 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole2)
             if franchiseRole1 is not None and franchiseRole2 is not None:
-                prefix1 = self.get_prefix(server_dict, newTeamRole)
-                prefix2 = self.get_prefix(server_dict, newTeamRole2)
+                prefix1 = await self.get_prefix(server_dict, newTeamRole)
+                prefix2 = await self.get_prefix(server_dict, newTeamRole2)
                 if prefix1 is not None and prefix2 is not None:
                     message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
                     try:
@@ -112,9 +112,9 @@ class Transactions:
         """Adds the team role to the user and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
 
-        channel = self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict)
         if channel is not None:
-            leagueRole = self.get_league_role(server_dict, ctx.message.server)
+            leagueRole = await self.get_league_role(server_dict, ctx.message.server)
             if leagueRole is not None:
                 if teamRole in user.roles:
                     await self.bot.remove_roles(user, teamRole)
@@ -145,13 +145,10 @@ class Transactions:
                 return franchiseRole
             except KeyError:
                 await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
-                return None
             except LookupError:
                 await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
-                return None
         except KeyError:
             await self.bot.say(":x: Couldn't find franchise role dictionary")
-            return None
 
     async def get_prefix(self, server_dict, teamRole):
         try:
@@ -162,10 +159,8 @@ class Transactions:
                 return prefix
             except KeyError:
                 await self.bot.say(":x: Prefix not found for {0}".format(gmName))
-                return None
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
-            return None
 
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
@@ -178,10 +173,8 @@ class Transactions:
                 return channel
             except:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
-                return None
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
-            return None
 
     async def get_league_role(self, server_dict, server):
         try:
@@ -191,10 +184,8 @@ class Transactions:
                 return leagueRole
             except LookupError:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
-                return None
         except KeyError:
             await self.bot.say(":x: League role not currently set")
-            return None
 
     # Config
     def check_configs(self):
