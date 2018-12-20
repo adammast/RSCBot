@@ -104,9 +104,55 @@ class Transactions:
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
 
-    # @commands.command(pass_context=True)
-    # async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, 
-    #     user2 : discord.Member, newTeamRole2 : discord.Role):
+    @commands.command(pass_context=True)
+    async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, 
+        user2 : discord.Member, newTeamRole2 : discord.Role, additionalMessage = ""):
+        """Swaps the teams of the two players and announces the trade in the assigned channel"""
+        if newTeamRole2 not in user.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, newTeamRole2.mention))
+            return
+        else if newTeamRole not in user2.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user2.mention, newTeamRole.mention))
+            return
+
+        server = ctx.message.server
+        self.load_data()
+        server_dict = self.config.setdefault(server.id, {})
+        franchise_dict = server_dict.setdefault("Franchise roles", {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
+        gmName1 = re.findall(r'(?<=\()\w*\b', newTeamRole.name)[0]
+        gmName2 = re.findall(r'(?<=\()\w*\b', newTeamRole2.name)[0]
+        try:
+            franchiseRole1 = self.find_role(server.roles, franchise_dict[gmName1])
+            franchiseRole2 = self.find_role(server.roles, franchise_dict[gmName2])
+        except KeyError:
+            await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
+            return
+        except LookupError:
+            await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
+            return
+
+        try:
+            prefix1 = prefix_dict[gmName1]
+            prefix2 = prefix_dict[gmName2]
+        except KeyError:
+            await self.bot.say(":x: No prefix found in dictionary for {0}".format(gmName))
+            return
+
+        try:
+            channelId = server_dict['Transaction Channel']
+            channel = server.get_channel(channelId)
+            message = "{0} was traded by the {1} to the {2} for {3} {4}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention, additionalMessage)
+            await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
+            await self.bot.add_roles(user, newTeamRole, franchiseRole1)
+            await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
+            await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
+            await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
+            await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
+            await self.bot.send_message(channel, message)
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
 
     @commands.command(pass_context=True)
     async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
