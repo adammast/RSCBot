@@ -39,18 +39,33 @@ class BulkRoleManager:
     @commands.command(pass_context=True)
     async def addRole(self, ctx, role : discord.Role, *userList):
         empty = True
+        added = 0
+        had = 0
+        notFound = 0
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in ctx.message.server.members:
-                    await self.bot.add_roles(member, role)
+                    if role not in member.roles:
+                        await self.bot.add_roles(member, role)
+                        added += 1
+                    else:
+                        had += 1
                     empty = False
             except:
                 await self.bot.say(":x: Can't find {0}".format(user))
+                notFound += 1
         if empty:
-            await self.bot.say(":x: Nobody was given the role {0}".format(role.mention))
+            message = ":x: Nobody was given the role {0}".format(role.mention)
         else:
-            await self.bot.say(":white_check_mark: Role {0} given to everyone that was found from list".format(role.mention))
+           message = ":white_check_mark: Role {0} given to everyone that was found from list".format(role.mention)
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if had > 0:
+            message += ". {0} user(s) already had the role".format(had)
+        if added > 0:
+            message += ". {0} user(s) had the role added to them".format(added)
+        await self.bot.say(message)
             
 
 def setup(bot):
