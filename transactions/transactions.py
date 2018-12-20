@@ -29,9 +29,9 @@ class Transactions:
             try:
                 freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
                 if freeAgentRole in user.roles:
-                    await self.bot.remove_roles(user, freeAgentRole)
                     message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.send_message(channel, message)
+                    await self.bot.remove_roles(user, freeAgentRole)
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
