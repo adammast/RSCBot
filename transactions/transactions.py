@@ -142,7 +142,7 @@ class Transactions:
                         await self.bot.send_message(channel, message)
 
 
-    async def remove_player_from_team(self, ctx, server_dict, user, teamRole):
+    # async def remove_player_from_team(self, ctx, server_dict, user, teamRole):
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
