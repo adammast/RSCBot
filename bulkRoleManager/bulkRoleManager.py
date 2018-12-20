@@ -53,7 +53,9 @@ class BulkRoleManager:
                         had += 1
                     empty = False
             except:
-                await self.bot.say(":x: Can't find {0}".format(user))
+                if notFound == 0:
+                    await self.bot.say("Couldn't find:")
+                await self.bot.say(user)
                 notFound += 1
         if empty:
             message = ":x: Nobody was given the role {0}".format(role.mention)
