@@ -13,10 +13,10 @@ class BulkRoleManager:
         empty = True
         for member in ctx.message.server.members:
             if role in member.roles:
-                await self.bot.say("{0.name}: {0.id}".format(member))
+                await self.bot.say("{0.name}#{0.numbers}".format(member))
                 empty = False
-            if empty:
-                await self.bot.say("Nobody has the role {}".format(role.mention))
+        if empty:
+            await self.bot.say("Nobody has the role {}".format(role.mention))
 
 def setup(bot):
     bot.add_cog(BulkRoleManager(bot))
