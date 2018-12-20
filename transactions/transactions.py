@@ -149,6 +149,7 @@ class Transactions:
                 await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
+                return
 
             try:
                 await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
@@ -156,6 +157,7 @@ class Transactions:
                 await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
+                return
             
             await self.bot.send_message(channel, message)
         except KeyError:
