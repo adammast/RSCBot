@@ -141,8 +141,7 @@ class Transactions:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
             gmName = self.get_gm_name(teamRole)
             try:
-                franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
-                return franchiseRole
+                return self.find_role(server.roles, franchise_dict[gmName])
             except KeyError:
                 await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
             except LookupError:
@@ -155,8 +154,7 @@ class Transactions:
             prefix_dict = server_dict.setdefault("Prefixes", {})
             gmName = self.get_gm_name(teamRole)
             try:
-                prefix = prefix_dict[gmName]
-                return prefix
+                return prefix_dict[gmName]
             except KeyError:
                 await self.bot.say(":x: Prefix not found for {0}".format(gmName))
         except KeyError:
@@ -169,8 +167,7 @@ class Transactions:
         try:
             channelId = server_dict['Transaction Channel']
             try:
-                channel = server.get_channel(channelId)
-                return channel
+                return server.get_channel(channelId)
             except:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
         except KeyError:
@@ -180,8 +177,7 @@ class Transactions:
         try:
             leagueRoleId = server_dict['League Role']
             try:
-                leagueRole = self.find_role(server.roles, leagueRoleId)
-                return leagueRole
+                return self.find_role(server.roles, leagueRoleId)
             except LookupError:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
         except KeyError:
