@@ -25,6 +25,9 @@ class Transactions:
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
+        freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+        if freeAgentRole in user.roles:
+            await self.bot.remove_roles(user, freeAgentRole)
         if channel is not None:
             message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
             await self.bot.send_message(channel, message)
@@ -34,6 +37,9 @@ class Transactions:
         """Removes the team role and franchise role, and adds the free agent prefix to a user and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         channel = await self.remove_player_from_team(ctx, server_dict, user, teamRole)
+        await self.bot.change_nickname(user, "FA | {0}".format(user.name))
+        freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+        await self.bot.add_roles(user, freeAgentRole)
         if channel is not None:
             message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
             await self.bot.send_message(channel, message)
@@ -95,9 +101,6 @@ class Transactions:
                 if franchiseRole is not None:
                     prefix = await self.get_prefix(server_dict, teamRole)
                     if prefix is not None:
-                        freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-                        if freeAgentRole in user.roles:
-                            await self.bot.remove_roles(user, freeAgentRole)
                         await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                         await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                         return channel
@@ -115,9 +118,6 @@ class Transactions:
                 prefix = await self.get_prefix(server_dict, teamRole)
                 if prefix is not None:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
-                    await self.bot.change_nickname(user, "FA | {0}".format(user.name))
-                    freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-                    await self.bot.add_roles(user, freeAgentRole)
                     return channel
 
     async def get_franchise_role(self, server_dict, server, teamRole):
