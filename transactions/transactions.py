@@ -149,7 +149,7 @@ class Transactions:
                 roles.remove(franchiseRole2)
                 roles.append(newTeamRole)
                 roles.append(franchiseRole1)
-                await self.bot.replace_roles(user, roles)
+                await self.bot.replace_roles(user, roles[0:len(roles) - 1])
                 await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
@@ -161,7 +161,7 @@ class Transactions:
                 roles.remove(franchiseRole1)
                 roles.append(newTeamRole2)
                 roles.append(franchiseRole2)
-                await self.bot.replace_roles(user2, roles)
+                await self.bot.replace_roles(user2, roles[0:len(roles) - 1])
                 await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
