@@ -106,7 +106,7 @@ class Transactions:
 
     @commands.command(pass_context=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, 
-        user2 : discord.Member, newTeamRole2 : discord.Role, additionalMessage = ""):
+        user2 : discord.Member, newTeamRole2 : discord.Role, additionalMessage : typing.Optional[string] = ""):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
         if newTeamRole2 not in user.roles:
             await self.bot.say(":x: {0} is not on the {1}".format(user.mention, newTeamRole2.mention))
