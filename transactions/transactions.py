@@ -136,7 +136,7 @@ class Transactions:
             prefix1 = prefix_dict[gmName1]
             prefix2 = prefix_dict[gmName2]
         except KeyError:
-            await self.bot.say(":x: No prefix found in dictionary for {0}".format(gmName))
+            await self.bot.say(":x: No prefix found in dictionary for either {0} or {1}".format(gmName1, gmName2))
             return
 
         try:
