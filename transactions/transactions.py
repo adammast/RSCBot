@@ -30,13 +30,13 @@ class Transactions:
         server_dict = self.get_server_dict(ctx)
 
         channel = self.get_transaction_channel(server_dict)
-        if channel:
+        if channel is not None:
             leagueRole = self.get_league_role(server_dict, ctx.message.server)
-            if leagueRole:
+            if leagueRole is not None:
                 franchiseRole = self.get_franchise_role(server_dict, ctx.message.server, teamRole)
-                if franchiseRole:
+                if franchiseRole is not None:
                     prefix = self.get_prefix(server_dict, teamRole)
-                    if prefix:
+                    if prefix is not None:
                         message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                         freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
                         if freeAgentRole in user.roles:
@@ -55,11 +55,11 @@ class Transactions:
         server_dict = self.get_server_dict(ctx)
 
         channel = self.get_transaction_channel(server_dict)
-        if channel:
+        if channel is not None:
             franchiseRole = self.get_franchise_role(server_dict, ctx.message.server, teamRole)
-            if franchiseRole:
+            if franchiseRole is not None:
                 prefix = self.get_prefix(server_dict, teamRole)
-                if prefix:
+                if prefix is not None:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
                     await self.bot.change_nickname(user, "FA | {0}".format(user.name))
                     freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
@@ -81,13 +81,13 @@ class Transactions:
         server_dict = self.get_server_dict(ctx)
 
         channel = self.get_transaction_channel(server_dict)
-        if channel:
+        if channel is not None:
             franchiseRole1 = self.get_franchise_role(server_dict, ctx.message.server, newTeamRole)
             franchiseRole2 = self.get_franchise_role(server_dict, ctx.message.server, newTeamRole2)
-            if franchiseRole1 and franchiseRole2:
+            if franchiseRole1 is not None and franchiseRole2 is not None:
                 prefix1 = self.get_prefix(server_dict, newTeamRole)
                 prefix2 = self.get_prefix(server_dict, newTeamRole2)
-                if prefix1 and prefix2:
+                if prefix1 is not None and prefix2 is not None:
                     message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
                     try:
                         await self.bot.add_roles(user, newTeamRole, franchiseRole1)
@@ -113,9 +113,9 @@ class Transactions:
         server_dict = self.get_server_dict(ctx)
 
         channel = self.get_transaction_channel(server_dict)
-        if channel:
+        if channel is not None:
             leagueRole = self.get_league_role(server_dict, ctx.message.server)
-            if leagueRole:
+            if leagueRole is not None:
                 if teamRole in user.roles:
                     await self.bot.remove_roles(user, teamRole)
                     message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
