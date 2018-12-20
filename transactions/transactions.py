@@ -29,7 +29,7 @@ class Transactions:
         
         server_dict = self.get_server_dict(ctx)
 
-        channel = await self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             leagueRole = await self.get_league_role(server_dict, ctx.message.server)
             if leagueRole is not None:
@@ -54,7 +54,7 @@ class Transactions:
 
         server_dict = self.get_server_dict(ctx)
 
-        channel = await self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
             if franchiseRole is not None:
@@ -80,7 +80,7 @@ class Transactions:
 
         server_dict = self.get_server_dict(ctx)
 
-        channel = await self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             franchiseRole1 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole)
             franchiseRole2 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole2)
@@ -112,7 +112,7 @@ class Transactions:
         """Adds the team role to the user and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
 
-        channel = await self.get_transaction_channel(server_dict)
+        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             leagueRole = await self.get_league_role(server_dict, ctx.message.server)
             if leagueRole is not None:
@@ -165,7 +165,7 @@ class Transactions:
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
 
-    async def get_transaction_channel(self, server_dict):
+    async def get_transaction_channel(self, server_dict, server):
         try:
             channelId = server_dict['Transaction Channel']
             try:
