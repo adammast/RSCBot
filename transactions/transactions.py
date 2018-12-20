@@ -107,12 +107,12 @@ class Transactions:
     @commands.command(pass_context=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, user2 : discord.Member, newTeamRole2 : discord.Role):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
-        # if newTeamRole2 not in user.roles:
-        #     await self.bot.say(":x: {0} is not on the {1}".format(user.mention, newTeamRole2.mention))
-        #     return
-        # else if newTeamRole not in user2.roles:
-        #     await self.bot.say(":x: {0} is not on the {1}".format(user2.mention, newTeamRole.mention))
-        #     return
+        if newTeamRole2 not in user.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, newTeamRole2.mention))
+            return
+        elif newTeamRole not in user2.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user2.mention, newTeamRole.mention))
+            return
 
         server = ctx.message.server
         self.load_data()
@@ -143,12 +143,20 @@ class Transactions:
             channelId = server_dict['Transaction Channel']
             channel = server.get_channel(channelId)
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
-            await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
-            await self.bot.add_roles(user, newTeamRole, franchiseRole1)
-            await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
-            await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
-            await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
-            await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
+            try:
+                await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
+                await self.bot.add_roles(user, newTeamRole, franchiseRole1)
+                await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
+            except:
+                await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
+
+            try:
+                await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
+                await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
+                await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
+            except:
+                await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
+            
             await self.bot.send_message(channel, message)
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
