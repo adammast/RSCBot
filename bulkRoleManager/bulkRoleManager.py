@@ -40,7 +40,7 @@ class BulkRoleManager:
     async def addRole(self, ctx, role : discord.Role, *userList):
         empty = True
         for user in userList:
-            member = await commands.MemberConverter(ctx, user).convert()
+            member = commands.MemberConverter(ctx, user).convert()
             if member in ctx.message.server.members:
                 await self.bot.add_roles(member, role)
                 empty = False
