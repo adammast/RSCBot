@@ -141,29 +141,26 @@ class Transactions:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
             gmName = self.get_gm_name(teamRole)
             try:
-                return self.find_role(server.roles, franchise_dict[gmName])
+                franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
+                return franchiseRole
             except KeyError:
                 await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
-                return
             except LookupError:
                 await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
-                return
         except KeyError:
             await self.bot.say(":x: Couldn't find franchise role dictionary")
-            return
 
     def get_prefix(self, server_dict, teamRole):
         try:
             prefix_dict = server_dict.setdefault("Prefixes", {})
             gmName = self.get_gm_name(teamRole)
             try:
-                return prefix_dict[gmName]
+                prefix = prefix_dict[gmName]
+                return prefix
             except KeyError:
                 await self.bot.say(":x: Prefix not found for {0}".format(gmName))
-                return
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
-            return
 
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
@@ -172,13 +169,12 @@ class Transactions:
         try:
             channelId = server_dict['Transaction Channel']
             try:
-                return server.get_channel(channelId)
+                channel = server.get_channel(channelId)
+                return channel
             except:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
-                return
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
-            return
 
     def get_league_role(self, server_dict, server):
         try:
@@ -188,10 +184,8 @@ class Transactions:
                 return leagueRole
             except LookupError:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
-                return
         except KeyError:
             await self.bot.say(":x: League role not currently set")
-            return
 
     # Config
     def check_configs(self):
