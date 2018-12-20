@@ -145,10 +145,13 @@ class Transactions:
                 return franchiseRole
             except KeyError:
                 await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
+                return None
             except LookupError:
                 await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
+                return None
         except KeyError:
             await self.bot.say(":x: Couldn't find franchise role dictionary")
+            return None
 
     async def get_prefix(self, server_dict, teamRole):
         try:
@@ -159,8 +162,10 @@ class Transactions:
                 return prefix
             except KeyError:
                 await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+                return None
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
+            return None
 
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
@@ -173,8 +178,10 @@ class Transactions:
                 return channel
             except:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
+                return None
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
+            return None
 
     async def get_league_role(self, server_dict, server):
         try:
@@ -184,8 +191,10 @@ class Transactions:
                 return leagueRole
             except LookupError:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
+                return None
         except KeyError:
             await self.bot.say(":x: League role not currently set")
+            return None
 
     # Config
     def check_configs(self):
