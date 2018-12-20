@@ -25,7 +25,7 @@ class Transactions:
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
-        await add_player_to_team(server_dict, ctx, user, teamRole, message)
+        await add_player_to_team(ctx, server_dict, user, teamRole, message)
 
     @commands.command(pass_context=True)
     async def cut(self, ctx, user : discord.Member, teamRole : discord.Role):
