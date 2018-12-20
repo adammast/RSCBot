@@ -10,6 +10,7 @@ class BulkRoleManager:
 
     @commands.command(pass_context=True)
     async def getAllWithRole(self, ctx, role : discord.Role):
+        empty = True
         for member in ctx.message.server.members:
             if role in member.roles:
                 await self.bot.say("{0.name}: {0.id}".format(member))
