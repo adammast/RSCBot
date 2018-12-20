@@ -117,6 +117,7 @@ class TransactionConfiguration:
         channelId = server_dict.pop('Transaction Channel', None)
         if channelId:
             channel = server.get_channel(channelId)
+            self.save_data()
             await self.bot.say(":white_check_mark: Transaction log channel no longer set to {0}".format(channel.mention))
         else:
             await self.bot.say(":x: Transaction log channel has not been set")
@@ -165,6 +166,7 @@ class TransactionConfiguration:
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
             else:
+                self.save_data()
                 await self.bot.say(":white_check_mark: League role no longer set to {0}".format(leagueRole.name))
         else:
             await self.bot.say(":x: League role has not been set")
@@ -213,6 +215,7 @@ class TransactionConfiguration:
             except LookupError:
                 await self.bot.say(":x: Could not find role with id of {0}".format(freeAgentRoleId))
             else:
+                self.save_data()
                 await self.bot.say(":white_check_mark: Free agent role no longer set to {0}".format(freeAgentRole.name))
         else:
             await self.bot.say(":x: Free agent role has not been set")
