@@ -126,10 +126,10 @@ class Transactions:
             franchiseRole1 = self.find_role(server.roles, franchise_dict[gmName1])
             franchiseRole2 = self.find_role(server.roles, franchise_dict[gmName2])
         except KeyError:
-            await self.bot.say(":x: No role found in dictionary for {0}".format(gmName))
+            await self.bot.say(":x: No role found in dictionary for either {0} or {1}".format(gmName1, gmName2))
             return
         except LookupError:
-            await self.bot.say(":x: Could not find franchise role for {0}".format(gmName))
+            await self.bot.say(":x: Could not find franchise role for either {0} or {1}".format(gmName1, gmName2))
             return
 
         try:
