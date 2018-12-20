@@ -25,24 +25,34 @@ class Transactions:
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
-        freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-        if freeAgentRole in user.roles:
-            await self.bot.remove_roles(user, freeAgentRole)
         if channel is not None:
-            message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
-            await self.bot.send_message(channel, message)
+            try:
+                freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+                if freeAgentRole in user.roles:
+                    await self.bot.remove_roles(user, freeAgentRole)
+                    message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
+                    await self.bot.send_message(channel, message)
+            except KeyError:
+                await self.bot.say(":x: Free agent role not found in dictionary")
+            except LookupError:
+                await self.bot.say(":x: Free agent role not found in server")
 
     @commands.command(pass_context=True)
     async def cut(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Removes the team role and franchise role, and adds the free agent prefix to a user and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         channel = await self.remove_player_from_team(ctx, server_dict, user, teamRole)
-        await self.bot.change_nickname(user, "FA | {0}".format(user.name))
-        freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-        await self.bot.add_roles(user, freeAgentRole)
         if channel is not None:
-            message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
-            await self.bot.send_message(channel, message)
+            try:
+                freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+                await self.bot.change_nickname(user, "FA | {0}".format(user.name))
+                await self.bot.add_roles(user, freeAgentRole)
+                message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
+                await self.bot.send_message(channel, message)
+            except KeyError:
+                await self.bot.say(":x: Free agent role not found in dictionary")
+            except LookupError:
+                await self.bot.say(":x: Free agent role not found in server")
 
     @commands.command(pass_context=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, user2 : discord.Member, newTeamRole2 : discord.Role):
