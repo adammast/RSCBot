@@ -60,8 +60,8 @@ class Transactions:
                     freeAgentRole = self.find_role(server.roles, server_dict['Free Agent'])
                     if freeAgentRole in user.roles:
                         await self.bot.remove_roles(user, freeAgentRole)
-                    await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
+                    await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.send_message(channel, message)
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
@@ -140,14 +140,13 @@ class Transactions:
             return
 
         try:
-            await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
             channelId = server_dict['Transaction Channel']
-            await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
             channel = server.get_channel(channelId)
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
             try:
                 await self.bot.add_roles(user, newTeamRole, franchiseRole1)
                 await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
+                await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
                 return
@@ -155,6 +154,7 @@ class Transactions:
             try:
                 await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
                 await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
+                await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
                 return
