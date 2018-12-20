@@ -31,7 +31,25 @@ class BulkRoleManager:
                 await self.bot.remove_roles(member, role)
                 empty = False
         if empty:
-            await self.bot.say("Nobody has the role {}".format(role.mention))
+            await self.bot.say(":x: Nobody has the role {0}".format(role.mention))
+        else:
+            await self.bot.say(":white_check_mark: Role {0} removed from everyone in the server".format(role.mention))
+
+
+    @commands.command(pass_context=True)
+    async def addRole(self, ctx, *userList : discord.Member, role : discord.Role):
+        empty = True
+        for member in userList:
+            if member in ctx.message.server.members:
+                await self.bot.add_roles(member, role)
+                empty = False
+            else:
+                await self.bot.say(":x: Can't find {0}".format(member.name))
+        if empty:
+            await self.bot.say(":x: Nobody was given the role {0}".format(role.mention))
+        else:
+            await self.bot.say(":white_check_mark: Role {0} given to everyone that was found from list".format(role.mention))
+            
 
 def setup(bot):
     bot.add_cog(BulkRoleManager(bot))
