@@ -24,70 +24,31 @@ class Transactions:
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
-        message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
-        await self.add_player_to_team(ctx, server_dict, user, teamRole, message)
+        channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
+        if channel is not None:
+            message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
+            await self.bot.send_message(channel, message)
 
     @commands.command(pass_context=True)
     async def cut(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Removes the team role and franchise role, and adds the free agent prefix to a user and posts to the assigned channel"""
-        if teamRole not in user.roles:
-            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, teamRole.mention))
-            return
-
         server_dict = self.get_server_dict(ctx)
-
-        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
+        channel = await self.remove_player_from_team(ctx, server_dict, user, teamRole)
         if channel is not None:
-            franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
-            if franchiseRole is not None:
-                prefix = await self.get_prefix(server_dict, teamRole)
-                if prefix is not None:
-                    await self.bot.remove_roles(user, teamRole, franchiseRole)
-                    await self.bot.change_nickname(user, "FA | {0}".format(user.name))
-                    freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-                    await self.bot.add_roles(user, freeAgentRole)
-                    message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
-                    await self.bot.send_message(channel, message)
-
+            message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
+            await self.bot.send_message(channel, message)
 
     @commands.command(pass_context=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, user2 : discord.Member, newTeamRole2 : discord.Role):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
-        if newTeamRole2 not in user.roles:
-            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, newTeamRole2.mention))
-            return
-        elif newTeamRole not in user2.roles:
-            await self.bot.say(":x: {0} is not on the {1}".format(user2.mention, newTeamRole.mention))
-            return
-
         server_dict = self.get_server_dict(ctx)
-
-        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
+        await self.remove_player_from_team(ctx, server_dict, user, newTeamRole2)
+        await self.remove_player_from_team(ctx, server_dict, user2, newTeamRole)
+        await self.add_player_to_team(ctx, server_dict, user, newTeamRole)
+        channel = await self.add_player_to_team(ctx, server_dict, user2, newTeamRole2)
         if channel is not None:
-            franchiseRole1 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole)
-            franchiseRole2 = await self.get_franchise_role(server_dict, ctx.message.server, newTeamRole2)
-            if franchiseRole1 is not None and franchiseRole2 is not None:
-                prefix1 = await self.get_prefix(server_dict, newTeamRole)
-                prefix2 = await self.get_prefix(server_dict, newTeamRole2)
-                if prefix1 is not None and prefix2 is not None:
-                    message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
-                    try:
-                        await self.bot.add_roles(user, newTeamRole, franchiseRole1)
-                        await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
-                        await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
-                    except:
-                        await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
-                        return
-
-                    try:
-                        await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
-                        await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
-                        await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
-                    except:
-                        await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
-                        return
-                    
-                    await self.bot.send_message(channel, message)
+            message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
+            await self.bot.send_message(channel, message)
 
     @commands.command(pass_context=True)
     async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -121,7 +82,7 @@ class Transactions:
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
 
-    async def add_player_to_team(self, ctx, server_dict, user, teamRole, message):
+    async def add_player_to_team(self, ctx, server_dict, user, teamRole):
         if teamRole in user.roles:
             await self.bot.say(":x: {0} is already on the {1}".format(user.mention, teamRole.mention))
             return False
@@ -139,10 +100,25 @@ class Transactions:
                             await self.bot.remove_roles(user, freeAgentRole)
                         await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                         await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
-                        await self.bot.send_message(channel, message)
+                        return channel
 
 
-    # async def remove_player_from_team(self, ctx, server_dict, user, teamRole):
+    async def remove_player_from_team(self, ctx, server_dict, user, teamRole):
+        if teamRole not in user.roles:
+            await self.bot.say(":x: {0} is not on the {1}".format(user.mention, teamRole.mention))
+            return
+
+        channel = await self.get_transaction_channel(server_dict, ctx.message.server)
+        if channel is not None:
+            franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
+            if franchiseRole is not None:
+                prefix = await self.get_prefix(server_dict, teamRole)
+                if prefix is not None:
+                    await self.bot.remove_roles(user, teamRole, franchiseRole)
+                    await self.bot.change_nickname(user, "FA | {0}".format(user.name))
+                    freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+                    await self.bot.add_roles(user, freeAgentRole)
+                    return channel
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
