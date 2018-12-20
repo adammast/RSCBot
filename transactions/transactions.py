@@ -136,7 +136,7 @@ class Transactions:
                 return role
         raise LookupError('roleId not found in server roles')
 
-    def get_franchise_role(self, server_dict, server, teamRole):
+    async def get_franchise_role(self, server_dict, server, teamRole):
         try:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
             gmName = self.get_gm_name(teamRole)
@@ -150,7 +150,7 @@ class Transactions:
         except KeyError:
             await self.bot.say(":x: Couldn't find franchise role dictionary")
 
-    def get_prefix(self, server_dict, teamRole):
+    async def get_prefix(self, server_dict, teamRole):
         try:
             prefix_dict = server_dict.setdefault("Prefixes", {})
             gmName = self.get_gm_name(teamRole)
@@ -165,7 +165,7 @@ class Transactions:
     def get_gm_name(self, teamRole):
         return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
 
-    def get_transaction_channel(self, server_dict):
+    async def get_transaction_channel(self, server_dict):
         try:
             channelId = server_dict['Transaction Channel']
             try:
@@ -176,7 +176,7 @@ class Transactions:
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
 
-    def get_league_role(self, server_dict, server):
+    async def get_league_role(self, server_dict, server):
         try:
             leagueRoleId = server_dict['League Role']
             try:
