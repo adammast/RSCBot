@@ -144,16 +144,24 @@ class Transactions:
             channel = server.get_channel(channelId)
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
             try:
-                await self.bot.remove_roles(user, newTeamRole2, franchiseRole2)
-                await self.bot.add_roles(user, newTeamRole, franchiseRole1)
+                roles = user.roles
+                roles.remove(newTeamRole2)
+                roles.remove(franchiseRole2)
+                roles.append(newTeamRole)
+                roles.append(franchiseRole1)
+                await self.bot.replace_roles(user, roles)
                 await self.bot.change_nickname(user, "{0} | {1}".format(prefix1, user.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user.name))
                 return
 
             try:
-                await self.bot.remove_roles(user2, newTeamRole, franchiseRole1)
-                await self.bot.add_roles(user2, newTeamRole2, franchiseRole2)
+                roles = user2.roles
+                roles.remove(newTeamRole)
+                roles.remove(franchiseRole1)
+                roles.append(newTeamRole2)
+                roles.append(franchiseRole2)
+                await self.bot.replace_roles(user2, roles)
                 await self.bot.change_nickname(user2, "{0} | {1}".format(prefix2, user2.name))
             except:
                 await self.bot.say(":x: Error trying to handle roles for {0}".format(user2.name))
