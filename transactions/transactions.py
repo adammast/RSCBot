@@ -2,11 +2,11 @@ import discord
 import os.path
 import os
 import re
-import transactionConfiguration
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
 from cogs.utils import checks
+from transactionConfiguration import transactionConfiguration
 
 class Transactions:
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
