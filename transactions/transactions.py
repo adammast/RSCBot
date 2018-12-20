@@ -11,13 +11,16 @@ from transactionConfiguration import transactionConfiguration
 class Transactions:
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    DATA_FOLDER = "data/transactionConfiguration"
-    CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
+    # DATA_FOLDER = "data/transactionConfiguration"
+    # CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
 
-    CONFIG_DEFAULT = {}
+    # CONFIG_DEFAULT = {}
+
+    SERVER_DICT = {}
 
     def __init__(self, bot):
         self.bot = bot
+        self.load_dict()
         # transactionConfiguration.check_configs()
         # transactionConfiguration.load_data()
 
@@ -85,6 +88,7 @@ class Transactions:
                 await self.bot.send_message(channel, message)
 
     def get_server_dict(self, ctx):
+        return self.SERVER_DICT
         server = ctx.message.server
         transactionConfiguration.load_data()
         server_dict = transactionConfiguration.config.setdefault(server.id, {})
@@ -174,6 +178,9 @@ class Transactions:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
         except KeyError:
             await self.bot.say(":x: League role not currently set")
+
+    def load_dict(self):
+        self.SERVER_DICT = transactionConfiguration.load_data(self)
 
     # # Config
     # def check_configs(self):
