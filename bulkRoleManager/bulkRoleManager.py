@@ -9,11 +9,14 @@ class BulkRoleManager:
         self.bot = bot
 
     @commands.command(pass_context=True)
-    async def getAllWithRole(self, ctx, role : discord.Role):
+    async def getAllWithRole(self, ctx, role : discord.Role, getNickname = False):
         empty = True
         for member in ctx.message.server.members:
             if role in member.roles:
-                await self.bot.say("{0.name}#{0.discriminator}".format(member))
+                if getNickname:
+                    await self.bot.say("{0.nick}: {0.name}#{0.discriminator}".format(member))
+                else:
+                    await self.bot.say("{0.name}#{0.discriminator}".format(member))
                 empty = False
         if empty:
             await self.bot.say("Nobody has the role {}".format(role.mention))
