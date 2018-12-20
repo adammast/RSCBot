@@ -44,7 +44,7 @@ class BulkRoleManager:
                 await self.bot.add_roles(member, role)
                 empty = False
             else:
-                await self.bot.say(":x: Can't find {0}".format(member.name))
+                await self.bot.say(":x: Can't find {0}".format(member))
         if empty:
             await self.bot.say(":x: Nobody was given the role {0}".format(role.mention))
         else:
