@@ -12,16 +12,19 @@ class BulkRoleManager:
     async def getAllWithRole(self, ctx, role : discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
+        messageList = ["Players with {0} role:".format(role.name)]
         for member in ctx.message.server.members:
             if role in member.roles:
                 if getNickname:
-                    await self.bot.say("{0.nick}: {0.name}#{0.discriminator}".format(member))
+                    messageList.append("{0.nick}: {0.name}#{0.discriminator}".format(member))
                 else:
-                    await self.bot.say("{0.name}#{0.discriminator}".format(member))
+                    messageList.append("{0.name}#{0.discriminator}".format(member))
                 count += 1
         if count == 0:
             await self.bot.say("Nobody has the {0} role".format(role.mention))
         else:
+            for message in messageList:
+                await self.bot.say(message)
             await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command(pass_context=True)
