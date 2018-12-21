@@ -64,7 +64,7 @@ class Draft:
                         message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
                     if freeAgentRole in user.roles:
                         await self.bot.remove_roles(user, freeAgentRole)
-                    await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
+                    await self.bot.change_nickname(user, "{0} | {1}".format(prefix, self.get_player_nickname(user)))
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.send_message(channel, message)
                     await self.bot.say("Done")
@@ -80,6 +80,16 @@ class Draft:
             if role.id == roleId:
                 return role
         raise LookupError('roleId not found in server roles')
+
+    def get_player_nickname(self, user : discord.Member):
+        if user.nick is not None:
+            array = user.nick.split(' | ', 1)
+            if len(array) == 2:
+                currentNickname = array[1].strip()
+            else:
+                currentNickname = array[0]
+            return currentNickname
+        return user.name
 
     # Config
     def check_configs(self):

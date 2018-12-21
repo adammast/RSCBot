@@ -46,7 +46,7 @@ class Transactions:
         if channel is not None:
             try:
                 freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
-                await self.bot.change_nickname(user, "FA | {0}".format(user.name))
+                await self.bot.change_nickname(user, "FA | {0}".format(self.get_player_nickname(user)))
                 await self.bot.add_roles(user, freeAgentRole)
                 message = "{0} was cut by the {1} They will now be on waivers".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
@@ -87,11 +87,6 @@ class Transactions:
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
-    @commands.command(pass_context=True)
-    async def getPlayerInfo(self, ctx, user : discord.Member):
-        await self.get_player_prefix(user)
-        await self.get_player_nickname(user)
-
     def get_server_dict(self, ctx):
         server = ctx.message.server
         self.load_data()
@@ -123,7 +118,7 @@ class Transactions:
                 if franchiseRole is not None:
                     prefix = await self.get_prefix(server_dict, teamRole)
                     if prefix is not None:
-                        await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
+                        await self.bot.change_nickname(user, "{0} | {1}".format(prefix, self.get_player_nickname(user)))
                         await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                         return channel
 
@@ -142,24 +137,15 @@ class Transactions:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
                     return channel
 
-    async def get_player_prefix(self, user : discord.Member):
-        if user.nick is not None:
-            array = user.nick.split(' | ', 1)
-            currentPrefix = array[0]
-            await self.bot.say("Prefix = {0}".format(currentPrefix))
-        else:
-            await self.bot.say("{0} doesn't have a prefix".format(user.name))
-
-    async def get_player_nickname(self, user : discord.Member):
+    def get_player_nickname(self, user : discord.Member):
         if user.nick is not None:
             array = user.nick.split(' | ', 1)
             if len(array) == 2:
                 currentNickname = array[1].strip()
             else:
                 currentNickname = array[0]
-            await self.bot.say("Nickname = {0}".format(currentNickname))
-        else:
-            await self.bot.say("{0} doesn't have a prefix".format(user.name))
+            return currentNickname
+        return user.name
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
