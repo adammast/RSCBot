@@ -146,7 +146,7 @@ class Transactions:
         if user.nick is not None:
             array = re.findall(r'\w\s*\|*', user.nick)
             currentPrefix = re.findall(r'\w\s*', str(array[0]))[0].strip()
-            await self.bot.say("Prefix = {0}".format(currentPrefix))
+            await self.bot.say("Prefix = {0}".format(array[0]))
         else:
             await self.bot.say("{0} doesn't have a prefix".format(user.name))
 
