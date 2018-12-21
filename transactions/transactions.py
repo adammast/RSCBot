@@ -142,8 +142,11 @@ class Transactions:
                     return channel
 
     async def get_player_prefix(self, user : discord.Member):
-        currentPrefix = re.findall(r'\w*', user.nick)[0]
-        await self.bot.say(currentPrefix)
+        if user.nick is not None:
+            currentPrefix = re.findall(r'\w*', user.nick)[0]
+            await self.bot.say(currentPrefix)
+        else:
+            await self.bot.say("{0} doesn't have a prefix".format(user.name))
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
