@@ -143,8 +143,27 @@ class Transactions:
 
     async def get_player_prefix(self, user : discord.Member):
         if user.nick is not None:
-            currentPrefix = re.findall(r'\w*', user.nick)[0]
+            array = re.findall(r'\w\s*\|*', user.nick)
+            currentPrefix = re.findall(r'\w\s*', array[0]).strip()
             await self.bot.say(currentPrefix)
+        else:
+            await self.bot.say("{0} doesn't have a prefix".format(user.name))
+
+    async def get_player_nickname(self, user : discord.Member):
+        if user.nick is not None:
+            array = re.findall(r'\w\s*\|*', user.nick)
+            currentPrefix = re.findall(r'\w\s*', array[0]).strip()
+            if len(currentPrefix) > 3:
+                currentNickname = currentPrefix
+            elif len(array) == 2:
+                currentNickname = array[1].strip()
+            elif len(array) > 2:
+                currentNickname = ""
+                array.pop(0)
+                for x in array:
+                    currentNickname += x
+                currentNickname = currentNickname.strip()
+            await self.bot.say(currentNickname)
         else:
             await self.bot.say("{0} doesn't have a prefix".format(user.name))
 
