@@ -87,6 +87,10 @@ class Transactions:
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
+    @commands.command(pass_context=True)
+    async def getPrefix(self, ctx, user : discord.Member):
+        await self.get_player_prefix(user)
+
     def get_server_dict(self, ctx):
         server = ctx.message.server
         self.load_data()
@@ -136,6 +140,10 @@ class Transactions:
                 if prefix is not None:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
                     return channel
+
+    async def get_player_prefix(self, user : discord.Member):
+        currentPrefix = re.findall(r'\w*', user.nick)[0]
+        await self.bot.say(currentPrefix)
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
