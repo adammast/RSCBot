@@ -88,8 +88,9 @@ class Transactions:
                 await self.bot.say("Done")
 
     @commands.command(pass_context=True)
-    async def getPrefix(self, ctx, user : discord.Member):
+    async def getPlayerInfo(self, ctx, user : discord.Member):
         await self.get_player_prefix(user)
+        await self.get_player_nickname(user)
 
     def get_server_dict(self, ctx):
         server = ctx.message.server
@@ -145,7 +146,7 @@ class Transactions:
         if user.nick is not None:
             array = re.findall(r'\w\s*\|*', user.nick)
             currentPrefix = re.findall(r'\w\s*', array[0]).strip()
-            await self.bot.say(currentPrefix)
+            await self.bot.say("Prefix = {0}".format(currentPrefix))
         else:
             await self.bot.say("{0} doesn't have a prefix".format(user.name))
 
@@ -163,7 +164,7 @@ class Transactions:
                 for x in array:
                     currentNickname += x
                 currentNickname = currentNickname.strip()
-            await self.bot.say(currentNickname)
+            await self.bot.say("Nickname = {0}".format(currentNickname))
         else:
             await self.bot.say("{0} doesn't have a prefix".format(user.name))
 
