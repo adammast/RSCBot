@@ -11,16 +11,18 @@ class BulkRoleManager:
     @commands.command(pass_context=True)
     async def getAllWithRole(self, ctx, role : discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
-        empty = True
+        count = 0
         for member in ctx.message.server.members:
             if role in member.roles:
                 if getNickname:
                     await self.bot.say("{0.nick}: {0.name}#{0.discriminator}".format(member))
                 else:
                     await self.bot.say("{0.name}#{0.discriminator}".format(member))
-                empty = False
-        if empty:
-            await self.bot.say("Nobody has the role {}".format(role.mention))
+                count += 1
+        if count == 0:
+            await self.bot.say("Nobody has the {0} role".format(role.mention))
+        else:
+            await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command(pass_context=True)
     async def removeRoleFromAll(self, ctx, role : discord.Role):
@@ -31,9 +33,9 @@ class BulkRoleManager:
                 await self.bot.remove_roles(member, role)
                 empty = False
         if empty:
-            await self.bot.say(":x: Nobody has the role {0}".format(role.mention))
+            await self.bot.say(":x: Nobody has the {0} role".format(role.mention))
         else:
-            await self.bot.say(":white_check_mark: Role {0} removed from everyone in the server".format(role.mention))
+            await self.bot.say(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
 
     @commands.command(pass_context=True)
@@ -60,7 +62,7 @@ class BulkRoleManager:
         if empty:
             message = ":x: Nobody was given the role {0}".format(role.mention)
         else:
-           message = ":white_check_mark: Role {0} given to everyone that was found from list".format(role.mention)
+           message = ":white_check_mark: {0} role given to everyone that was found from list".format(role.mention)
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
