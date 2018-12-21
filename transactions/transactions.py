@@ -32,6 +32,7 @@ class Transactions:
                     message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.send_message(channel, message)
                     await self.bot.remove_roles(user, freeAgentRole)
+                    await self.bot.say("Done")
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
@@ -47,8 +48,9 @@ class Transactions:
                 freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
                 await self.bot.change_nickname(user, "FA | {0}".format(user.name))
                 await self.bot.add_roles(user, freeAgentRole)
-                message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
+                message = "{0} was cut by the {1} They will now be on waivers".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
@@ -65,6 +67,7 @@ class Transactions:
         if channel is not None:
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
             await self.bot.send_message(channel, message)
+            await self.bot.say("Done")
 
     @commands.command(pass_context=True)
     async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -82,6 +85,7 @@ class Transactions:
                     await self.bot.add_roles(user, teamRole, leagueRole)
                     message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
 
     def get_server_dict(self, ctx):
         server = ctx.message.server
@@ -96,7 +100,10 @@ class Transactions:
         raise LookupError('roleId not found in server roles')
 
     def get_gm_name(self, teamRole):
-        return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        try:
+            return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        except:
+            raise LookupError('GM name not found from role {0}'.format(teamRole.name))
 
     async def add_player_to_team(self, ctx, server_dict, user, teamRole):
         if teamRole in user.roles:
@@ -133,24 +140,30 @@ class Transactions:
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
-            gmName = self.get_gm_name(teamRole)
             try:
-                return self.find_role(server.roles, franchise_dict[gmName])
-            except KeyError:
-                await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
+                gmName = self.get_gm_name(teamRole)
+                try:
+                    return self.find_role(server.roles, franchise_dict[gmName])
+                except KeyError:
+                    await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
+                except LookupError:
+                    await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
             except LookupError:
-                await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
+                await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
         except KeyError:
             await self.bot.say(":x: Couldn't find franchise role dictionary")
 
     async def get_prefix(self, server_dict, teamRole):
         try:
             prefix_dict = server_dict.setdefault("Prefixes", {})
-            gmName = self.get_gm_name(teamRole)
             try:
-                return prefix_dict[gmName]
-            except KeyError:
-                await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+                gmName = self.get_gm_name(teamRole)
+                try:
+                    return prefix_dict[gmName]
+                except KeyError:
+                    await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+            except LookupError:
+                await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
 

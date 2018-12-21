@@ -29,7 +29,12 @@ class Draft:
         franchise_dict = server_dict.setdefault("Franchise roles", {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        try:
+            gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        except:
+            await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
+            return
+            
         try:
             franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
         except KeyError:
@@ -62,6 +67,7 @@ class Draft:
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.send_message(channel, message)
+                    await self.bot.say("Done")
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             except KeyError:
