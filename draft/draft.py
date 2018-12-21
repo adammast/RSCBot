@@ -29,7 +29,12 @@ class Draft:
         franchise_dict = server_dict.setdefault("Franchise roles", {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
-        gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        try:
+            gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+        except:
+            await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
+            return
+            
         try:
             franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
         except KeyError:
