@@ -62,6 +62,7 @@ class Draft:
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, user.name))
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.send_message(channel, message)
+                    await self.bot.say("Done")
                 except LookupError:
                     await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
             except KeyError:

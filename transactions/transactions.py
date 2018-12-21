@@ -32,6 +32,7 @@ class Transactions:
                     message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.send_message(channel, message)
                     await self.bot.remove_roles(user, freeAgentRole)
+                    await self.bot.say("Done")
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
@@ -49,6 +50,7 @@ class Transactions:
                 await self.bot.add_roles(user, freeAgentRole)
                 message = "{0} was cut by the {1}. They will now be on waivers".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
@@ -65,6 +67,7 @@ class Transactions:
         if channel is not None:
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
             await self.bot.send_message(channel, message)
+            await self.bot.say("Done")
 
     @commands.command(pass_context=True)
     async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -82,6 +85,7 @@ class Transactions:
                     await self.bot.add_roles(user, teamRole, leagueRole)
                     message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
 
     def get_server_dict(self, ctx):
         server = ctx.message.server
