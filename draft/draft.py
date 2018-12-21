@@ -2,6 +2,7 @@ import discord
 import os.path
 import os
 import re
+import transactions
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -29,12 +30,14 @@ class Draft:
         franchise_dict = server_dict.setdefault("Franchise roles", {})
         prefix_dict = server_dict.setdefault("Prefixes", {})
 
+        gmName = transactions.transactions.Transactions(self).get_gm_name(teamRole)
+
         try:
             gmName = re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
         except:
             await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
             return
-            
+
         try:
             franchiseRole = self.find_role(server.roles, franchise_dict[gmName])
         except KeyError:
