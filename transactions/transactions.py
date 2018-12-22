@@ -29,11 +29,18 @@ class Transactions:
             try:
                 free_agent_dict = server_dict.setdefault("Free agent roles", {})
                 freeAgentRole = self.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
-                if freeAgentRole in user.roles:
-                    message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
-                    await self.bot.send_message(channel, message)
+                if freeAgentRole is None:
+                    if(len(free_agent_dict.items()) > 0):
+                        for key, value in free_agent_dict.items():
+                            for role in user.roles:
+                                if role.id == value:
+                                    freeAgentRole = role
+                                    break
+                message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
+                await self.bot.send_message(channel, message)
+                if freeAgentRole is not None:
                     await self.bot.remove_roles(user, freeAgentRole)
-                    await self.bot.say("Done")
+                await self.bot.say("Done")
             except KeyError:
                 await self.bot.say(":x: Free agent role not found in dictionary")
             except LookupError:
