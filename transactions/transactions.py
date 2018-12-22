@@ -2,6 +2,7 @@ import discord
 import os.path
 import os
 import re
+import typing
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -40,7 +41,7 @@ class Transactions:
                 await self.bot.say(":x: Free agent role not found in server")
 
     @commands.command(pass_context=True)
-    async def cut(self, ctx, user : discord.Member, teamRole : discord.Role, freeAgentRole : discord.role = None):
+    async def cut(self, ctx, user : discord.Member, teamRole : discord.Role, freeAgentRole : typing.Optional[discord.role] = None):
         """Removes the team role and franchise role, and adds the free agent prefix to a user and posts to the assigned channel"""
         server_dict = self.get_server_dict(ctx)
         channel = await self.remove_player_from_team(ctx, server_dict, user, teamRole)
