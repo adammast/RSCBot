@@ -27,7 +27,8 @@ class Transactions:
         channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
         if channel is not None:
             try:
-                freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+                free_agent_dict = server_dict.setdefault("Free agent roles", {})
+                freeAgentRole = self.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
                 if freeAgentRole in user.roles:
                     message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
                     await self.bot.send_message(channel, message)

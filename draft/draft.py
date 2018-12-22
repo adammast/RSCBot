@@ -57,7 +57,8 @@ class Draft:
                 try:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
-                    freeAgentRole = self.find_role(server.roles, server_dict['Free Agent'])
+                    free_agent_dict = server_dict.setdefault("Free agent roles", {})
+                    freeAgentRole = self.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
                     if teamRole in user.roles:
                         message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
                     else:
@@ -90,6 +91,12 @@ class Draft:
                 currentNickname = array[0]
             return currentNickname
         return user.name
+
+    def get_tier_name(self, teamRole):
+        try:
+            return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
+        except:
+            raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
 
     # Config
     def check_configs(self):
