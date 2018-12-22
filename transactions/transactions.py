@@ -31,10 +31,10 @@ class Transactions:
                 freeAgentRole = None
                 if(len(free_agent_dict.items()) > 0):
                     for value in free_agent_dict.items():
-                        await self.bot.say("Searching for role with id {0}".format(value))
+                        #await self.bot.say("Searching for role with id {0}".format(value[1]))
                         for role in user.roles:
-                            await self.bot.say("Comparing against {0.name} role with id {0.id}".format(role))
-                            if role.id == value:
+                            #await self.bot.say("Comparing against {0.name} role with id {0.id}".format(role))
+                            if role.id == value[1]:
                                 freeAgentRole = role
                                 break
                 message = "{0} was signed by the {1}".format(user.mention, teamRole.mention)
