@@ -31,7 +31,9 @@ class Transactions:
                 freeAgentRole = None
                 if(len(free_agent_dict.items()) > 0):
                     for value in free_agent_dict.items():
+                        await self.bot.say("Searching for role with id {0}".format(value))
                         for role in user.roles:
+                            await self.bot.say("Comparing against {0.name} role with id {0.id}".format(role))
                             if role.id == value:
                                 freeAgentRole = role
                                 break
