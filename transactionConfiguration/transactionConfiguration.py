@@ -107,7 +107,7 @@ class TransactionConfiguration:
                 try:
                     try:
                         freeAgentRole = self.find_role(server.roles, value)
-                        await self.bot.say("Franchise role for {0} = {1}".format(key, freeAgentRole.mention))
+                        await self.bot.say("Free agent role for {0} = {1}".format(key, freeAgentRole.mention))
                     except LookupError:
                         await self.bot.say(":x: Could not find free agent role with id of {0}".format(value))
                 except IndexError:
