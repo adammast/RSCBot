@@ -58,13 +58,13 @@ class Draft:
                     leagueRole = self.find_role(server.roles, leagueRoleId)
                     channel = server.get_channel(channelId)
                     free_agent_dict = server_dict.setdefault("Free agent roles", {})
-                    freeAgentRole = self.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
+                    freeAgentRole = freeAgentRole = self.find_free_agent_role(free_agent_dict, user)
+                    if freeAgentRole is not None:
+                        await self.bot.remove_roles(user, freeAgentRole)
                     if teamRole in user.roles:
                         message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
                     else:
                         message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-                    if freeAgentRole in user.roles:
-                        await self.bot.remove_roles(user, freeAgentRole)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, self.get_player_nickname(user)))
                     await self.bot.add_roles(user, teamRole, leagueRole, franchiseRole)
                     await self.bot.send_message(channel, message)
@@ -92,11 +92,13 @@ class Draft:
             return currentNickname
         return user.name
 
-    def get_tier_name(self, teamRole):
-        try:
-            return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
-        except:
-            raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
+    def find_free_agent_role(self, free_agent_dict, user):
+        if(len(free_agent_dict.items()) > 0):
+            for value in free_agent_dict.items():
+                for role in user.roles:
+                    if role.id == value[1]:
+                        return role
+        return None
 
     # Config
     def check_configs(self):
