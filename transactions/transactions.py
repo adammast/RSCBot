@@ -28,7 +28,7 @@ class Transactions:
         if channel is not None:
             try:
                 free_agent_dict = server_dict.setdefault("Free agent roles", {})
-                freeAgentRole is None
+                freeAgentRole = None
                 if(len(free_agent_dict.items()) > 0):
                     for value in free_agent_dict.items():
                         for role in user.roles:
