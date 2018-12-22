@@ -82,6 +82,54 @@ class TransactionConfiguration:
             await self.bot.say(":x: Something went wrong when trying to clear the franchise role dictionary")
 
     @commands.command(pass_context=True)
+    async def setFreeAgentRole(self, ctx, tier, role : discord.Role):
+        """Used to set the free agent roles for the different tiers"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        free_agent_dict = server_dict.setdefault("Free agent roles", {})
+            
+        try:
+            free_agent_dict[tier] = role.id
+            self.save_data()
+            await self.bot.say("Franchise role for {0} = {1}".format(tier, role.mention))
+        except IndexError:
+            await self.bot.say(":x: Error adding info to the free agent role dictionary")
+
+    @commands.command(pass_context=True)
+    async def getFreeAgentRoles(self, ctx):
+        """Used to get all free agent roles for the different tiers"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        free_agent_dict = server_dict.setdefault("Free agent roles", {})
+
+        if(len(free_agent_dict.items()) > 0):
+            for key, value in free_agent_dict.items():
+                try:
+                    try:
+                        freeAgentRole = self.find_role(server.roles, value)
+                        await self.bot.say("Franchise role for {0} = {1}".format(key, freeAgentRole.mention))
+                    except LookupError:
+                        await self.bot.say(":x: Could not find free agent role with id of {0}".format(value))
+                except IndexError:
+                    await self.bot.say(":x: Error finding key value pair in free agent role dictionary")
+        else:
+            await self.bot.say(":x: No free agent roles are set in the dictionary")
+
+    @commands.command(pass_context=True)
+    async def clearFreeAgentRoles(self, ctx):
+        """Used to clear the free agent role dictionary"""
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        free_agent_dict = server_dict.setdefault("Free agent roles", {})
+
+        try:
+            free_agent_dict.clear()
+            self.save_data()
+            await self.bot.say(":white_check_mark: All free agent roles have been removed from dictionary")
+        except:
+            await self.bot.say(":x: Something went wrong when trying to clear the free agent role dictionary")
+
+    @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server = ctx.message.server
@@ -170,55 +218,6 @@ class TransactionConfiguration:
                 await self.bot.say(":white_check_mark: League role no longer set to {0}".format(leagueRole.name))
         else:
             await self.bot.say(":x: League role has not been set")
-
-    @commands.command(pass_context=True)
-    async def setFreeAgentRole(self, ctx, freeAgentRole : discord.Role):
-        """Assigns the specified role as the free agent role so it can be given to all the players that are cut"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-
-        try:
-            server_dict.setdefault('Free Agent', freeAgentRole.id)
-            self.save_data()
-            await self.bot.say(":white_check_mark: Free agent role now set to {0}".format(freeAgentRole.name))
-        except:
-            await self.bot.say(":x: Error setting free agent role to {0}".format(freeAgentRole.name))
-
-    @commands.command(pass_context=True)
-    async def getFreeAgentRole(self, ctx):
-        """Gets the free agent role"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        
-        try:
-            freeAgentRoleId = server_dict['Free Agent']
-        except KeyError:
-            await self.bot.say(":x: Free agent role not currently set")
-        else:
-            try:
-                freeAgentRole = self.find_role(server.roles, freeAgentRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find free agent role with id of {0}".format(freeAgentRoleId))
-            else:
-                await self.bot.say("Free agent role currently set to {0}".format(freeAgentRole.name))
-
-    @commands.command(pass_context=True)
-    async def unsetFreeAgentRole(self, ctx):
-        """Unassignes the free agent role"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-
-        freeAgentRoleId = server_dict.pop('Free Agent', None)
-        if freeAgentRoleId:
-            try:
-                freeAgentRole = self.find_role(server.roles, freeAgentRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find role with id of {0}".format(freeAgentRoleId))
-            else:
-                self.save_data()
-                await self.bot.say(":white_check_mark: Free agent role no longer set to {0}".format(freeAgentRole.name))
-        else:
-            await self.bot.say(":x: Free agent role has not been set")
 
     def find_role(self, roles, roleId):
         for role in roles:

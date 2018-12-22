@@ -45,7 +45,8 @@ class Transactions:
         channel = await self.remove_player_from_team(ctx, server_dict, user, teamRole)
         if channel is not None:
             try:
-                freeAgentRole = self.find_role(ctx.message.server.roles, server_dict['Free Agent'])
+                free_agent_dict = server_dict.setdefault("Free agent roles", {})
+                freeAgentRole = self.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
                 await self.bot.change_nickname(user, "FA | {0}".format(self.get_player_nickname(user)))
                 await self.bot.add_roles(user, freeAgentRole)
                 message = "{0} was cut by the {1} They will now be on waivers".format(user.mention, teamRole.mention)
@@ -104,6 +105,12 @@ class Transactions:
             return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
         except:
             raise LookupError('GM name not found from role {0}'.format(teamRole.name))
+
+    def get_tier_name(self, teamRole):
+        try:
+            return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
+        except:
+            raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
 
     async def add_player_to_team(self, ctx, server_dict, user, teamRole):
         if teamRole in user.roles:
