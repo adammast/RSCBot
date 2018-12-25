@@ -77,10 +77,11 @@ class Draft:
             await self.bot.say(":x: Transaction log channel not set")
                                           
     def find_role(self, roles, roleId):
-        for role in roles:
-            if role.id == roleId:
-                return role
-        raise LookupError('roleId not found in server roles')
+        try:
+            return self.bot.get_cog("TransactionConfiguration").find_role(roles, roleId)
+        except:
+            #cog transactionConfiguration isn't loaded
+            self.bot.say(":x: TransactionConfiguration isn't loaded")
 
     def get_player_nickname(self, user : discord.Member):
         if user.nick is not None:
@@ -100,27 +101,12 @@ class Draft:
                         return role
         return None
 
-    # Config
-    def check_configs(self):
-        self.check_folders()
-        self.check_files()
-
-    def check_folders(self):
-        if not os.path.exists(self.DATA_FOLDER):
-            os.makedirs(self.DATA_FOLDER, exist_ok=True)
-
-    def check_files(self):
-        self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
-
-    def check_file(self, file, default):
-        if not dataIO.is_valid_json(file):
-            dataIO.save_json(file, default)
-
-    def load_data(self):
-        self.config = dataIO.load_json(self.CONFIG_FILE_PATH)
-
-    def save_data(self):
-        dataIO.save_json(self.CONFIG_FILE_PATH, self.config)
+    def get_server_dict(self, ctx):
+        try:
+            return self.bot.get_cog("TransactionConfiguration").get_server_dict(ctx)
+        except:
+            #cog transactionConfiguration isn't loaded
+            self.bot.say(":x: TransactionConfiguration isn't loaded")
 
 def setup(bot):
     bot.add_cog(Draft(bot))

@@ -5,9 +5,16 @@ from discord.ext import commands
 
 class Transactions:
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
+    
+    CONFIG_COG = None
 
     def __init__(self, bot):
         self.bot = bot
+        try:
+            self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
+        except:
+            #cog transactionConfiguration isn't loaded
+            self.bot.say(":x: TransactionConfiguration isn't loaded")
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -87,10 +94,7 @@ class Transactions:
             self.bot.say(":x: TransactionConfiguration isn't loaded")
 
     def find_role(self, roles, roleId):
-        for role in roles:
-            if role.id == roleId:
-                return role
-        raise LookupError('roleId not found in server roles')
+        return self.CONFIG_COG.find_role(roles, roleId)
 
     def get_gm_name(self, teamRole):
         try:
@@ -144,6 +148,12 @@ class Transactions:
                     await self.bot.remove_roles(user, teamRole, franchiseRole)
                     return channel
 
+    async def get_league_role(self, server_dict, server):
+        self.CONFIG_COG.get_league_role(server_dict, server)
+
+    async def get_transaction_channel(self, server_dict, server):
+        self.CONFIG_COG.get_transaction_channel(server_dict, server)
+
     def get_player_nickname(self, user : discord.Member):
         if user.nick is not None:
             array = user.nick.split(' | ', 1)
@@ -183,26 +193,6 @@ class Transactions:
                 await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
-
-    async def get_transaction_channel(self, server_dict, server):
-        try:
-            channelId = server_dict['Transaction Channel']
-            try:
-                return server.get_channel(channelId)
-            except:
-                await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
-        except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
-
-    async def get_league_role(self, server_dict, server):
-        try:
-            leagueRoleId = server_dict['League Role']
-            try:
-                return self.find_role(server.roles, leagueRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
-        except KeyError:
-            await self.bot.say(":x: League role not currently set")
 
 def setup(bot):
     bot.add_cog(Transactions(bot))

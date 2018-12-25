@@ -140,16 +140,10 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def getTransactionLogChannel(self, ctx):
         """Gets the transaction-log channel"""
-        server = ctx.message.server
-        server_dict = self.get_server_dict(ctx)
-        
-        try:
-            channelId = server_dict['Transaction Channel']
-        except KeyError:
-            await self.bot.say(":x: Transaction log channel not currently set")
-        else:
-             channel = server.get_channel(channelId)
-             await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
+        channel = await self.get_transaction_channel(self.get_server_dict(ctx), ctx.message.server)
+        if(channel is not None):
+            await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
+             
 
     @commands.command(pass_context=True)
     async def unsetTransactionLogChannel(self, ctx):
@@ -180,20 +174,9 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def getLeagueRole(self, ctx):
         """Gets the league role"""
-        server = ctx.message.server
-        server_dict = self.get_server_dict(ctx)
-        
-        try:
-            leagueRoleId = server_dict['League Role']
-        except KeyError:
-            await self.bot.say(":x: League role not currently set")
-        else:
-            try:
-                leagueRole = self.find_role(server.roles, leagueRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
-            else:
-                await self.bot.say("League role currently set to {0}".format(leagueRole.name))
+        leagueRole = await self.get_league_role(self.get_server_dict(ctx), ctx.message.server)
+        if(leagueRole):
+            await self.bot.say("League role currently set to {0}".format(leagueRole.name))
 
     @commands.command(pass_context=True)
     async def unsetLeagueRole(self, ctx):
@@ -224,6 +207,26 @@ class TransactionConfiguration:
         self.load_data()
         server_dict = self.config.setdefault(server.id, {})
         return server_dict
+
+    async def get_transaction_channel(self, server_dict, server):
+        try:
+            channelId = server_dict['Transaction Channel']
+            try:
+                return server.get_channel(channelId)
+            except:
+                await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
+        except KeyError:
+            await self.bot.say(":x: Transaction log channel not set")
+
+    async def get_league_role(self, server_dict, server):
+        try:
+            leagueRoleId = server_dict['League Role']
+            try:
+                return self.find_role(server.roles, leagueRoleId)
+            except LookupError:
+                await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
+        except KeyError:
+            await self.bot.say(":x: League role not currently set")
 
     # Config
     def check_configs(self):
