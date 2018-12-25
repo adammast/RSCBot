@@ -81,11 +81,10 @@ class Transactions:
 
     def get_server_dict(self, ctx):
         try:
-            server_dict = self.bot.get_cog("transactionConfiguration").get_server_dict(ctx)
-            return server_dict
+            return self.bot.get_cog("TransactionConfiguration").get_server_dict(ctx)
         except:
             #cog transactionConfiguration isn't loaded
-            self.bot.say(":x: transactionConfiguration isn't loaded")
+            self.bot.say(":x: TransactionConfiguration isn't loaded")
 
     def find_role(self, roles, roleId):
         for role in roles:
