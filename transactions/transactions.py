@@ -1,24 +1,13 @@
 import discord
-import os.path
-import os
 import re
 
-from .utils.dataIO import dataIO
 from discord.ext import commands
-from cogs.utils import checks
 
 class Transactions:
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    DATA_FOLDER = "data/transactionConfiguration"
-    CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
-
-    CONFIG_DEFAULT = {}
-
     def __init__(self, bot):
         self.bot = bot
-        self.check_configs()
-        self.load_data()
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -91,10 +80,12 @@ class Transactions:
                 await self.bot.say("Done")
 
     def get_server_dict(self, ctx):
-        server = ctx.message.server
-        self.load_data()
-        server_dict = self.config.setdefault(server.id, {})
-        return server_dict
+        try:
+            self.bot.get_cog("transactionConfiguration").get_server_dict()
+            return server_dict
+        except:
+            #cog transactionConfiguration isn't loaded
+            self.bot.say(":x: transactionConfiguration isn't loaded")
 
     def find_role(self, roles, roleId):
         for role in roles:
@@ -213,28 +204,6 @@ class Transactions:
                 await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
         except KeyError:
             await self.bot.say(":x: League role not currently set")
-
-    # Config
-    def check_configs(self):
-        self.check_folders()
-        self.check_files()
-
-    def check_folders(self):
-        if not os.path.exists(self.DATA_FOLDER):
-            os.makedirs(self.DATA_FOLDER, exist_ok=True)
-
-    def check_files(self):
-        self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
-
-    def check_file(self, file, default):
-        if not dataIO.is_valid_json(file):
-            dataIO.save_json(file, default)
-
-    def load_data(self):
-        self.config = dataIO.load_json(self.CONFIG_FILE_PATH)
-
-    def save_data(self):
-        dataIO.save_json(self.CONFIG_FILE_PATH, self.config)
 
 def setup(bot):
     bot.add_cog(Transactions(bot))
