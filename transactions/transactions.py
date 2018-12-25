@@ -81,7 +81,7 @@ class Transactions:
 
     def get_server_dict(self, ctx):
         try:
-            self.bot.get_cog("transactionConfiguration").get_server_dict()
+            self.bot.get_cog("transactionConfiguration").get_server_dict(ctx)
             return server_dict
         except:
             #cog transactionConfiguration isn't loaded
