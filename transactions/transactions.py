@@ -149,10 +149,10 @@ class Transactions:
                     return channel
 
     async def get_league_role(self, server_dict, server):
-        return self.CONFIG_COG.get_league_role(server_dict, server)
+        return await self.CONFIG_COG.get_league_role(server_dict, server)
 
     async def get_transaction_channel(self, server_dict, server):
-        return self.CONFIG_COG.get_transaction_channel(server_dict, server)
+        return await self.CONFIG_COG.get_transaction_channel(server_dict, server)
 
     def get_player_nickname(self, user : discord.Member):
         if user.nick is not None:
