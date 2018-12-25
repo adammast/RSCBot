@@ -10,11 +10,7 @@ class Transactions:
 
     def __init__(self, bot):
         self.bot = bot
-        try:
-            self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
-        except:
-            #cog transactionConfiguration isn't loaded
-            self.bot.say(":x: TransactionConfiguration isn't loaded")
+        self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
