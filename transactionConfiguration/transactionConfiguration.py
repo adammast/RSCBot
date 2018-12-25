@@ -24,7 +24,7 @@ class TransactionConfiguration:
     async def announce(self, ctx, message):
         """Posts the message to the transaction log channel"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
 
         try:
             channelId = server_dict['Transaction Channel']
@@ -36,8 +36,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def setFranchiseRole(self, ctx, gmName, role : discord.Role):
         """Used to set the franchise roles for the given GM names"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         franchise_dict = server_dict.setdefault("Franchise roles", {})
             
         try:
@@ -51,7 +50,7 @@ class TransactionConfiguration:
     async def getFranchiseRoles(self, ctx):
         """Used to get all franchise roles in the franchise dictionary"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         franchise_dict = server_dict.setdefault("Franchise roles", {})
 
         if(len(franchise_dict.items()) > 0):
@@ -70,8 +69,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def clearFranchiseRoles(self, ctx):
         """Used to clear the franchise role dictionary"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         franchise_dict = server_dict.setdefault("Franchise roles", {})
 
         try:
@@ -84,8 +82,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def setFreeAgentRole(self, ctx, tier, role : discord.Role):
         """Used to set the free agent roles for the different tiers"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         free_agent_dict = server_dict.setdefault("Free agent roles", {})
             
         try:
@@ -99,7 +96,7 @@ class TransactionConfiguration:
     async def getFreeAgentRoles(self, ctx):
         """Used to get all free agent roles for the different tiers"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         free_agent_dict = server_dict.setdefault("Free agent roles", {})
 
         if(len(free_agent_dict.items()) > 0):
@@ -118,8 +115,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def clearFreeAgentRoles(self, ctx):
         """Used to clear the free agent role dictionary"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         free_agent_dict = server_dict.setdefault("Free agent roles", {})
 
         try:
@@ -132,8 +128,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
 
         try:
             server_dict.setdefault('Transaction Channel', tlog.id)
@@ -146,7 +141,7 @@ class TransactionConfiguration:
     async def getTransactionLogChannel(self, ctx):
         """Gets the transaction-log channel"""
         server = ctx.message.server
-        server_dict = self.config.default(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         
         try:
             channelId = server_dict['Transaction Channel']
@@ -160,7 +155,7 @@ class TransactionConfiguration:
     async def unsetTransactionLogChannel(self, ctx):
         """Unassignes the transaction-log channel"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
 
         channelId = server_dict.pop('Transaction Channel', None)
         if channelId:
@@ -173,8 +168,7 @@ class TransactionConfiguration:
     @commands.command(pass_context=True)
     async def setLeagueRole(self, ctx, leagueRole : discord.Role):
         """Assigns the specified role as the "League" role so it can be given to all the players that are drafted"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
 
         try:
             server_dict.setdefault('League Role', leagueRole.id)
@@ -187,7 +181,7 @@ class TransactionConfiguration:
     async def getLeagueRole(self, ctx):
         """Gets the league role"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
         
         try:
             leagueRoleId = server_dict['League Role']
@@ -205,7 +199,7 @@ class TransactionConfiguration:
     async def unsetLeagueRole(self, ctx):
         """Unassignes the league role"""
         server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
+        server_dict = self.get_server_dict(ctx)
 
         leagueRoleId = server_dict.pop('League Role', None)
         if leagueRoleId:
@@ -224,6 +218,12 @@ class TransactionConfiguration:
             if role.id == roleId:
                 return role
         raise LookupError('roleId not found in server roles')
+
+    def get_server_dict(self, ctx):
+        server = ctx.message.server
+        self.load_data()
+        server_dict = self.config.setdefault(server.id, {})
+        return server_dict
 
     # Config
     def check_configs(self):
