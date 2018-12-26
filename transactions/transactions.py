@@ -13,7 +13,7 @@ class Transactions:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
-    async def getTeam(self, ctx, teamName):
+    async def getTeam(self, ctx, teamName : str):
         roles = ctx.message.server.roles
         for role in roles:
             if role.name[1:len(teamName)] == teamName:
