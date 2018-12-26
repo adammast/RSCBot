@@ -93,6 +93,42 @@ class Transactions:
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
+    @commands.command(pass_context=True)
+    async def promote(self, ctx, user : discord.Member, teamRole : discord.Role):
+        server_dict = self.CONFIG_COG.get_server_dict(ctx)
+        tierList = self.CONFIG_COG.get_tier_list(ctx)
+        oldTeamRole = None
+        for role in user.roles:
+            if self.get_tier_name(role) in tierList:
+                oldTeamRole = self.CONFIG_COG.find_role(role)
+
+        if oldTeamRole is not None:
+            await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
+            channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
+            if channel:
+                message = "{0} was promoted to the {1}".format(user.mention, teamRole.mention)
+                await self.bot.send_message(channel, message)
+        else:
+            await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
+
+    @commands.command(pass_context=True)
+    async def relegate(self, ctx, user : discord.Member, teamRole : discord.Role):
+        server_dict = self.CONFIG_COG.get_server_dict(ctx)
+        tierList = self.CONFIG_COG.get_tier_list(ctx)
+        oldTeamRole = None
+        for role in user.roles:
+            if self.get_tier_name(role) in tierList:
+                oldTeamRole = self.CONFIG_COG.find_role(role)
+
+        if oldTeamRole is not None:
+            await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
+            channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
+            if channel:
+                message = "{0} was relegated to the {1}".format(user.mention, teamRole.mention)
+                await self.bot.send_message(channel, message)
+        else:
+            await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
+
     def get_gm_name(self, teamRole):
         try:
             return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]

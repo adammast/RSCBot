@@ -34,7 +34,7 @@ class TransactionConfiguration:
             await self.bot.say(":x: Transaction log channel not set")
 
     @commands.command(pass_context=True)
-    async def setFranchiseRole(self, ctx, gmName, role : discord.Role):
+    async def addFranchiseRole(self, ctx, gmName, role : discord.Role):
         """Used to set the franchise roles for the given GM names"""
         server_dict = self.get_server_dict(ctx)
         franchise_dict = server_dict.setdefault("Franchise roles", {})
@@ -80,7 +80,7 @@ class TransactionConfiguration:
             await self.bot.say(":x: Something went wrong when trying to clear the franchise role dictionary")
 
     @commands.command(pass_context=True)
-    async def setFreeAgentRole(self, ctx, tier, role : discord.Role):
+    async def addFreeAgentRole(self, ctx, tier, role : discord.Role):
         """Used to set the free agent roles for the different tiers"""
         server_dict = self.get_server_dict(ctx)
         free_agent_dict = server_dict.setdefault("Free agent roles", {})
@@ -124,6 +124,45 @@ class TransactionConfiguration:
             await self.bot.say(":white_check_mark: All free agent roles have been removed from dictionary")
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the free agent role dictionary")
+
+    @commands.command(pass_context=True)
+    async def addTier(self, ctx, tier):
+        """Used to add a tier to the tier list"""
+        server_dict = self.get_server_dict(ctx)
+        tierList = server_dict.setdefault("Tiers", [])
+            
+        try:
+            tierList.append(tier)
+            self.save_data()
+            await self.bot.say(":white_check_mark: {0} added to tier list".format(tier))
+        except:
+            await self.bot.say(":x: Error adding {0} to the tier list".format(tier))
+
+    @commands.command(pass_context=True)
+    async def getTiers(self, ctx):
+        """Used to get all the tiers in the tier list"""
+        server_dict = self.get_server_dict(ctx)
+        tierList = server_dict.setdefault("Tiers", [])
+
+        if(len(tierList) > 0):
+            await self.bot.say("Tiers:")
+            for tier in tierList:
+                await self.bot.say(tier)
+        else:
+            await self.bot.say(":x: No free agent roles are set in the dictionary")
+
+    @commands.command(pass_context=True)
+    async def clearTiers(self, ctx):
+        """Used to clear the tier list"""
+        server_dict = self.get_server_dict(ctx)
+        tierList = server_dict.setdefault("Tiers", [])
+
+        try:
+            tierList.clear()
+            self.save_data()
+            await self.bot.say(":white_check_mark: All tiers removed from list")
+        except:
+            await self.bot.say(":x: Something went wrong when trying to clear the tier list")
 
     @commands.command(pass_context=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
@@ -207,6 +246,10 @@ class TransactionConfiguration:
         self.load_data()
         server_dict = self.config.setdefault(server.id, {})
         return server_dict
+
+    def get_tier_list(self, ctx):
+        server_dict = self.get_server_dict(ctx)
+        return server_dict.setdefault("Tiers", [])
 
     async def get_transaction_channel(self, server_dict, server):
         try:
