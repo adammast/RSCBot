@@ -27,7 +27,10 @@ class Transactions:
                             teamMembers.append(member)
                 message = "```{0}:".format(role.name)
                 if gm:
-                    message += "\n{0} (GM".format(gm.nick)
+                    if gm.nick:
+                        message += "\n{0} (GM".format(gm.nick)
+                    else:
+                        message += "\n{0} (GM".format(gm.name)
                     if self.CONFIG_COG.find_role_by_name(gm.roles, "Captain") is not None:
                         message += "|C)"
                     else:
