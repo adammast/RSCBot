@@ -27,11 +27,16 @@ class Draft:
             try:
                 free_agent_dict = server_dict.setdefault("Free agent roles", {})
                 freeAgentRole = self.TRANS_COG.find_free_agent_role(free_agent_dict, user)
-                draftEligibleRole = await self.get_draft_eligible_role(server_dict, ctx.message.server)
+                # draftEligibleRole = await self.get_draft_eligible_role(server_dict, ctx.message.server)
                 await self.bot.send_message(channel, message)
+                draftEligibleRole = None
+                for role in user.roles:
+                    if role.name == "Draft Eligible":
+                        draftEligibleRole = role
+                        break
                 if freeAgentRole is not None:
                     await self.bot.remove_roles(user, freeAgentRole)
-                if draftEligibleRole in user.roles:
+                if draftEligibleRole is not None:
                     await self.bot.remove_roles(user, draftEligibleRole)
                 await self.bot.say("Done")
             except KeyError:
