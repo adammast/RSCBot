@@ -22,7 +22,7 @@ class Draft:
             message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
         else:
             message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
-        channel = await self.TRANS_COG.add_player_to_team(ctx, server_dict, user, teamRole, None)
+        channel = await self.TRANS_COG.add_player_to_team(ctx, server_dict, user, teamRole)
         if channel is not None:
             try:
                 free_agent_dict = server_dict.setdefault("Free agent roles", {})

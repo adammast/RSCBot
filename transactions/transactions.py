@@ -15,8 +15,12 @@ class Transactions:
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
+        if teamRole in user.roles:
+            await self.bot.say(":x: {0} is already on the {1}".format(user.mention, teamRole.mention))
+            return
+
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        channel = await self.add_player_to_team(ctx, server_dict, user, teamRole, True)
+        channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
         if channel is not None:
             try:
                 free_agent_dict = server_dict.setdefault("Free agent roles", {})
@@ -54,11 +58,18 @@ class Transactions:
     @commands.command(pass_context=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, user2 : discord.Member, newTeamRole2 : discord.Role):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
+        if newTeamRole in user.roles:
+            await self.bot.say(":x: {0} is already on the {1}".format(user.mention, newTeamRole.mention))
+            return
+        if newTeamRole2 in user2.roles:
+            await self.bot.say(":x: {0} is already on the {1}".format(user2.mention, newTeamRole2.mention))
+            return
+
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         await self.remove_player_from_team(ctx, server_dict, user, newTeamRole2)
         await self.remove_player_from_team(ctx, server_dict, user2, newTeamRole)
-        await self.add_player_to_team(ctx, server_dict, user, newTeamRole, True)
-        channel = await self.add_player_to_team(ctx, server_dict, user2, newTeamRole2, True)
+        await self.add_player_to_team(ctx, server_dict, user, newTeamRole)
+        channel = await self.add_player_to_team(ctx, server_dict, user2, newTeamRole2)
         if channel is not None:
             message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, newTeamRole2.mention, newTeamRole.mention, user2.mention)
             await self.bot.send_message(channel, message)
@@ -102,12 +113,7 @@ class Transactions:
                         return role
         return None
 
-    async def add_player_to_team(self, ctx, server_dict, user, teamRole, checkIfOnTeam):
-        if checkIfOnTeam:
-            if teamRole in user.roles:
-                await self.bot.say(":x: {0} is already on the {1}".format(user.mention, teamRole.mention))
-                return False
-
+    async def add_player_to_team(self, ctx, server_dict, user, teamRole):
         channel = await self.CONFIG_COG.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             leagueRole = await self.CONFIG_COG.get_league_role(server_dict, ctx.message.server)
