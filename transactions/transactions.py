@@ -137,7 +137,8 @@ class Transactions:
 
     def get_tier_name(self, teamRole):
         try:
-            return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
+            tierName = re.findall(r'\w*\b(?=\))', teamRole.name)[0]
+            return tierName
         except:
             raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
 

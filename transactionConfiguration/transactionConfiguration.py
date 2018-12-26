@@ -149,7 +149,7 @@ class TransactionConfiguration:
             for tier in tierList:
                 await self.bot.say(tier)
         else:
-            await self.bot.say(":x: No free agent roles are set in the dictionary")
+            await self.bot.say(":x: No tiers in tier list")
 
     @commands.command(pass_context=True)
     async def clearTiers(self, ctx):
