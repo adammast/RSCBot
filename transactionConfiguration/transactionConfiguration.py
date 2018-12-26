@@ -208,7 +208,7 @@ class TransactionConfiguration:
         for role in roles:
             if role.name == roleName:
                 return role
-        raise LookupError('roleName not found in roles')
+        return None
 
     def get_server_dict(self, ctx):
         server = ctx.message.server

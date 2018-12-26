@@ -21,20 +21,20 @@ class Transactions:
                 teamMembers = []
                 for member in ctx.message.server.members:
                     if role in member.roles:
-                        if self.CONFIG_COG.find_role_by_name(member.roles, "General Manager"):
+                        if self.CONFIG_COG.find_role_by_name(member.roles, "General Manager") is not None:
                             gm = member
                         else:
                             teamMembers.append(member)
                 message = "```{0}:".format(role.name)
                 if gm:
                     message += "\n{0} (GM".format(gm.nick)
-                    if self.CONFIG_COG.find_role_by_name(gm.roles, "Captain"):
+                    if self.CONFIG_COG.find_role_by_name(gm.roles, "Captain") is not None:
                         message += "|C)"
                     else:
                         message += ")"
                 for member in teamMembers:
                     message += "\n{0}".format(member.nick)
-                    if self.CONFIG_COG.find_role_by_name(member.roles, "Captain"):
+                    if self.CONFIG_COG.find_role_by_name(member.roles, "Captain") is not None:
                         message += " (C)"
                 message += "```"
                 await self.bot.say(message)
