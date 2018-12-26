@@ -82,7 +82,7 @@ class Transactions:
 
         channel = await self.CONFIG_COG.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
-            leagueRole = await self.CONFIG_COG.get_league_role(server_dict, ctx.message.server)
+            leagueRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "League")
             if leagueRole is not None:
                 if teamRole in user.roles:
                     await self.bot.remove_roles(user, teamRole)
@@ -156,7 +156,7 @@ class Transactions:
     async def add_player_to_team(self, ctx, server_dict, user, teamRole):
         channel = await self.CONFIG_COG.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
-            leagueRole = await self.CONFIG_COG.get_league_role(server_dict, ctx.message.server)
+            leagueRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "League")
             if leagueRole is not None:
                 franchiseRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
                 if franchiseRole is not None:

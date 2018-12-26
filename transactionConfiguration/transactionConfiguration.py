@@ -198,48 +198,17 @@ class TransactionConfiguration:
         else:
             await self.bot.say(":x: Transaction log channel has not been set")
 
-    @commands.command(pass_context=True)
-    async def setLeagueRole(self, ctx, leagueRole : discord.Role):
-        """Assigns the specified role as the "League" role so it can be given to all the players that are drafted"""
-        server_dict = self.get_server_dict(ctx)
-
-        try:
-            server_dict.setdefault('League Role', leagueRole.id)
-            self.save_data()
-            await self.bot.say(":white_check_mark: League role now set to {0}".format(leagueRole.name))
-        except:
-            await self.bot.say(":x: Error setting league role to {0}".format(leagueRole.name))
-
-    @commands.command(pass_context=True)
-    async def getLeagueRole(self, ctx):
-        """Gets the league role"""
-        leagueRole = await self.get_league_role(self.get_server_dict(ctx), ctx.message.server)
-        if(leagueRole):
-            await self.bot.say("League role currently set to {0}".format(leagueRole.name))
-
-    @commands.command(pass_context=True)
-    async def unsetLeagueRole(self, ctx):
-        """Unassignes the league role"""
-        server = ctx.message.server
-        server_dict = self.get_server_dict(ctx)
-
-        leagueRoleId = server_dict.pop('League Role', None)
-        if leagueRoleId:
-            try:
-                leagueRole = self.find_role(server.roles, leagueRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find role with id of {0}".format(leagueRoleId))
-            else:
-                self.save_data()
-                await self.bot.say(":white_check_mark: League role no longer set to {0}".format(leagueRole.name))
-        else:
-            await self.bot.say(":x: League role has not been set")
-
     def find_role(self, roles, roleId):
         for role in roles:
             if role.id == roleId:
                 return role
         raise LookupError('roleId not found in server roles')
+
+    def find_role_by_name(self, roles, roleName):
+        for role in roles:
+            if role.name == roleName:
+                return role
+        raise LookupError('roleName not found in server roles')
 
     def get_server_dict(self, ctx):
         server = ctx.message.server
@@ -260,16 +229,6 @@ class TransactionConfiguration:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
-
-    async def get_league_role(self, server_dict, server):
-        try:
-            leagueRoleId = server_dict['League Role']
-            try:
-                return self.find_role(server.roles, leagueRoleId)
-            except LookupError:
-                await self.bot.say(":x: Could not find league role with id of {0}".format(leagueRoleId))
-        except KeyError:
-            await self.bot.say(":x: League role not currently set")
 
     # Config
     def check_configs(self):
