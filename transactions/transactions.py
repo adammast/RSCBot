@@ -137,7 +137,7 @@ class Transactions:
             tierName = self.get_tier_name(role)
             if tierName is not None:
                 if tierName in tierList:
-                    return self.CONFIG_COG.find_role(role)
+                    return role
 
     def find_free_agent_role(self, free_agent_dict, user):
         if(len(free_agent_dict.items()) > 0):
