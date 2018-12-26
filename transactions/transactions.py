@@ -13,8 +13,11 @@ class Transactions:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
-    async def getTeam(self, ctx, teamName : discord.Role):
-        await self.bot.say(teamName.mention)
+    async def getTeam(self, ctx, teamName):
+        roles = ctx.message.server.roles
+        for role in roles:
+            if role.name[1:len(teamName)] == teamName:
+                await self.bot.say(role.name)
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
