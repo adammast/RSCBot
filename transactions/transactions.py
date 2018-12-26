@@ -13,6 +13,10 @@ class Transactions:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
+    async def getTeam(self, ctx, teamName : discord.Role):
+        await self.bot.say(teamName.mention)
+
+    @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         if teamRole in user.roles:
