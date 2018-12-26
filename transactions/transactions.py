@@ -13,11 +13,31 @@ class Transactions:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
-    async def getTeam(self, ctx, teamName : str):
+    async def teamList(self, ctx, teamName : str):
         roles = ctx.message.server.roles
         for role in roles:
             if role.name.lower().startswith(teamName.lower()):
-                await self.bot.say(role.name)
+                gm = None
+                teamMembers = []
+                for member in ctx.message.server.members:
+                    if role in member.roles:
+                        if self.CONFIG_COG.find_role_by_name(member.roles, "General Manager"):
+                            gm = member
+                        else:
+                            teamMembers.append(member)
+                message = "```{0}:".format(role.name)
+                if gm:
+                    message += "\n{0} (GM".format(gm.nick)
+                    if self.CONFIG_COG.find_role_by_name(gm.roles, "Captain"):
+                        message += "|C)"
+                    else:
+                        message += ")"
+                for member in teamMembers:
+                    message += "\n{0}".format(member.nick)
+                    if self.CONFIG_COG.find_role_by_name(member.roles, "Captain"):
+                        message += " (C)"
+                message += "```"
+                await self.bot.say(message)
                 return
         await self.bot.say(":x: Could not match {0} to a role".format(teamName))
 
