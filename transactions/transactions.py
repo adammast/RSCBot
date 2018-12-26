@@ -99,7 +99,7 @@ class Transactions:
         oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
             if self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != self.get_franchise_role(server_dict, ctx.message.server, teamRole):
-                await self.bot.say(":x: New team is not in the same franchise as {0}'s current team".format(user.name))
+                await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(teamRole.name, user.name, oldTeamRole.name))
                 return
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
             channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
@@ -115,7 +115,7 @@ class Transactions:
         oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
             if self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != self.get_franchise_role(server_dict, ctx.message.server, teamRole):
-                await self.bot.say(":x: New team is not in the same franchise as {0}'s current team".format(user.name))
+                await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(teamRole.name, user.name, oldTeamRole.name))
                 return
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
             channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
