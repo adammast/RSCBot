@@ -129,7 +129,7 @@ class Transactions:
         try:
             return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
         except:
-            raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
+            return None
 
     def get_current_team_role(self, ctx, user : discord.Member):
         tierList = self.CONFIG_COG.get_tier_list(ctx)
