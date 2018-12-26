@@ -96,12 +96,7 @@ class Transactions:
     @commands.command(pass_context=True)
     async def promote(self, ctx, user : discord.Member, teamRole : discord.Role):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        tierList = self.CONFIG_COG.get_tier_list(ctx)
-        oldTeamRole = None
-        for role in user.roles:
-            if self.get_tier_name(role) in tierList:
-                oldTeamRole = self.CONFIG_COG.find_role(role)
-
+        oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
             channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
@@ -114,12 +109,7 @@ class Transactions:
     @commands.command(pass_context=True)
     async def relegate(self, ctx, user : discord.Member, teamRole : discord.Role):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        tierList = self.CONFIG_COG.get_tier_list(ctx)
-        oldTeamRole = None
-        for role in user.roles:
-            if self.get_tier_name(role) in tierList:
-                oldTeamRole = self.CONFIG_COG.find_role(role)
-
+        oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
             channel = await self.add_player_to_team(ctx, server_dict, user, teamRole)
@@ -137,10 +127,17 @@ class Transactions:
 
     def get_tier_name(self, teamRole):
         try:
-            tierName = re.findall(r'\w*\b(?=\))', teamRole.name)[0]
-            return tierName
+            return re.findall(r'\w*\b(?=\))', teamRole.name)[0]
         except:
             raise LookupError('Tier name not found from role {0}'.format(teamRole.name))
+
+    def get_current_team_role(self, ctx, user : discord.Member):
+        tierList = self.CONFIG_COG.get_tier_list(ctx)
+        for role in user.roles:
+            tierName = self.get_tier_name(role)
+            if tierName is not None:
+                if tierName in tierList:
+                    return self.CONFIG_COG.find_role(role)
 
     def find_free_agent_role(self, free_agent_dict, user):
         if(len(free_agent_dict.items()) > 0):
