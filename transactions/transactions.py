@@ -16,12 +16,10 @@ class Transactions:
     async def getTeam(self, ctx, teamName : str):
         roles = ctx.message.server.roles
         for role in roles:
-            roleName = role.name[0:len(teamName)]
-            await self.bot.say("Testing: {0}".format(roleName))
-            if roleName == teamName:
+            if role.name.lower().startswith(teamName.lower()):
                 await self.bot.say(role.name)
                 return
-        await self.bot.say(":x: Could not match teamName to a role")
+        await self.bot.say(":x: Could not match {0} to a role".format(teamName))
 
     @commands.command(pass_context=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
