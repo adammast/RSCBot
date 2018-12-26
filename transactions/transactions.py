@@ -16,7 +16,9 @@ class Transactions:
     async def getTeam(self, ctx, teamName : str):
         roles = ctx.message.server.roles
         for role in roles:
-            if role.name[0:(len(teamName) - 1)] == teamName:
+            roleName = role.name[0:(len(teamName) - 1)]
+            await self.bot.say("Testing: {0}".format(roleName))
+            if roleName == teamName:
                 await self.bot.say(role.name)
                 return
         await self.bot.say(":x: Could not match teamName to a role")
