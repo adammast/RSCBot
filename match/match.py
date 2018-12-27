@@ -13,7 +13,7 @@ class Match:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
-    async def addMatches(self, ctx, matchInfo):
+    async def addMatches(self, ctx, * matchInfo):
         for x in matchInfo:
             await self.bot.say(x)
 
