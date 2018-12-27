@@ -52,6 +52,7 @@ class Match:
         try:
             server_dict.setdefault('Match Day', day)
             self.CONFIG_COG.save_data()
+            await self.bot.say("Done")
         except:
             await self.bot.say(":x: Error trying to set the match day. Make sure that the transaction configuration cog is loaded")
 
