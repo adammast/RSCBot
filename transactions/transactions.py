@@ -196,6 +196,7 @@ class Transactions:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
             try:
                 gmName = self.get_gm_name(teamRole)
+                await self.bot.say("GM = {0}".format(gmName))
                 try:
                     return self.CONFIG_COG.find_role(server.roles, franchise_dict[gmName])
                 except KeyError:

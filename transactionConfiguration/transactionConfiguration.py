@@ -30,6 +30,7 @@ class TransactionConfiguration:
             channelId = server_dict['Transaction Channel']
             channel = server.get_channel(channelId)
             await self.bot.send_message(channel, message)
+            await self.bot.say("Done")
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
 
