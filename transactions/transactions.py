@@ -192,8 +192,10 @@ class Transactions:
         return user.name
 
     async def get_franchise_role(self, server_dict, server, teamRole):
+        await self.bot.say("Test")
         try:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
+            await self.bot.say("Test2")
             try:
                 gmName = self.get_gm_name(teamRole)
                 await self.bot.say("GM = {0}".format(gmName))
