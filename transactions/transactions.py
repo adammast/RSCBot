@@ -106,6 +106,7 @@ class Transactions:
             if channel:
                 message = "{0} was promoted to the {1}".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
         else:
             await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
@@ -114,12 +115,7 @@ class Transactions:
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
-            await self.bot.say("Test")
-            oldFranRole = await self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole)
-            await self.bot.say("Test 2")
-            franRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
-            await self.bot.say("Test 3")
-            if oldFranRole != franRole:
+            if await self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != await self.get_franchise_role(server_dict, ctx.message.server, teamRole):
                 await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(teamRole.name, user.name, oldTeamRole.name))
                 return
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
@@ -127,6 +123,7 @@ class Transactions:
             if channel:
                 message = "{0} was relegated to the {1}".format(user.mention, teamRole.mention)
                 await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
         else:
             await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
@@ -199,10 +196,8 @@ class Transactions:
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
             franchise_dict = server_dict.setdefault("Franchise roles", {})
-            await self.bot.say("Test2")
             try:
                 gmName = self.get_gm_name(teamRole)
-                await self.bot.say("GM = {0}".format(gmName))
                 try:
                     return self.CONFIG_COG.find_role(server.roles, franchise_dict[gmName])
                 except KeyError:
