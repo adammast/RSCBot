@@ -195,19 +195,13 @@ class Transactions:
 
     async def get_franchise_role(self, server_dict, server, teamRole):
         try:
-            franchise_dict = server_dict.setdefault("Franchise roles", {})
-            try:
-                gmName = self.get_gm_name(teamRole)
-                try:
-                    return self.CONFIG_COG.find_role(server.roles, franchise_dict[gmName])
-                except KeyError:
-                    await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
-                except LookupError:
-                    await self.bot.say(":x: Could not find franchise role with id of {0}".format(franchise_dict[gmName]))
-            except LookupError:
-                await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
-        except KeyError:
-            await self.bot.say(":x: Couldn't find franchise role dictionary")
+            gmName = self.get_gm_name(teamRole)
+            for role in server.roles:
+                if re.findall(r'(?<=\().*(?=\))', role.name)[0] == gmName:
+                    return role
+            await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
+        except LookupError:
+            await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
 
     async def get_prefix(self, server_dict, teamRole):
         try:
