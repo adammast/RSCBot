@@ -35,52 +35,6 @@ class TransactionConfiguration:
             await self.bot.say(":x: Transaction log channel not set")
 
     @commands.command(pass_context=True)
-    async def addFranchiseRole(self, ctx, gmName, role : discord.Role):
-        """Used to set the franchise roles for the given GM names"""
-        server_dict = self.get_server_dict(ctx)
-        franchise_dict = server_dict.setdefault("Franchise roles", {})
-            
-        try:
-            franchise_dict[gmName] = role.id
-            self.save_data()
-            await self.bot.say("Franchise role for {0} = {1}".format(gmName, role.mention))
-        except IndexError:
-            await self.bot.say(":x: Error adding info to the franchise role dictionary")
-
-    @commands.command(pass_context=True)
-    async def getFranchiseRoles(self, ctx):
-        """Used to get all franchise roles in the franchise dictionary"""
-        server = ctx.message.server
-        server_dict = self.get_server_dict(ctx)
-        franchise_dict = server_dict.setdefault("Franchise roles", {})
-
-        if(len(franchise_dict.items()) > 0):
-            for key, value in franchise_dict.items():
-                try:
-                    try:
-                        franchiseRole = self.find_role(server.roles, value)
-                        await self.bot.say("Franchise role for {0} = {1}".format(key, franchiseRole.mention))
-                    except LookupError:
-                        await self.bot.say(":x: Could not find franchise role with id of {0}".format(value))
-                except IndexError:
-                    await self.bot.say(":x: Error finding key value pair in franchise role dictionary")
-        else:
-            await self.bot.say(":x: No franchise roles are set in the dictionary")
-
-    @commands.command(pass_context=True)
-    async def clearFranchiseRoles(self, ctx):
-        """Used to clear the franchise role dictionary"""
-        server_dict = self.get_server_dict(ctx)
-        franchise_dict = server_dict.setdefault("Franchise roles", {})
-
-        try:
-            franchise_dict.clear()
-            self.save_data()
-            await self.bot.say(":white_check_mark: All franchise roles have been removed from dictionary")
-        except:
-            await self.bot.say(":x: Something went wrong when trying to clear the franchise role dictionary")
-
-    @commands.command(pass_context=True)
     async def addFreeAgentRole(self, ctx, tier, role : discord.Role):
         """Used to set the free agent roles for the different tiers"""
         server_dict = self.get_server_dict(ctx)
