@@ -197,12 +197,9 @@ class Transactions:
         try:
             gmName = self.get_gm_name(teamRole)
             for role in server.roles:
-                try:
-                    gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
-                    if gmNameFromRole == gmName:
-                        return role
-                except:
-                    await self.bot.say("Failed on {0}".format(role.name))
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole == gmName:
+                    return role
             await self.bot.say(":x: Franchise role not found for {0}".format(gmName))
         except LookupError:
             await self.bot.say('GM name not found from role {0}'.format(teamRole.name))
