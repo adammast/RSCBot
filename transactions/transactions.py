@@ -98,7 +98,7 @@ class Transactions:
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
-            if self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != self.get_franchise_role(server_dict, ctx.message.server, teamRole):
+            if await self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != await self.get_franchise_role(server_dict, ctx.message.server, teamRole):
                 await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(teamRole.name, user.name, oldTeamRole.name))
                 return
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
@@ -114,7 +114,12 @@ class Transactions:
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         oldTeamRole = self.get_current_team_role(ctx, user)
         if oldTeamRole is not None:
-            if await self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole) != await self.get_franchise_role(server_dict, ctx.message.server, teamRole):
+            await self.bot.say("Test")
+            oldFranRole = await self.get_franchise_role(server_dict, ctx.message.server, oldTeamRole)
+            await self.bot.say("Test 2")
+            franRole = await self.get_franchise_role(server_dict, ctx.message.server, teamRole)
+            await self.bot.say("Test 3")
+            if oldFranRole != franRole:
                 await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(teamRole.name, user.name, oldTeamRole.name))
                 return
             await self.remove_player_from_team(ctx, server_dict, user, oldTeamRole)
