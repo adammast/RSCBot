@@ -129,7 +129,7 @@ class Transactions:
 
     def get_gm_name(self, teamRole):
         try:
-            return re.findall(r'(?<=\()\w*\b', teamRole.name)[0]
+            return re.findall(r'(?<=\().*(?=\))', teamRole.name)[0].split('-')[0].strip()
         except:
             raise LookupError('GM name not found from role {0}'.format(teamRole.name))
 
