@@ -21,7 +21,7 @@ class TransactionConfiguration:
         self.load_data()
 
     @commands.command(pass_context=True)
-    async def announce(self, ctx, message):
+    async def genericAnnounce(self, ctx, message):
         """Posts the message to the transaction log channel"""
         server = ctx.message.server
         server_dict = self.get_server_dict(ctx)
