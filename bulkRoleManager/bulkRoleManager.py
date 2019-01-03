@@ -83,7 +83,7 @@ class BulkRoleManager:
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in ctx.message.server.members:
                     nickname = self.get_player_nickname(member)
-                    await self.bot.say("{1} : {0.name}#{0.discriminator} : {0.id}".format(member, nickname))
+                    await self.bot.say("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
             except:
                 notFound.append(user)
         if len(notFound) > 0:
