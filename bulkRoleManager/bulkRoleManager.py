@@ -73,7 +73,23 @@ class BulkRoleManager:
         if added > 0:
             message += ". {0} user(s) had the role added to them".format(added)
         await self.bot.say(message)
-            
+
+    
+    @commands.command(pass_context=True)
+    async def getId(self, ctx, *userList):
+        notFound = []
+        for user in userList:
+            try:
+                member = commands.MemberConverter(ctx, user).convert()
+                if member in ctx.message.server.members:
+                    await self.bot.say("{0.nick} : {0.name}#{0.discriminator} : {0.id}".format(member))
+            except:
+                notFound.append(user)
+        if len(notFound) > 0:
+            await self.bot.say(":x: Couldn't find:")
+            for user in notFound:
+                await self.bot.say(user)
+       
 
 def setup(bot):
     bot.add_cog(BulkRoleManager(bot))
