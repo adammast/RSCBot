@@ -82,13 +82,24 @@ class BulkRoleManager:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in ctx.message.server.members:
-                    await self.bot.say("{0.nick} : {0.name}#{0.discriminator} : {0.id}".format(member))
+                    nickname = get_player_nickname(member)
+                    await self.bot.say("{1} : {0.name}#{0.discriminator} : {0.id}".format(member, nickname))
             except:
                 notFound.append(user)
         if len(notFound) > 0:
             await self.bot.say(":x: Couldn't find:")
             for user in notFound:
                 await self.bot.say(user)
+
+    def get_player_nickname(self, user : discord.Member):
+        if user.nick is not None:
+            array = user.nick.split(' | ', 1)
+            if len(array) == 2:
+                currentNickname = array[1].strip()
+            else:
+                currentNickname = array[0]
+            return currentNickname
+        return user.name
        
 
 def setup(bot):
