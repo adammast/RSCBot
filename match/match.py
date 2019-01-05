@@ -1,5 +1,6 @@
 import discord
 import re
+import ast
 
 from discord.ext import commands
 
@@ -13,8 +14,9 @@ class Match:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
     @commands.command(pass_context=True)
-    async def addMatches(self, ctx, * matchInfo):
-        for x in matchInfo:
+    async def addMatches(self, ctx, matchInfo):
+        matches = ast.literal_eval(matchInfo)
+        for x in matches:
             await self.bot.say(x)
 
     @commands.command(pass_context=True)
