@@ -43,8 +43,7 @@ class Transactions:
         if channel is not None:
             try:
                 if freeAgentRole is None:
-                    free_agent_dict = server_dict.setdefault("Free agent roles", {})
-                    freeAgentRole = self.CONFIG_COG.find_role(ctx.message.server.roles, free_agent_dict[self.get_tier_name(teamRole)])
+                    freeAgentRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "{0}FA".format(self.get_tier_name(teamRole)))
                 await self.bot.change_nickname(user, "FA | {0}".format(self.get_player_nickname(user)))
                 await self.bot.add_roles(user, freeAgentRole)
                 message = "{0} was cut by the {1} They will now be on waivers".format(user.mention, teamRole.mention)
