@@ -15,13 +15,13 @@ class Draft:
         self.TRANS_COG = self.bot.get_cog("Transactions")
 
     @commands.command(pass_context=True)
-    async def draft(self, ctx, user : discord.Member, teamRole : discord.Role):
+    async def draft(self, ctx, user : discord.Member, teamRole : discord.Role, round: int, pick: int):
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         if teamRole in user.roles:
-            message = "{0} was kept by the {1}".format(user.mention, teamRole.mention)
+            message = "Round {0} Pick {1}: {2} was kept by the {3}".format(round, pick, user.mention, teamRole.mention)
         else:
-            message = "{0} was drafted by the {1}".format(user.mention, teamRole.mention)
+            message = "Round {0} Pick {1}: {2} was drafted by the {3}".format(round, pick, user.mention, teamRole.mention)
         channel = await self.TRANS_COG.add_player_to_team(ctx, server_dict, user, teamRole)
         if channel is not None:
             try:
