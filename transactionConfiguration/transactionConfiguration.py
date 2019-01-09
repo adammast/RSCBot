@@ -1,6 +1,7 @@
 import discord
 import os.path
 import os
+import json
 
 from .utils.dataIO import dataIO
 from discord.ext import commands
@@ -205,6 +206,8 @@ class TransactionConfiguration:
         self.config = dataIO.load_json(self.CONFIG_FILE_PATH)
 
     def save_data(self):
+        # print("CONFIG_COG: Saving data:")
+        # print(json.dumps(self.config, indent=4, sort_keys=True))
         dataIO.save_json(self.CONFIG_FILE_PATH, self.config)
 
 def setup(bot):
