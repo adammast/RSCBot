@@ -24,7 +24,7 @@ class Draft:
         else:
             message = "Round {0} Pick {1}: {2} was drafted by the {3}".format(round, pick, user.mention, teamRole.mention)
         currentTeamRole = self.TRANS_COG.get_current_team_role(ctx, user)
-        if currentTeamRole != teamRole:
+        if currentTeamRole is not None and currentTeamRole != teamRole:
             await self.bot.remove_roles(user, currentTeamRole)
         channel = await self.TRANS_COG.add_player_to_team(ctx, server_dict, user, teamRole)
         if channel is not None:
