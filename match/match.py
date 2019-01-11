@@ -75,7 +75,7 @@ class Match:
         for teamRole in teamRoles:
             matchIndex = await self._teamDayMatchIndex(ctx, teamRole.id, matchDay)
             if matchIndex is not None:
-                await self.bot.send_message(ctx.author, self._formatMatchInfo(ctx, matchIndex, teamRoleForInfo))
+                await self.bot.send_message(ctx.message.author, self._formatMatchInfo(ctx, matchIndex, teamRoleForInfo))
             else:
                 await self.bot.send_message(ctx.author, "No match on day {0} for {1}".format(matchDay, teamRole.name))
             await self.bot.delete_message(ctx.message)
