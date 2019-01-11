@@ -14,7 +14,7 @@ class PrefixManager:
 
     CONFIG_DEFAULT = {}
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def setPrefixes(self, ctx, *gmNameAndPrefix):
         """Used to set prefixes for the given role name"""
         server = ctx.message.server
@@ -30,7 +30,7 @@ class PrefixManager:
             except IndexError:
                 await self.bot.say(":x: Error finding key value pair in arguments")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
         server = ctx.message.server
@@ -47,7 +47,7 @@ class PrefixManager:
             await self.bot.say(":x: No prefixes are set in the dictionary")
         
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
         server = ctx.message.server

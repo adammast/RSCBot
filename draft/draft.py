@@ -14,7 +14,7 @@ class Draft:
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
         self.TRANS_COG = self.bot.get_cog("Transactions")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def draft(self, ctx, user : discord.Member, teamRole : discord.Role, round: int, pick: int):
         """Assigns the team role and league role to a user when they are drafted and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)

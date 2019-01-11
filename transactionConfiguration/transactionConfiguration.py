@@ -21,7 +21,7 @@ class TransactionConfiguration:
         self.check_configs()
         self.load_data()
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def genericAnnounce(self, ctx, message):
         """Posts the message to the transaction log channel"""
         server = ctx.message.server
@@ -35,7 +35,7 @@ class TransactionConfiguration:
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def addFreeAgentRole(self, ctx, tier, role : discord.Role):
         """Used to set the free agent roles for the different tiers"""
         server_dict = self.get_server_dict(ctx)
@@ -48,7 +48,7 @@ class TransactionConfiguration:
         except IndexError:
             await self.bot.say(":x: Error adding info to the free agent role dictionary")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getFreeAgentRoles(self, ctx):
         """Used to get all free agent roles for the different tiers"""
         server = ctx.message.server
@@ -68,7 +68,7 @@ class TransactionConfiguration:
         else:
             await self.bot.say(":x: No free agent roles are set in the dictionary")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def clearFreeAgentRoles(self, ctx):
         """Used to clear the free agent role dictionary"""
         server_dict = self.get_server_dict(ctx)
@@ -81,7 +81,7 @@ class TransactionConfiguration:
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the free agent role dictionary")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def addTier(self, ctx, tier):
         """Used to add a tier to the tier list"""
         server_dict = self.get_server_dict(ctx)
@@ -94,7 +94,7 @@ class TransactionConfiguration:
         except:
             await self.bot.say(":x: Error adding {0} to the tier list".format(tier))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getTiers(self, ctx):
         """Used to get all the tiers in the tier list"""
         server_dict = self.get_server_dict(ctx)
@@ -107,7 +107,7 @@ class TransactionConfiguration:
         else:
             await self.bot.say(":x: No tiers in tier list")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def clearTiers(self, ctx):
         """Used to clear the tier list"""
         server_dict = self.get_server_dict(ctx)
@@ -120,7 +120,7 @@ class TransactionConfiguration:
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the tier list")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
         server_dict = self.get_server_dict(ctx)
@@ -132,7 +132,7 @@ class TransactionConfiguration:
         except:
             await self.bot.say(":x: Error setting transaction log channel to {0}".format(tlog.mention))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getTransactionLogChannel(self, ctx):
         """Gets the transaction-log channel"""
         channel = await self.get_transaction_channel(self.get_server_dict(ctx), ctx.message.server)
@@ -140,7 +140,7 @@ class TransactionConfiguration:
             await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
              
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def unsetTransactionLogChannel(self, ctx):
         """Unassignes the transaction-log channel"""
         server = ctx.message.server

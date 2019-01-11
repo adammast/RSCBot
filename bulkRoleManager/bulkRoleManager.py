@@ -8,7 +8,7 @@ class BulkRoleManager:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getAllWithRole(self, ctx, role : discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
@@ -27,7 +27,7 @@ class BulkRoleManager:
                 await self.bot.say(message)
             await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def removeRoleFromAll(self, ctx, role : discord.Role):
         """Removes the role from every member who has it in the server"""
         empty = True
@@ -41,7 +41,7 @@ class BulkRoleManager:
             await self.bot.say(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def addRole(self, ctx, role : discord.Role, *userList):
         empty = True
         added = 0
@@ -75,7 +75,7 @@ class BulkRoleManager:
         await self.bot.say(message)
 
     
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def getId(self, ctx, *userList):
         notFound = []
         for user in userList:

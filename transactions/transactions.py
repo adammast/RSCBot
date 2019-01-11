@@ -12,7 +12,7 @@ class Transactions:
         self.bot = bot
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
         if teamRole in user.roles:
@@ -35,7 +35,7 @@ class Transactions:
             except LookupError:
                 await self.bot.say(":x: Free agent role not found in server")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def cut(self, ctx, user : discord.Member, teamRole : discord.Role, freeAgentRole : discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix to a user and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
@@ -54,7 +54,7 @@ class Transactions:
             except LookupError:
                 await self.bot.say(":x: Free agent role not found in server")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def trade(self, ctx, user : discord.Member, newTeamRole : discord.Role, user2 : discord.Member, newTeamRole2 : discord.Role):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
         if newTeamRole in user.roles:
@@ -74,7 +74,7 @@ class Transactions:
             await self.bot.send_message(channel, message)
             await self.bot.say("Done")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
         """Adds the team role to the user and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
@@ -92,7 +92,7 @@ class Transactions:
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def promote(self, ctx, user : discord.Member, teamRole : discord.Role):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         oldTeamRole = self.get_current_team_role(ctx, user)
@@ -109,7 +109,7 @@ class Transactions:
         else:
             await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
-    @commands.command(pass_context=True)
+    @commands.command(pass_context=True, no_pm=True)
     async def relegate(self, ctx, user : discord.Member, teamRole : discord.Role):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         oldTeamRole = self.get_current_team_role(ctx, user)
