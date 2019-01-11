@@ -128,7 +128,7 @@ class Match:
         This match day is used when accessing the info in the !match command.
         """
         self.getData(ctx)
-        self.data.setdefault("Match Day", day)
+        self.data["Match Day"] = day
         try:
             self.saveData()
             await self.bot.say("Done")
