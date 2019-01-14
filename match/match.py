@@ -188,6 +188,7 @@ class Match:
         try:
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
+            self.bot.say(err)
             match_date_error = "Date not valid: {0}".format(err)
         homeRole = self.team_manager.team_for_name(ctx, home)
         awayRole = self.team_manager.team_for_name(ctx, away)
@@ -202,6 +203,7 @@ class Match:
             errors.append("Date provided is not valid. "
                           "(Make sure to use the right format.)")
         if not homeRole:
+            self.bot.say(homeRole.name)
             errors.append("Home team role not found.")
         if not awayRole:
             errors.append("Away team role not found.")
