@@ -122,7 +122,7 @@ class Match:
                     "No match on day {0} for {1}".format(match_day,
                                                          team_role.name)
                 )
-            await self.bot.delete_message(ctx.message)
+        await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def addMatches(self, ctx, *matches):
