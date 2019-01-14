@@ -346,7 +346,13 @@ class Match:
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
-        message += "\n\n*Other info here*\n\n"
+        message += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
+                    "and screenshots of the end-of-game scoreboard. Do not leave "
+                    "the game until screenshots have been taken. These must be "
+                    "uploaded by one member of your team after the 4-game series "
+                    "is over. Remember that the deadline to reschedule matches is "
+                    "at 10 minutes before the currently scheduled match time. They "
+                    "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
 
         message += "**Home Team:**\n"
         message += self.team_manager.format_team_info(ctx, home)
