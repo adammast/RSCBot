@@ -203,7 +203,6 @@ class Match:
             errors.append("Date provided is not valid. "
                           "(Make sure to use the right format.)")
         if not homeRole:
-            self.bot.say(homeRole.name)
             errors.append("Home team role not found.")
         if not awayRole:
             errors.append("Away team role not found.")
