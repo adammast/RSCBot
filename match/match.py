@@ -188,7 +188,6 @@ class Match:
         try:
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
-            await self.bot.say(err)
             match_date_error = "Date not valid: {0}".format(err)
         homeRole = self.team_manager.team_for_name(ctx, home)
         awayRole = self.team_manager.team_for_name(ctx, away)
