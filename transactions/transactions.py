@@ -11,6 +11,7 @@ class Transactions:
     def __init__(self, bot):
         self.bot = bot
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
+        self.TEAM_MANAGER = self.bot.get_cog("TeamManager")
 
     @commands.command(pass_context=True, no_pm=True)
     async def sign(self, ctx, user : discord.Member, teamRole : discord.Role):
@@ -139,7 +140,7 @@ class Transactions:
             return None
 
     def get_current_team_role(self, ctx, user : discord.Member):
-        tierList = self.CONFIG_COG.get_tier_list(ctx)
+        tierList = self.TEAM_MANAGER._tiers(ctx)
         for role in user.roles:
             tierName = self.get_tier_name(role)
             if tierName is not None:
