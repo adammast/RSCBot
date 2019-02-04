@@ -1,9 +1,9 @@
-# from typing import List
+from typing import List
 
 import discord
 from discord.ext import commands
 
-# from .utils import checks
+from .utils import checks
 
 
 class Test:
@@ -13,18 +13,18 @@ class Test:
     def __init__(self, bot):
         self.bot = bot
 
-    # def _member_has_role(self, member: discord.Member, role: discord.Role):
-    #     return role in member.roles
+    def _member_has_role(self, member: discord.Member, role: discord.Role):
+        return role in member.roles
 
-    # def _get_users_with_role(self, server: discord.Server,
-    #                          role: discord.Role) -> List[discord.User]:
-    #     roled = []
-    #     for member in server.members:
-    #         if self._member_has_role(member, role):
-    #             roled.append(member)
-    #     return roled
+    def _get_users_with_role(self, server: discord.Server,
+                             role: discord.Role) -> List[discord.User]:
+        roled = []
+        for member in server.members:
+            if self._member_has_role(member, role):
+                roled.append(member)
+        return roled
 
-    # @checks.mod_or_permissions(administrator=True)
+    @checks.mod_or_permissions(administrator=True)
     @commands.command(no_pm=True, pass_context=True)
     async def test(self, ctx, role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.
@@ -42,14 +42,14 @@ class Test:
         except:
             pass
 
-        # dm_these = self._get_users_with_role(server, role)
+        dm_these = self._get_users_with_role(server, role)
 
-        # for user in dm_these:
-        #     try:
-        #         await self.bot.send_message(user,
-        #                                     message.format(user, role, sender))
-        #     except (discord.Forbidden, discord.HTTPException):
-        #         continue
+        for user in dm_these:
+            try:
+                await self.bot.send_message(user,
+                                            message.format(user, role, sender))
+            except (discord.Forbidden, discord.HTTPException):
+                continue
 
 
 def setup(bot: commands.Bot):
