@@ -3,7 +3,7 @@ from typing import List
 import discord
 from discord.ext import commands
 
-# from .utils import checks
+from .utils import checks
 
 
 class MassDM:
@@ -24,11 +24,9 @@ class MassDM:
                 roled.append(member)
         return roled
 
-    @commands.command(no_pm=True, pass_context=True, name="massdm",
-                      aliases=["mdm"])
-    # @checks.mod_or_permissions(administrator=True)
-    async def _mdm(self, ctx: commands.Context,
-                   role: discord.Role, *, message: str):
+    @commands.command(no_pm=True, pass_context=True)
+    @checks.mod_or_permissions(administrator=True)
+    async def massdm(self, ctx, role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.
         Allows for the following customizations:
         {0} is the member being messaged.
