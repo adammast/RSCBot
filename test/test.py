@@ -26,7 +26,7 @@ class Test:
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command(no_pm=True, pass_context=True)
-    async def massdm(self, ctx, role: discord.Role, *, message: str):
+    async def massdm2(self, ctx, role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.
         Allows for the following customizations:
         {0} is the member being messaged.
