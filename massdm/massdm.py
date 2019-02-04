@@ -3,14 +3,14 @@ from typing import List
 import discord
 from discord.ext import commands
 
-# from .utils import checks
+from .utils import checks
 
 
 class MassDM:
 
     """Send a direct message to all members of the specified Role."""
 
-    def __init__(self, bot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     def _member_has_role(self, member: discord.Member, role: discord.Role):
@@ -24,9 +24,11 @@ class MassDM:
                 roled.append(member)
         return roled
 
-    # @checks.mod_or_permissions(administrator=True)
-    @commands.command(no_pm=True, pass_context=True)
-    async def massdm(self, ctx, role: discord.Role, *, message: str):
+    @commands.command(no_pm=True, pass_context=True, name="massdm2",
+                      aliases=["mdm2"])
+    @checks.mod_or_permissions(administrator=True)
+    async def _mdm(self, ctx: commands.Context,
+                   role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.
         Allows for the following customizations:
         {0} is the member being messaged.
