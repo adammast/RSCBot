@@ -43,6 +43,7 @@ class BulkRoleManager:
 
     @commands.command(pass_context=True, no_pm=True)
     async def addRole(self, ctx, role : discord.Role, *userList):
+        """Adds the role to every member that can be found from the userList"""
         empty = True
         added = 0
         had = 0
