@@ -8,7 +8,7 @@ class SheetTest:
     """Test cog for accessing and editing a Google Sheet"""
 
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('Python Test-21ff839e46f8.json', scope)
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('data/sheetTest/Python Test-21ff839e46f8.json', scope)
     gc = gspread.authorize(credentials)
 
     def __init__(self, bot):
