@@ -19,6 +19,9 @@ class SheetTest:
         """Edits the spreadsheet"""
         wks = self.gc.open('Test').sheet1
         await self.bot.say(wks.get_all_records())
+
+        wks..append_row(['This should go in column 1', 'This should go in column 2'])
+        await self.bot.say(wks.get_all_records())
         
        
 
