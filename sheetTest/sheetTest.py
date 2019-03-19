@@ -25,7 +25,7 @@ class SheetTest:
         await self.bot.say(wks.get_all_records())
 
     @commands.command(pass_context=True, no_pm=True)
-    async def read(self, ctx, rowIndex: None, columnIndex: None):
+    async def read(self, ctx, rowIndex: int = None, columnIndex: int = None):
         """Reads data from the spreadsheet at the specified row and column, or reads all data if no row or column are specified."""
         wks = self.gc.open('Test').sheet1
         if(rowIndex and columnIndex):
@@ -34,7 +34,7 @@ class SheetTest:
             await self.bot.say(wks.get_all_records())
 
     @commands.command(pass_context=True, no_pm=True)
-    async def write(self, ctx, rowIndex: typing.Optional[int], columnIndex: typing.Optional[int], message):
+    async def write(self, ctx, message, rowIndex: int = None, columnIndex: int = None):
         """Writes data to the spreadsheet at the specified row and column, or at the bottom of the sheet if no row or column are specified."""
         wks = self.gc.open('Test').sheet1
         if(rowIndex and columnIndex):
