@@ -348,11 +348,16 @@ class Match:
         #       enable crossplay, etc.)
         message += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                     "and screenshots of the end-of-game scoreboard. Do not leave "
-                    "the game until screenshots have been taken. These must be "
-                    "uploaded by one member of your team after the 4-game series "
-                    "is over. Remember that the deadline to reschedule matches is "
-                    "at 10 minutes before the currently scheduled match time. They "
-                    "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
+                    "the game until screenshots have been taken. "
+        #            "These must be uploaded by one member of your team after the 4-game series "
+        #            "is over. Remember that the deadline to reschedule matches is "
+        #            "at 10 minutes before the currently scheduled match time. They "
+        #            "can be scheduled no later than 11:59 PM ET on the original match day.\n\n") 
+        # REGULAR SEASON INFO
+                    "Playoff matches are a best of 5 series for every round until the finals. "
+                    "Screenshots and replays do not need to be uploaded to the website for "
+                    "playoff matches but you will need to report the scores in #score-reporting.\n\n")
+        # PLAYOFF INFO
 
         message += "**Home Team:**\n"
         message += self.team_manager.format_team_info(ctx, home)
