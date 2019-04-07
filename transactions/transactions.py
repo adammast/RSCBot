@@ -204,7 +204,7 @@ class Transactions:
                 prefix = await self.get_prefix(server_dict, franchiseRole)
                 if prefix is not None:
                     currentTier = self.get_current_tier_role(ctx, user)
-                    if currentTier != tierRole:
+                    if currentTier is not None and currentTier != tierRole:
                         await self.bot.remove_roles(currentTier)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, self.get_player_nickname(user)))
                     await self.bot.add_roles(user, tierRole, leagueRole, franchiseRole)
