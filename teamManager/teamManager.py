@@ -20,15 +20,13 @@ class TeamManager:
         self.bot = bot
         self.data_cog = self.bot.get_cog("RscData")
 
-    # @commands.command(pass_context=True, no_pm=True)
-    # async def teamList(self, ctx, teamName: str):
-    #     team_role = self.team_for_name(ctx, teamName)
-    #     if team_role is None:
-    #         await self.bot.say(
-    #             ":x: Could not match {0} to a role".format(teamName))
-    #         return
-    #     await self.bot.say(self.format_team_info(ctx, team_role))
-    #     return
+    @commands.command(pass_context=True, no_pm=True)
+    async def teamList(self, ctx, team_name: str):
+        franchise_role, tier_role = self._roles_for_team(ctx, team_name)
+        if franchise_role is None or tier_role is None:
+            await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
+            return
+        await self.bot.say(self.format_team_info(ctx, team_name, franchise_role, tier_role))
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -59,7 +57,7 @@ class TeamManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teamList(self, ctx):
+    async def teamsList(self, ctx):
         teams = self._teams(ctx)
         if teams:
             await self.bot.say(
@@ -69,23 +67,12 @@ class TeamManager:
 
     @commands.command(pass_context=True, no_pm=True)
     async def teamRoles(self, ctx, team_name: str):
-        teams = self._teams(ctx)
-        if teams:
-            if team_name in teams:
-                team_roles = self._team_roles(ctx)
-                team_data = team_roles.setdefault(team_name, {})
-                franchise_role_id = team_data["Franchise Role"]
-                tier_role_id = team_data["Tier Role"]
-                franchise_role = self._find_role(ctx, franchise_role_id)
-                tier_role = self._find_role(ctx, tier_role_id)
-                if franchise_role and tier_role:
-                    await self.bot.say(
-                        "Franchise role for {0} = {1}\nTier role for {0} = {2}".format(team_name, franchise_role.name, tier_role.name))
-            else:
-                await self.bot.say(
-                    "{0} not found in team list.".format(team_name))
+        franchise_role, tier_role = self._roles_for_team(ctx, team_name)
+        if franchise_role and tier_role:
+            await self.bot.say(
+                    "Franchise role for {0} = {1}\nTier role for {0} = {2}".format(team_name, franchise_role.name, tier_role.name))
         else:
-            await self.bot.say("No teams set up in this server.")
+            await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
 
     @commands.command(pass_context=True, no_pm=True)
     async def addTeam(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
@@ -168,34 +155,34 @@ class TeamManager:
     #             return role
     #     return None
 
-    # def gm_and_members_from_team(self, ctx, team_role):
-    #     """Retrieve tuple with the gm user and a list of other users that are
-    #     on the team indicated by the provided team_role.
-    #     """
-    #     gm = None
-    #     team_members = []
-    #     for member in ctx.message.server.members:
-    #         if team_role in member.roles:
-    #             if self.is_gm(member):
-    #                 gm = member
-    #             else:
-    #                 team_members.append(member)
-    #     return (gm, team_members)
+    def gm_and_members_from_team(self, ctx, franchise_role, tier_role):
+        """Retrieve tuple with the gm user and a list of other users that are
+        on the team indicated by the provided franchise_role and tier_role.
+        """
+        gm = None
+        team_members = []
+        for member in ctx.message.server.members:
+            if franchise_role in member.roles:
+                if self.is_gm(member):
+                    gm = member
+                elif tier_role in member.roles:
+                    team_members.append(member)
+        return (gm, team_members)
 
-    # def format_team_info(self, ctx, team_role):
-    #     gm, team_members = self.gm_and_members_from_team(ctx, team_role)
+    def format_team_info(self, ctx, team_name: str, franchise_role, tier_role):
+        gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
-    #     message = "```\n{0}:\n".format(team_role.name)
-    #     if gm:
-    #         message += "  {0}\n".format(
-    #             self._format_team_member_for_message(gm, "GM"))
-    #     for member in team_members:
-    #         message += "  {0}\n".format(
-    #             self._format_team_member_for_message(member))
-    #     if not team_members:
-    #         message += "  No known members."
-    #     message += "```\n"
-    #     return message
+        message = "```\n{0}:\n".format(team_name)
+        if gm:
+            message += "  {0}\n".format(
+                self._format_team_member_for_message(gm, "GM"))
+        for member in team_members:
+            message += "  {0}\n".format(
+                self._format_team_member_for_message(member))
+        if not team_members:
+            message += "  No known members."
+        message += "```\n"
+        return message
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
@@ -265,6 +252,19 @@ class TeamManager:
             except:
                 continue
         await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
+
+    def _roles_for_team(self, ctx, team_name: str):
+        teams = self._teams(ctx)
+        if teams and team_name in teams:
+            team_roles = self._team_roles(ctx)
+            team_data = team_roles.setdefault(team_name, {})
+            franchise_role_id = team_data["Franchise Role"]
+            tier_role_id = team_data["Tier Role"]
+            franchise_role = self._find_role(ctx, franchise_role_id)
+            tier_role = self._find_role(ctx, tier_role_id)
+            return (franchise_role, tier_role)
+        else:
+           raise LookupError('No team with name: {0}'.format(team_name))
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
