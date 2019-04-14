@@ -92,7 +92,7 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
         try:
-            franchise_role = self.get_franchise_role(ctx, gm_name)
+            franchise_role = await self.get_franchise_role(ctx, gm_name)
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
             team_data["Franchise Role"] = franchise_role.id
