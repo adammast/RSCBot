@@ -111,7 +111,7 @@ class TeamManager:
         team_roles = self._team_roles(ctx)
         try:
             teams.remove(team_name)
-            team_roles.remove(team_name)
+            del team_roles[team_name]
         except ValueError:
             await self.bot.say(
                 "{0} does not seem to be a team.".format(team_name))
