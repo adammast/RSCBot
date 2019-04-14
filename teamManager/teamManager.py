@@ -229,7 +229,7 @@ class TeamManager:
 
     def _team_roles(self, ctx):
         all_data = self._all_data(ctx)
-        team_roles = all_data.setdefault(self.TEAM_ROLES_KEY, [])
+        team_roles = all_data.setdefault(self.TEAM_ROLES_KEY, {})
         return team_roles
 
     def _save_team_roles(self, ctx, team_roles):
