@@ -74,8 +74,8 @@ class TeamManager:
             if team_name in teams:
                 team_roles = self._team_roles(ctx)
                 team_data = team_roles.setdefault(team_name, {})
-                franchise_role_id = team_data[FRANCHISE_ROLE_KEY]
-                tier_role_id = team_data[TIER_ROLE_KEY]
+                franchise_role_id = team_data["Franchise Role"]
+                tier_role_id = team_data["Tier Role"]
                 franchise_role = self.find_role(ctx, franchise_role_id)
                 tier_role = self.find_role(ctx, tier_role_id)
                 if franchise_role and tier_role:
@@ -93,8 +93,8 @@ class TeamManager:
         teams.append(team_name)
         team_roles = self._team_roles(ctx)
         team_data = team_roles.setdefault(team_name, {})
-        team_data[FRANCHISE_ROLE_KEY] = franchise_role.id
-        team_data[TIER_ROLE_KEY] = tier.id
+        team_data["Franchise Role"] = franchise_role.id
+        team_data["Tier Role"] = tier.id
         self._save_teams(ctx, teams)
         self._save_team_roles(ctx, team_roles)
         await self.bot.say("Done.")
