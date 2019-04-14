@@ -266,6 +266,12 @@ class TeamManager:
         else:
            raise LookupError('No team with name: {0}'.format(team_name))
 
+    def _find_team_name(self, ctx, franchise_role, tier_role):
+        teams = self._teams(ctx)
+        for team in teams:
+            if self._roles_for_team(ctx, team) == (franchise_role, tier_role):
+                return team
+
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
 
