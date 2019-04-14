@@ -258,12 +258,10 @@ class TeamManager:
         server = ctx.message.server
         roles = server.roles
         for role in roles:
-            try:
-                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
-                if gmNameFromRole == gm_name:
-                    return role
-            except:
-                await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
+            gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+            if gmNameFromRole == gm_name:
+                return role
+        await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
