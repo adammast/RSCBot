@@ -93,7 +93,7 @@ class TeamManager:
         team_roles = self._team_roles(ctx)
         try:
             try:
-                franchise_role = await self._get_franchise_role(ctx, gm_name)
+                franchise_role = await self.get_franchise_role(ctx, gm_name)
             except:
                 await self.bot.say("Error getting franchise role")
             await self.bot.say("Franchise role = {0} and tier role = {1}".format(franchise_role.name, tier_role.name))
@@ -258,7 +258,7 @@ class TeamManager:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
-    async def _get_franchise_role(self, ctx, gm_name):
+    async def get_franchise_role(self, ctx, gm_name):
         server = ctx.message.server
         roles = server.roles
         for role in roles:
