@@ -182,6 +182,15 @@ class Transactions:
                 return role
         return None
 
+    def get_current_franchise_role(self, user: discord.Member):
+        for role in user.roles:
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole:
+                    return role
+            except:
+                continue
+
     def find_free_agent_role(self, free_agent_dict, user):
         if(len(free_agent_dict.items()) > 0):
             for value in free_agent_dict.items():
@@ -233,15 +242,6 @@ class Transactions:
                 currentNickname = array[0]
             return currentNickname
         return user.name
-
-    def get_current_franchise_role(self, user: discord.Member):
-        for role in user.roles:
-            try:
-                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
-                if gmNameFromRole:
-                    return role
-            except:
-                continue
 
     async def get_prefix(self, server_dict, franchiseRole: discord.Role):
         try:
