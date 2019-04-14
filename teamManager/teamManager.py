@@ -92,11 +92,7 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
         try:
-            try:
-                franchise_role = await self.get_franchise_role(ctx, gm_name)
-            except:
-                await self.bot.say("Error getting franchise role")
-            await self.bot.say("Franchise role = {0} and tier role = {1}".format(franchise_role.name, tier_role.name))
+            franchise_role = await self._get_franchise_role(ctx, gm_name)
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
             team_data["Franchise Role"] = franchise_role.id
@@ -258,13 +254,16 @@ class TeamManager:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
-    async def get_franchise_role(self, ctx, gm_name):
+    async def _get_franchise_role(self, ctx, gm_name):
         server = ctx.message.server
         roles = server.roles
         for role in roles:
-            gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
-            if gmNameFromRole == gm_name:
-                return role
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole == gm_name:
+                    return role
+            except:
+                continue
         await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
 
     def log_info(self, message):
