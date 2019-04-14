@@ -17,7 +17,7 @@ class Transactions:
     async def draft(self, ctx, user: discord.Member, team_name: str, round: int = None, pick: int = None):
         """Assigns the franchise, tier, and league role to a user when they are drafted and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        franchise_role, tier_role = self.TEAM_MANAGER._get_team_roles(ctx, team_name)
+        franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
         if franchise_role in user.roles:
             message = "Round {0} Pick {1}: {2} was kept by the {3}".format(round, pick, user.mention, team_name)
         else:
@@ -49,7 +49,7 @@ class Transactions:
     @commands.command(pass_context=True, no_pm=True)
     async def sign(self, ctx, user: discord.Member, team_name: str):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
-        franchise_role, tier_role = self.TEAM_MANAGER._get_team_roles(ctx, team_name)
+        franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
         if franchise_role in user.roles and tier_role in user.roles:
             await self.bot.say(":x: {0} is already on the {1}".format(user.mention, team_name))
             return
@@ -92,8 +92,8 @@ class Transactions:
     @commands.command(pass_context=True, no_pm=True)
     async def trade(self, ctx, user: discord.Member, new_team_name: str, user_2: discord.Member, new_team_name_2: str):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
-        franchise_role_1, tier_role_1 = self.TEAM_MANAGER._get_team_roles(ctx, new_team_name)
-        franchise_role_2, tier_role_2 = self.TEAM_MANAGER._get_team_roles(ctx, new_team_name_2)
+        franchise_role_1, tier_role_1 = self.TEAM_MANAGER._roles_for_team(ctx, new_team_name)
+        franchise_role_2, tier_role_2 = self.TEAM_MANAGER._roles_for_team(ctx, new_team_name_2)
         if franchise_role_1 in user.roles and tier_role_1 in user.roles:
             await self.bot.say(":x: {0} is already on the {1}".format(user.mention, new_team_name))
             return
