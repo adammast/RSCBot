@@ -76,8 +76,8 @@ class TeamManager:
                 team_data = team_roles.setdefault(team_name, {})
                 franchise_role_id = team_data["Franchise Role"]
                 tier_role_id = team_data["Tier Role"]
-                franchise_role = self.find_role(ctx, franchise_role_id)
-                tier_role = self.find_role(ctx, tier_role_id)
+                franchise_role = self._find_role(ctx, franchise_role_id)
+                tier_role = self._find_role(ctx, tier_role_id)
                 if franchise_role and tier_role:
                     await self.bot.say(
                         "Franchise role for {0} = {1}\nTier role for {0} = {2}".format(team_name, franchise_role.name, tier_role.name))
@@ -92,7 +92,8 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
         try:
-            franchise_role = await self.get_franchise_role(ctx, gm_name)
+            franchise_role = await self._get_franchise_role(ctx, gm_name)
+            await self.bot.say("Franchise role = {0} and tier role = {1}".format(franchise_role.name, tier_role.name))
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
             team_data["Franchise Role"] = franchise_role.id
@@ -246,7 +247,7 @@ class TeamManager:
         all_data[self.TEAM_ROLES_KEY] = team_roles
         self.data_cog.save(ctx, self.DATASET, all_data)
 
-    def find_role(self, ctx, role_id):
+    def _find_role(self, ctx, role_id):
         server = ctx.message.server
         roles = server.roles
         for role in roles:
@@ -254,7 +255,7 @@ class TeamManager:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
-    async def get_franchise_role(self, ctx, gm_name):
+    async def _get_franchise_role(self, ctx, gm_name):
         server = ctx.message.server
         roles = server.roles
         for role in roles:
