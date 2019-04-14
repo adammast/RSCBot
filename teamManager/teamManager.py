@@ -88,13 +88,19 @@ class TeamManager:
             await self.bot.say("No teams set up in this server.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def addTeam(self, ctx, team_name: str, franchise_role: discord.Role, tier: discord.Role):
+    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
         teams = self._teams(ctx)
-        teams.append(team_name)
         team_roles = self._team_roles(ctx)
-        team_data = team_roles.setdefault(team_name, {})
-        team_data["Franchise Role"] = franchise_role.id
-        team_data["Tier Role"] = tier.id
+        try:
+            franchise_role = self.get_franchise_role(ctx, gm_name)
+            teams.append(team_name)
+            team_data = team_roles.setdefault(team_name, {})
+            team_data["Franchise Role"] = franchise_role.id
+            team_data["Tier Role"] = tier.id
+        except:
+            await self.bot.say(
+                "Error trying to add team {0}".format(team_name))
+            return
         self._save_teams(ctx, teams)
         self._save_team_roles(ctx, team_roles)
         await self.bot.say("Done.")
@@ -102,13 +108,16 @@ class TeamManager:
     @commands.command(pass_context=True, no_pm=True)
     async def removeTeam(self, ctx, team_name: str):
         teams = self._teams(ctx)
+        team_roles = self._team_roles(ctx)
         try:
             teams.remove(team_name)
+            team_roles.remove(team_name)
         except ValueError:
             await self.bot.say(
                 "{0} does not seem to be a team.".format(team_name))
             return
         self._save_teams(ctx, teams)
+        self._save_team_roles(ctx, team_roles)
         await self.bot.say("Done.")
 
     def is_gm(self, member):
@@ -244,6 +253,17 @@ class TeamManager:
             if role.id == role_id:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
+
+    async def get_franchise_role(self, ctx, gm_name):
+        server = ctx.message.server
+        roles = server.roles
+        for role in roles:
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole == gm_name:
+                    return role
+            except:
+                await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
