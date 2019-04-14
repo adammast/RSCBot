@@ -92,7 +92,10 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
         try:
-            franchise_role = await self._get_franchise_role(ctx, gm_name)
+            try:
+                franchise_role = await self._get_franchise_role(ctx, gm_name)
+            except:
+                await self.bot.say("Error getting franchise role")
             await self.bot.say("Franchise role = {0} and tier role = {1}".format(franchise_role.name, tier_role.name))
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
