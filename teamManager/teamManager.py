@@ -61,7 +61,7 @@ class TeamManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teamsList(self, ctx):
+    async def listTeams(self, ctx):
         teams = self._teams(ctx)
         if teams:
             await self.bot.say(

@@ -112,7 +112,7 @@ class Transactions:
            await self.bot.say("Done")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def sub(self, ctx, user : discord.Member, teamRole : discord.Role):
+    async def sub(self, ctx, user: discord.Member, team_name: str):
         """Adds the team role to the user and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
 
@@ -120,12 +120,13 @@ class Transactions:
         if channel is not None:
             leagueRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "League")
             if leagueRole is not None:
-                if teamRole in user.roles:
-                    await self.bot.remove_roles(user, teamRole)
-                    message = "{0} has finished their time as a substitute for the {1}".format(user.name, teamRole.name)
+                franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
+                if franchise_role in user.roles and tier_role in user.roles:
+                    await self.bot.remove_roles(user, franchise_role, tier_role)
+                    message = "{0} has finished their time as a substitute for the {1}".format(user.name, team_name)
                 else:
-                    await self.bot.add_roles(user, teamRole, leagueRole)
-                    message = "{0} was signed to a temporary contract by the {1}".format(user.mention, teamRole.mention)
+                    await self.bot.add_roles(user, franchise_role, tier_role, leagueRole)
+                    message = "{0} was signed to a temporary contract by the {1}".format(user.mention, team_name)
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
