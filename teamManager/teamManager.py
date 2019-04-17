@@ -244,7 +244,7 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
 
-        tier_role = self._get_tier_role(self, ctx, tier)
+        tier_role = self._get_tier_role(ctx, tier)
 
         await self.bot.say("Team name: {0}".format(team_name))
         await self.bot.say("GM name: {0}".format(gm_name))
