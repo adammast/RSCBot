@@ -44,7 +44,7 @@ class TransactionConfiguration:
         try:
             free_agent_dict[tier] = role.id
             self.save_data()
-            await self.bot.say("Franchise role for {0} = {1}".format(tier, role.mention))
+            await self.bot.say("Free agent role for {0} = {1}".format(tier, role.mention))
         except IndexError:
             await self.bot.say(":x: Error adding info to the free agent role dictionary")
 
