@@ -112,7 +112,7 @@ class TeamManager:
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def addTeam(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
-        teamAdded = self._add_team(ctx, team_name, gm_name, tier)
+        teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
             await self.bot.say("Done.")
         else:
@@ -240,7 +240,7 @@ class TeamManager:
         tier_matches = re.findall(r'\w*\b(?=\))', team_role.name)
         return None if not tier_matches else tier_matches[0]
 
-    def _add_team(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
+    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
         try:
@@ -250,9 +250,7 @@ class TeamManager:
             team_data["Franchise Role"] = franchise_role.id
             team_data["Tier Role"] = tier.id
         except:
-            await self.bot.say(
-                "Error trying to add team {0}".format(team_name))
-            return
+            return False
         self._save_teams(ctx, teams)
         self._save_team_roles(ctx, team_roles)
         return True
