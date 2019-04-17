@@ -111,7 +111,7 @@ class TeamManager:
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
+    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
         teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
             await self.bot.say("Done.")
@@ -240,13 +240,15 @@ class TeamManager:
         tier_matches = re.findall(r'\w*\b(?=\))', team_role.name)
         return None if not tier_matches else tier_matches[0]
 
-    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
+    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: str):
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
 
+        tier_role = self._get_tier_role(self, ctx, tier)
+
         await self.bot.say("Team name: {0}".format(team_name))
         await self.bot.say("GM name: {0}".format(gm_name))
-        await self.bot.say("Tier role: {0}".format(tier.name))
+        await self.bot.say("Tier role: {0}".format(tier_role.name))
 
         # Validation of input
         # There are other validations we could do, but don't
@@ -256,7 +258,7 @@ class TeamManager:
             errors.append("Team name not found.")
         if not gm_name:
             errors.append("GM name not found.")
-        if not tier:
+        if not tier_role:
             errors.append("Tier role not found.")
         if errors:
             await self.bot.say(":x: Errors with input:\n\n  "
@@ -268,12 +270,19 @@ class TeamManager:
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
             team_data["Franchise Role"] = franchise_role.id
-            team_data["Tier Role"] = tier.id
+            team_data["Tier Role"] = tier_role.id
         except:
             return False
         self._save_teams(ctx, teams)
         self._save_team_roles(ctx, team_roles)
         return True
+
+    def _get_tier_role(self, ctx, tier: str):
+        roles = ctx.message.server.roles
+        for role in roles:
+            if role.name.lower() == tier.lower():
+                return role
+        return None
 
     def _teams(self, ctx):
         all_data = self._all_data(ctx)
