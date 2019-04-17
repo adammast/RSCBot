@@ -1,7 +1,9 @@
 import discord
 import re
+import ast
 
 from discord.ext import commands
+from cogs.utils import checks
 
 
 class TeamManager:
@@ -38,6 +40,7 @@ class TeamManager:
             await self.bot.say("No tiers set up in this server.")
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def addTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         tiers.append(tier_name)
@@ -45,6 +48,7 @@ class TeamManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def removeTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         try:
@@ -75,24 +79,47 @@ class TeamManager:
             await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
 
     @commands.command(pass_context=True, no_pm=True)
-    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
-        teams = self._teams(ctx)
-        team_roles = self._team_roles(ctx)
+    @checks.admin_or_permissions(manage_server=True)
+    async def addTeams(self, ctx, *teams_to_add):
+        """Add the teams provided to the team list.
+
+        Arguments:
+
+        teams_to_add -- One or more teams in the following format:
+        ```
+        "['<team_name>','<gm_name>','<tier>']"
+        ```
+        Each team should be separated by a space.
+
+        Examples:
+        ```
+        [p]addTeams "['Derechos','Shamu','Challenger']"
+        [p]addTeams "['Derechos','Shamu','Challenger']" "['Barbarians','Snipe','Challenger']"
+        ```
+        """
+        addedCount = 0
         try:
-            franchise_role = await self._get_franchise_role(ctx, gm_name)
-            teams.append(team_name)
-            team_data = team_roles.setdefault(team_name, {})
-            team_data["Franchise Role"] = franchise_role.id
-            team_data["Tier Role"] = tier.id
-        except:
-            await self.bot.say(
-                "Error trying to add team {0}".format(team_name))
-            return
-        self._save_teams(ctx, teams)
-        self._save_team_roles(ctx, team_roles)
+            for teamStr in teams_to_add:
+                team = ast.literal_eval(teamStr)
+                await self.bot.say("Adding team: {0}".format(repr(team)))
+                teamAdded = await self._add_team(ctx, *team)
+                if teamAdded:
+                    addedCount += 1
+        finally:
+            await self.bot.say("Added {0} team(s).".format(addedCount))
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
+        teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
+        if(teamAdded):
+            await self.bot.say("Done.")
+        else:
+            await self.bot.say("Error adding team: {0}".format(team_name))
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def removeTeam(self, ctx, team_name: str):
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
@@ -212,6 +239,46 @@ class TeamManager:
     def _extract_tier_from_role(self, team_role):
         tier_matches = re.findall(r'\w*\b(?=\))', team_role.name)
         return None if not tier_matches else tier_matches[0]
+
+    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: str):
+        teams = self._teams(ctx)
+        team_roles = self._team_roles(ctx)
+
+        tier_role = self._get_tier_role(ctx, tier)
+
+        # Validation of input
+        # There are other validations we could do, but don't
+        #     - that there aren't extra args
+        errors = []
+        if not team_name:
+            errors.append("Team name not found.")
+        if not gm_name:
+            errors.append("GM name not found.")
+        if not tier_role:
+            errors.append("Tier role not found.")
+        if errors:
+            await self.bot.say(":x: Errors with input:\n\n  "
+                               "* {0}\n".format("\n  * ".join(errors)))
+            return
+
+        try:
+            franchise_role = await self._get_franchise_role(ctx, gm_name)
+            teams.append(team_name)
+            team_data = team_roles.setdefault(team_name, {})
+            team_data["Franchise Role"] = franchise_role.id
+            team_data["Tier Role"] = tier_role.id
+        except:
+            return False
+        self._save_teams(ctx, teams)
+        self._save_team_roles(ctx, team_roles)
+        return True
+
+    def _get_tier_role(self, ctx, tier: str):
+        roles = ctx.message.server.roles
+        for role in roles:
+            if role.name.lower() == tier.lower():
+                return role
+        return None
 
     def _teams(self, ctx):
         all_data = self._all_data(ctx)
