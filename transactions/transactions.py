@@ -172,7 +172,7 @@ class Transactions:
     def get_current_team_name(self, ctx, user: discord.Member):
         tier_role = self.get_current_tier_role(ctx, user)
         franchise_role = self.get_current_franchise_role(user)
-        return self.TEAM_MANAGER._find_team_name(franchise_role, tier_role)
+        return self.TEAM_MANAGER._find_team_name(ctx, franchise_role, tier_role)
 
 
     def get_current_tier_role(self, ctx, user: discord.Member):
