@@ -146,22 +146,23 @@ class Transactions:
         else:
             await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
-    @commands.command(pass_context=True, no_pm=True)
-    async def relegate(self, ctx, user: discord.Member, team_name: str):
-        server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        old_team_name = self.get_current_team_name(ctx, user)
-        if old_team_name is not None:
-            if self.TEAM_MANAGER._roles_for_team(ctx, old_team_name)[0] != self.TEAM_MANAGER._roles_for_team(ctx, team_name)[0]:
-                await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))
-                return
-            await self.remove_player_from_team(ctx, server_dict, user, old_team_name)
-            channel = await self.add_player_to_team(ctx, server_dict, user, team_name)
-            if channel:
-               message = "{0} was relegated to the {1}".format(user.mention, team_name)
-               await self.bot.send_message(channel, message)
-               await self.bot.say("Done")
-        else:
-            await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
+    ## NO LONGER NEEDED
+    # @commands.command(pass_context=True, no_pm=True)
+    # async def relegate(self, ctx, user: discord.Member, team_name: str):
+    #     server_dict = self.CONFIG_COG.get_server_dict(ctx)
+    #     old_team_name = self.get_current_team_name(ctx, user)
+    #     if old_team_name is not None:
+    #         if self.TEAM_MANAGER._roles_for_team(ctx, old_team_name)[0] != self.TEAM_MANAGER._roles_for_team(ctx, team_name)[0]:
+    #             await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))
+    #             return
+    #         await self.remove_player_from_team(ctx, server_dict, user, old_team_name)
+    #         channel = await self.add_player_to_team(ctx, server_dict, user, team_name)
+    #         if channel:
+    #            message = "{0} was relegated to the {1}".format(user.mention, team_name)
+    #            await self.bot.send_message(channel, message)
+    #            await self.bot.say("Done")
+    #     else:
+    #         await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
     def get_gm_name(self, teamRole):
         try:
