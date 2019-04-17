@@ -243,6 +243,22 @@ class TeamManager:
     async def _add_team(self, ctx, team_name: str, gm_name: str, tier: discord.Role):
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
+
+        # Validation of input
+        # There are other validations we could do, but don't
+        #     - that there aren't extra args
+        errors = []
+        if not team_name:
+            errors.append("Team name not found.")
+        if not gm_name:
+            errors.append("GM name not found.")
+        if not tier:
+            errors.append("Tier role not found.")
+        if errors:
+            await self.bot.say(":x: Errors with input:\n\n  "
+                               "* {0}\n".format("\n  * ".join(errors)))
+            return
+
         try:
             franchise_role = await self._get_franchise_role(ctx, gm_name)
             teams.append(team_name)
