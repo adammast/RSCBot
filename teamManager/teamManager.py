@@ -244,6 +244,10 @@ class TeamManager:
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
 
+        await self.bot.say("Team name: {0}".format(team_name))
+        await self.bot.say("GM name: {0}".format(gm_name))
+        await self.bot.say("Tier role: {0}".format(tier.name))
+
         # Validation of input
         # There are other validations we could do, but don't
         #     - that there aren't extra args
