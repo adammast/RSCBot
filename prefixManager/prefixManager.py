@@ -61,6 +61,18 @@ class PrefixManager:
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def lookupPrefix(self, ctx, gmName: str):
+        server = ctx.message.server
+        server_dict = self.config.setdefault(server.id, {})
+        prefix_dict = server_dict.setdefault("Prefixes", {})
+
+        try:
+            prefix = prefix_dict[gmName]
+            await self.bot.say("Prefix for {0} = {1}".format(gmName, prefix))
+        except KeyError:
+            await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+
     def find_role(self, roles, roleId):
         for role in roles:
             if role.id == roleId:
