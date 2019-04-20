@@ -165,11 +165,11 @@ class Transactions:
     #     else:
     #         await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
-    def get_gm_name(self, teamRole):
+    def get_gm_name(self, franchiseRole):
         try:
-            return re.findall(r'(?<=\().*(?=\))', teamRole.name)[0].split('-')[0].strip()
+            return re.findall(r'(?<=\().*(?=\))', franchiseRole.name)[0]
         except:
-            raise LookupError('GM name not found from role {0}'.format(teamRole.name))
+            raise LookupError('GM name not found from role {0}'.format(franchiseRole.name))
 
     def get_current_team_name(self, ctx, user: discord.Member):
         tier_role = self.get_current_tier_role(ctx, user)
