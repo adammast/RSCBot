@@ -18,10 +18,11 @@ class Transactions:
         """Assigns the franchise, tier, and league role to a user when they are drafted and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
         franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
+        gm_name = self.get_gm_name(franchise_role)
         if franchise_role in user.roles:
-            message = "Round {0} Pick {1}: {2} was kept by the {3}".format(round, pick, user.mention, team_name)
+            message = "Round {0} Pick {1}: {2} was kept by the {3} ({4} - {5})".format(round, pick, user.mention, team_name, gm_name, tier_role.name)
         else:
-            message = "Round {0} Pick {1}: {2} was drafted by the {3}".format(round, pick, user.mention, team_name)
+            message = "Round {0} Pick {1}: {2} was drafted by the {3} ({4} - {5})".format(round, pick, user.mention, team_name, gm_name, tier_role.name)
 
         channel = await self.add_player_to_team(ctx, server_dict, user, team_name)
         if channel is not None:
@@ -60,7 +61,8 @@ class Transactions:
            try:
                free_agent_dict = server_dict.setdefault("Free agent roles", {})
                freeAgentRole = self.find_free_agent_role(free_agent_dict, user)
-               message = "{0} was signed by the {1}".format(user.mention, team_name)
+               gm_name = self.get_gm_name(franchise_role)
+               message = "{0} was signed by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                await self.bot.send_message(channel, message)
                if freeAgentRole is not None:
                    await self.bot.remove_roles(user, freeAgentRole)
@@ -74,6 +76,7 @@ class Transactions:
     async def cut(self, ctx, user : discord.Member, team_name: str, freeAgentRole: discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix to a user and posts to the assigned channel"""
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
+        franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
         channel = await self.remove_player_from_team(ctx, server_dict, user, team_name)
         if channel is not None:
             try:
@@ -81,7 +84,8 @@ class Transactions:
                     freeAgentRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "{0}FA".format(self.get_current_tier_role(ctx, user).name))
                 await self.bot.change_nickname(user, "FA | {0}".format(self.get_player_nickname(user)))
                 await self.bot.add_roles(user, freeAgentRole)
-                message = "{0} was cut by the {1}".format(user.mention, team_name)
+                gm_name = self.get_gm_name(franchise_role)
+                message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
             except KeyError:
@@ -94,6 +98,8 @@ class Transactions:
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
         franchise_role_1, tier_role_1 = self.TEAM_MANAGER._roles_for_team(ctx, new_team_name)
         franchise_role_2, tier_role_2 = self.TEAM_MANAGER._roles_for_team(ctx, new_team_name_2)
+        gm_name_1 = self.get_gm_name(franchise_role_1)
+        gm_name_2 = self.get_gm_name(franchise_role_2)
         if franchise_role_1 in user.roles and tier_role_1 in user.roles:
             await self.bot.say(":x: {0} is already on the {1}".format(user.mention, new_team_name))
             return
@@ -107,7 +113,8 @@ class Transactions:
         await self.add_player_to_team(ctx, server_dict, user, new_team_name)
         channel = await self.add_player_to_team(ctx, server_dict, user_2, new_team_name_2)
         if channel is not None:
-           message = "{0} was traded by the {1} to the {2} for {3}".format(user.mention, new_team_name_2, new_team_name, user_2.mention)
+           message = "{0} was traded by the {1} ({4} - {5}) to the {2} ({6} - {7}) for {3}".format(user.mention, new_team_name_2, new_team_name, 
+                user_2.mention, gm_name_2, tier_role_2.name, gm_name_1, tier_role_1.name)
            await self.bot.send_message(channel, message)
            await self.bot.say("Done")
 
@@ -121,12 +128,13 @@ class Transactions:
             leagueRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "League")
             if leagueRole is not None:
                 franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
+                gm_name = self.get_gm_name(franchise_role)
                 if franchise_role in user.roles and tier_role in user.roles:
                     await self.bot.remove_roles(user, franchise_role, tier_role)
-                    message = "{0} has finished their time as a substitute for the {1}".format(user.name, team_name)
+                    message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm_name, tier_role.name)
                 else:
                     await self.bot.add_roles(user, franchise_role, tier_role, leagueRole)
-                    message = "{0} was signed to a temporary contract by the {1}".format(user.mention, team_name)
+                    message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await self.bot.send_message(channel, message)
                 await self.bot.say("Done")
 
@@ -141,9 +149,11 @@ class Transactions:
             await self.remove_player_from_team(ctx, server_dict, user, old_team_name)
             channel = await self.add_player_to_team(ctx, server_dict, user, team_name)
             if channel:
-               message = "{0} was promoted to the {1}".format(user.mention, team_name)
-               await self.bot.send_message(channel, message)
-               await self.bot.say("Done")
+                franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
+                gm_name = self.get_gm_name(franchise_role)
+                message = "{0} was promoted to the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
+                await self.bot.send_message(channel, message)
+                await self.bot.say("Done")
         else:
             await self.bot.say("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
