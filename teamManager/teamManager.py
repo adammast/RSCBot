@@ -146,15 +146,16 @@ class TeamManager:
                 return True
         return False
 
-    # def teams_for_user(self, ctx, user):
-    #     tiers = self._tiers(ctx)
-    #     team_roles = []
-    #     for role in user.roles:
-    #         tier = self._extract_tier_from_role(role)
-    #         if tier is not None:
-    #             if tier in tiers:
-    #                 team_roles.append(role)
-    #     return team_roles
+    def teams_for_user(self, ctx, user):
+        tiers = self._tiers(ctx)
+        teams = []
+        franchise_role = self.get_current_franchise_role(user)
+        for role in user.roles:
+            if role.name in tiers:
+                tier_role = role
+                team_name = self._find_team_name(ctx, franchise_role, tier_role)
+                teams.append(team_name)
+        return teams
 
     # def teams_for_names(self, ctx, *team_names):
     #     """Retrieve the matching team roles for the provided names.
@@ -338,6 +339,15 @@ class TeamManager:
         for team in teams:
             if self._roles_for_team(ctx, team) == (franchise_role, tier_role):
                 return team
+
+    def get_current_franchise_role(self, user: discord.Member):
+        for role in user.roles:
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole:
+                    return role
+            except:
+                continue
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)

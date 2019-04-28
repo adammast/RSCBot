@@ -183,7 +183,7 @@ class Transactions:
 
     def get_current_team_name(self, ctx, user: discord.Member):
         tier_role = self.get_current_tier_role(ctx, user)
-        franchise_role = self.get_current_franchise_role(user)
+        franchise_role = self.TEAM_MANAGER.get_current_franchise_role(user)
         return self.TEAM_MANAGER._find_team_name(ctx, franchise_role, tier_role)
 
 
@@ -193,15 +193,6 @@ class Transactions:
             if role.name in tierList:
                 return role
         return None
-
-    def get_current_franchise_role(self, user: discord.Member):
-        for role in user.roles:
-            try:
-                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
-                if gmNameFromRole:
-                    return role
-            except:
-                continue
 
     def find_free_agent_role(self, free_agent_dict, user):
         if(len(free_agent_dict.items()) > 0):

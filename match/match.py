@@ -90,37 +90,36 @@ class Match:
             await self.bot.say("Match day not provided and not set for "
                                "the server.")
             return
-        team_roles = []
-        user_team_roles = self.team_manager.teams_for_user(
+        team_names = []
+        user_team_names = self.team_manager.teams_for_user(
             ctx, ctx.message.author)
 
         team_names_provided = len(args) > 1
         if team_names_provided:
-            team_roles = self.team_manager.teams_for_names(
-                ctx, *args[1:])
+            team_names = team_names_provided
         else:
-            team_roles = user_team_roles
+            team_names = user_team_names
 
-        if not team_roles:
-            await self.bot.say("No team roles found. If you provided teams, "
+        if not team_names:
+            await self.bot.say("No teams found. If you provided teams, "
                                "check the spelling. If not, you do not have "
-                               "a team role.")
+                               "roles corresponding to a team.")
             return
 
-        for team_role in team_roles:
-            team_role_for_info = team_role if user_team_roles else None
-            match_index = self._team_day_match_index(ctx, team_role.name,
+        for team_name in team_names:
+            team_name_for_info = team_name if user_team_names else None
+            match_index = self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
                 await self.bot.send_message(
                     ctx.message.author,
                     self._format_match_info(ctx, match_index,
-                                            team_role_for_info))
+                                            team_name_for_info))
             else:
                 await self.bot.send_message(
                     ctx.message.author,
                     "No match on day {0} for {1}".format(match_day,
-                                                         team_role.name)
+                                                         team_name)
                 )
         await self.bot.delete_message(ctx.message)
 
@@ -309,7 +308,7 @@ class Match:
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    def _format_match_info(self, ctx, match_index, user_team_role=None):
+    def _format_match_info(self, ctx, match_index, user_team_name=None):
         matches = self._matches(ctx)
         match = matches[match_index]
         # Match format:
@@ -329,7 +328,7 @@ class Match:
                                                              away.name)
         message += ("Room Name: **{0}**\nPassword: "
                     "**{1}**\n").format(match['roomName'], match['roomPass'])
-        if user_team_role and user_team_role == home:
+        if user_team_name and user_team_name == home:
             message += ("\nYou are the **home** team. You will create the "
                         "room using the above information. Contact the "
                         "other team when your team is ready to begin the "
@@ -338,7 +337,7 @@ class Match:
                         "Remember to ask before the match begins if the other "
                         "team would like to switch server region after 2 "
                         "games.")
-        elif user_team_role and user_team_role == away:
+        elif user_team_name and user_team_name == away:
             message += ("\nYou are the **away** team. You will join the room "
                         "using the above information once the other team "
                         "contacts you. Do not begin joining a team until "
