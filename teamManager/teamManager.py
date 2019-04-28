@@ -28,7 +28,7 @@ class TeamManager:
         if franchise_role is None or tier_role is None:
             await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
             return
-        await self.bot.say(self.format_team_info(ctx, team_name, franchise_role, tier_role))
+        await self.bot.say(self.format_team_info(ctx, team_name))
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -197,7 +197,8 @@ class TeamManager:
                     team_members.append(member)
         return (gm, team_members)
 
-    def format_team_info(self, ctx, team_name: str, franchise_role, tier_role):
+    def format_team_info(self, ctx, team_name: str):
+        franchise_role, tier_role = self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
         message = "```\n{0}:\n".format(team_name)
