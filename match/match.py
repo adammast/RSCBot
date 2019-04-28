@@ -188,8 +188,8 @@ class Match:
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
             match_date_error = "Date not valid: {0}".format(err)
-        homeRole = self.team_manager.team_for_name(ctx, home)
-        awayRole = self.team_manager.team_for_name(ctx, away)
+        homeRoles = self.team_manager._roles_for_team(ctx, home)
+        awayRoles = self.team_manager._roles_for_team(ctx, away)
         roomName = args[0] if args else self._generate_name_pass()
         roomPass = args[1] if len(args) > 1 else self._generate_name_pass()
 
@@ -200,10 +200,10 @@ class Match:
         if match_date_error:
             errors.append("Date provided is not valid. "
                           "(Make sure to use the right format.)")
-        if not homeRole:
-            errors.append("Home team role not found.")
-        if not awayRole:
-            errors.append("Away team role not found.")
+        if not homeRoles:
+            errors.append("Home team roles not found.")
+        if not awayRoles:
+            errors.append("Away team roles not found.")
         if errors:
             await self.bot.say(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
@@ -222,9 +222,9 @@ class Match:
         schedule = self._schedule(ctx)
         # Check for pre-existing matches
         home_match_index = self._team_day_match_index(
-            ctx, homeRole.name, match_day)
+            ctx, home, match_day)
         away_match_index = self._team_day_match_index(
-            ctx, awayRole.name, match_day)
+            ctx, away, match_day)
         errors = []
         if home_match_index is not None:
             errors.append("Home team already has a match for "
@@ -240,8 +240,8 @@ class Match:
         match_data = {
             'matchDay': match_day,
             'matchDate': match_date,
-            'home': homeRole.name,
-            'away': awayRole.name,
+            'home': home,
+            'away': away,
             'roomName': roomName,
             'roomPass': roomPass
         }
@@ -250,10 +250,10 @@ class Match:
         matches = schedule.setdefault(self.MATHCES_KEY, [])
         team_days = schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
 
-        home_key = self._team_day_key(homeRole.name, match_day)
+        home_key = self._team_day_key(home, match_day)
         team_days[home_key] = len(matches)
 
-        away_key = self._team_day_key(awayRole.name, match_day)
+        away_key = self._team_day_key(away, match_day)
         team_days[away_key] = len(matches)
 
         matches.append(match_data)
@@ -261,8 +261,8 @@ class Match:
         self._save_schedule(ctx, schedule)
 
         result = match_data.copy()
-        result['home'] = homeRole.name
-        result['away'] = awayRole.name
+        result['home'] = home
+        result['away'] = away
         return result
 
     def _all_data(self, ctx):
