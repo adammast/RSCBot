@@ -96,7 +96,7 @@ class Match:
 
         team_names_provided = len(args) > 1
         if team_names_provided:
-            team_names = *args[1:]
+            team_names = args[1:]
         else:
             team_names = user_team_names
 
