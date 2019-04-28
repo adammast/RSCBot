@@ -157,32 +157,6 @@ class TeamManager:
                 teams.append(team_name)
         return teams
 
-    # def teams_for_names(self, ctx, *team_names):
-    #     """Retrieve the matching team roles for the provided names.
-
-    #     Names with no matching roles are skipped. If none are found, an empty
-    #     list is returned.
-    #     """
-    #     teams = []
-    #     for team_name in team_names:
-    #         team = self.team_for_name(ctx, team_name)
-    #         if team:
-    #             teams.append(team)
-    #     return teams
-
-    # def team_for_name(self, ctx, team_name):
-    #     """ Retrieve the matching team role for the provided name.
-
-    #     Returns None if there is no match.
-    #     """
-    #     roles = ctx.message.server.roles
-    #     for role in roles:
-    #         # Do we want `startswith` here? Leaving it as it is what was
-    #         # used before
-    #         if role.name.lower().startswith(team_name.lower()):
-    #             return role
-    #     return None
-
     def gm_and_members_from_team(self, ctx, franchise_role, tier_role):
         """Retrieve tuple with the gm user and a list of other users that are
         on the team indicated by the provided franchise_role and tier_role.

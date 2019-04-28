@@ -315,8 +315,8 @@ class Match:
         # match_data = {
         #     'matchDay': match_day,
         #     'matchDate': match_date,
-        #     'home': homeRole.name,
-        #     'away': awayRole.name,
+        #     'home': home,
+        #     'away': away,
         #     'roomName': roomName,
         #     'roomPass': roomPass
         # }
