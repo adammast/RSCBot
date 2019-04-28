@@ -320,12 +320,12 @@ class Match:
         #     'roomName': roomName,
         #     'roomPass': roomPass
         # }
-        home = self.team_manager.team_for_name(ctx, match['home'])
-        away = self.team_manager.team_for_name(ctx, match['away'])
+        home = match['home']
+        away = match['away']
         message = "__Match Day {0}: {1}__\n".format(match['matchDay'],
                                                     match['matchDate'])
-        message += "**{0}**\n    versus\n**{1}**\n\n".format(home.name,
-                                                             away.name)
+        message += "**{0}**\n    versus\n**{1}**\n\n".format(home,
+                                                             away)
         message += ("Room Name: **{0}**\nPassword: "
                     "**{1}**\n").format(match['roomName'], match['roomPass'])
         if user_team_name and user_team_name == home:
