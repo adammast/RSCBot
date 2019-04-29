@@ -204,9 +204,9 @@ class Transactions:
 
     async def add_player_to_team(self, ctx, server_dict, user, team_name):
         franchise_role, tier_role = self.TEAM_MANAGER._roles_for_team(ctx, team_name)
-        if franchise_role in user.roles and tier_role in user.roles:
-            await self.bot.say(":x: {0} is already on the {1}".format(user.mention, team_name))
-            return
+        # if franchise_role in user.roles and tier_role in user.roles:
+        #     await self.bot.say(":x: {0} is already on the {1}".format(user.mention, team_name))
+        #     return
 
         channel = await self.CONFIG_COG.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
