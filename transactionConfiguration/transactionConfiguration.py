@@ -115,6 +115,40 @@ class TransactionConfiguration:
         else:
             await self.bot.say(":x: Transaction log channel has not been set")
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def setDraftLogChannel(self, ctx, dlog : discord.Channel):
+        """Assigns the specified channel as the channel where all draft transactions will be announced"""
+        server_dict = self.get_server_dict(ctx)
+
+        try:
+            server_dict.setdefault('Draft Channel', dlog.id)
+            self.save_data()
+            await self.bot.say(":white_check_mark: Draft log channel now set to {0}".format(dlog.mention))
+        except:
+            await self.bot.say(":x: Error setting draft log channel to {0}".format(dlog.mention))
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def getDraftLogChannel(self, ctx):
+        """Gets the draft-log channel"""
+        channel = await self.get_draft_channel(self.get_server_dict(ctx), ctx.message.server)
+        if(channel is not None):
+            await self.bot.say("Draft log channel currently set to {0}".format(channel.mention))
+             
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def unsetDraftLogChannel(self, ctx):
+        """Unassignes the draft-log channel"""
+        server = ctx.message.server
+        server_dict = self.get_server_dict(ctx)
+
+        channelId = server_dict.pop('Draft Channel', None)
+        if channelId:
+            channel = server.get_channel(channelId)
+            self.save_data()
+            await self.bot.say(":white_check_mark: Draft log channel no longer set to {0}".format(channel.mention))
+        else:
+            await self.bot.say(":x: Draft log channel has not been set")
+
     def find_role(self, roles, roleId):
         for role in roles:
             if role.id == roleId:
@@ -142,6 +176,16 @@ class TransactionConfiguration:
                 await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
         except KeyError:
             await self.bot.say(":x: Transaction log channel not set")
+
+    async def get_draft_channel(self, server_dict, server):
+        try:
+            channelId = server_dict['Draft Channel']
+            try:
+                return server.get_channel(channelId)
+            except:
+                await self.bot.say(":x: Draft log channel not found with id of {0}".format(channelId))
+        except KeyError:
+            await self.bot.say(":x: Draft log channel not set")
 
     # Config
     def check_configs(self):

@@ -23,12 +23,16 @@ class TeamManager:
         self.data_cog = self.bot.get_cog("RscData")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teamList(self, ctx, team_name: str):
+    async def teamList(self, ctx, *, franchise_name: str):
+        await self.bot.say("Franchise name is: {0}".format(franchise_name))
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def roster(self, ctx, *, team_name: str):
         franchise_role, tier_role = self._roles_for_team(ctx, team_name)
         if franchise_role is None or tier_role is None:
             await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
             return
-        await self.bot.say(self.format_team_info(ctx, team_name))
+        await self.bot.say(self.format_roster_info(ctx, team_name))
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -171,11 +175,11 @@ class TeamManager:
                     team_members.append(member)
         return (gm, team_members)
 
-    def format_team_info(self, ctx, team_name: str):
+    def format_roster_info(self, ctx, team_name: str):
         franchise_role, tier_role = self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
-        message = "```\n{0}:\n".format(team_name)
+        message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
         if gm:
             message += "  {0}\n".format(
                 self._format_team_member_for_message(gm, "GM"))
