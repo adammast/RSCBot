@@ -333,7 +333,7 @@ class TeamManager:
         teams = self._teams(ctx)
         for team in teams:
             if self._roles_for_team(ctx, team)[0] == franchise_role:
-                franchise_teams.insert(team)
+                franchise_teams.append(team)
         return franchise_teams
 
     def get_current_franchise_role(self, user: discord.Member):
