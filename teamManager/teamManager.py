@@ -33,6 +33,8 @@ class TeamManager:
                 message += "\n\t{0} ({1})".format(team, tier_role.name)
             message += "```"
             await self.bot.say(message)
+        else:
+            await self.bot.say("No franchise with name: {0}".format(franchise_name))
         
 
     @commands.command(pass_context=True, no_pm=True)
