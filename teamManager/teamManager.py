@@ -23,8 +23,17 @@ class TeamManager:
         self.data_cog = self.bot.get_cog("RscData")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teamList(self, ctx, *, franchise_name: str):
-        await self.bot.say("Franchise name is: {0}".format(franchise_name))
+    async def teams(self, ctx, *, franchise_name: str):
+        franchise_role = self.get_franchise_role_from_name(ctx, franchise_name)
+        if franchise_role is not None:
+            teams = self._find_teams_for_franchise(ctx, franchise_role)
+            message = "```{0}:".format(franchise_name)
+            for team in teams:
+                tier_role = self._roles_for_team(ctx, team)[1]
+                message += "\n\t{0} ({1})".format(team, tier_role.name)
+            message += "```"
+            await self.bot.say(message)
+        
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
@@ -319,6 +328,14 @@ class TeamManager:
             if self._roles_for_team(ctx, team) == (franchise_role, tier_role):
                 return team
 
+    def _find_teams_for_franchise(self, ctx, franchise_role):
+        franchise_teams = []
+        teams = self._teams(ctx)
+        for team in teams:
+            if self._roles_for_team(ctx, team)[0] == franchise_role:
+                franchise_teams.insert(team)
+        return franchise_teams
+
     def get_current_franchise_role(self, user: discord.Member):
         for role in user.roles:
             try:
@@ -327,6 +344,13 @@ class TeamManager:
                     return role
             except:
                 continue
+    def get_franchise_role_from_name(self, ctx, franchise_name: str):
+        roles = ctx.message.server.roles
+        for role in roles:
+            # Do we want `startswith` here? Leaving it as it is what was
+            # used before
+            if role.name.lower().startswith(franchise_name.lower()):
+                return role
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
