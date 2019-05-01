@@ -27,7 +27,7 @@ class TeamManager:
         franchise_role = self.get_franchise_role_from_name(ctx, franchise_name)
         if franchise_role is not None:
             teams = self._find_teams_for_franchise(ctx, franchise_role)
-            message = "```{0}:".format(franchise_name)
+            message = "```{0}:".format(franchise_role.name)
             for team in teams:
                 tier_role = self._roles_for_team(ctx, team)[1]
                 message += "\n\t{0} ({1})".format(team, tier_role.name)
