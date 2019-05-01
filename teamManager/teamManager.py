@@ -346,13 +346,16 @@ class TeamManager:
                     return role
             except:
                 continue
+
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
         roles = ctx.message.server.roles
         for role in roles:
-            # Do we want `startswith` here? Leaving it as it is what was
-            # used before
-            if role.name.lower().startswith(franchise_name.lower()):
-                return role
+            try:
+                matchedString = re.findall(r'.+?(?= \()', role.name)[0]
+                if matchedString == franchise_name:
+                    return role
+            except:
+                continue
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
