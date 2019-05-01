@@ -352,7 +352,7 @@ class TeamManager:
         for role in roles:
             try:
                 matchedString = re.findall(r'.+?(?= \()', role.name)[0]
-                if matchedString == franchise_name:
+                if matchedString.lower() == franchise_name.lower():
                     return role
             except:
                 continue
