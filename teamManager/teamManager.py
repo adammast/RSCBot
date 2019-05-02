@@ -23,6 +23,15 @@ class TeamManager:
         self.data_cog = self.bot.get_cog("RscData")
 
     @commands.command(pass_context=True, no_pm=True)
+    async def franchises(self, ctx):
+        franchise_roles = self._get_all_franchise_roles(ctx)
+        message = "```Franchises:"
+        for role in franchise_roles:
+            message += "\n\t{0}".format(role.name)
+        message += "```"
+        await self.bot.say(message)
+
+    @commands.command(pass_context=True, no_pm=True)
     async def teams(self, ctx, *, franchise_name: str):
         franchise_role = self.get_franchise_role_from_name(ctx, franchise_name)
         if franchise_role is not None:
@@ -35,15 +44,18 @@ class TeamManager:
             await self.bot.say(message)
         else:
             await self.bot.say("No franchise with name: {0}".format(franchise_name))
-        
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
-        franchise_role, tier_role = self._roles_for_team(ctx, team_name)
-        if franchise_role is None or tier_role is None:
-            await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
-            return
-        await self.bot.say(self.format_roster_info(ctx, team_name))
+        team = self._match_team_name(ctx, team_name)
+        if team is not None:
+            franchise_role, tier_role = self._roles_for_team(ctx, team)
+            if franchise_role is None or tier_role is None:
+                await self.bot.say("No franchise and tier roles set up for {0}".format(team))
+                return
+            await self.bot.say(self.format_roster_info(ctx, team))
+        else:
+            await self.bot.say("No team with name: {0}".format(team_name))
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -311,6 +323,19 @@ class TeamManager:
                 continue
         await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
 
+    def _get_all_franchise_roles(self, ctx):
+        franchise_roles = []
+        server = ctx.message.server
+        roles = server.roles
+        for role in roles:
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole is not None:
+                    franchise_roles.append(role)
+            except:
+                continue
+        return franchise_roles
+
     def _roles_for_team(self, ctx, team_name: str):
         teams = self._teams(ctx)
         if teams and team_name in teams:
@@ -356,6 +381,12 @@ class TeamManager:
                     return role
             except:
                 continue
+
+    def _match_team_name(self, ctx, team_name):
+        teams = self._teams(ctx)
+        for team in teams:
+            if team_name.lower() == team.lower():
+                return team
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
