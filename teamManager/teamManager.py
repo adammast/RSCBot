@@ -32,8 +32,22 @@ class TeamManager:
         await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teams(self, ctx, *, franchise_name: str):
-        franchise_role = self.get_franchise_role_from_name(ctx, franchise_name)
+    async def teams(self, ctx, *, franchise_name_or_tier: str):
+        tiers = self._tiers(ctx)
+        for tier in tiers:
+            if tier.lower() == franchise_name_or_tier.lower():
+                teams = self._find_teams_for_tier(ctx, franchise_name_or_tier)
+                message = "```{0} teams:".format(tier)
+                for team in teams:
+                    franchise_role = self._roles_for_team(ctx, team)[0]
+                    gmNameFromRole = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
+                    message += "\n\t{0} ({1})".format(team, gmNameFromRole)
+                message += "```"
+                await self.bot.say(message)
+                return
+
+        ## Franchise name, not tier
+        franchise_role = self.get_franchise_role_from_name(ctx, franchise_name_or_tier)
         if franchise_role is not None:
             teams = self._find_teams_for_franchise(ctx, franchise_role)
             message = "```{0}:".format(franchise_role.name)
@@ -43,7 +57,7 @@ class TeamManager:
             message += "```"
             await self.bot.say(message)
         else:
-            await self.bot.say("No franchise with name: {0}".format(franchise_name))
+            await self.bot.say("No franchise  or tier with name: {0}".format(franchise_name_or_tier))
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
@@ -387,6 +401,15 @@ class TeamManager:
         for team in teams:
             if team_name.lower() == team.lower():
                 return team
+
+    def _find_teams_for_tier(self, ctx, tier):
+        teams_in_tier = []
+        teams = self._teams(ctx)
+        for team in teams:
+            tier = self._roles_for_team(ctx, team)[1]
+            if tier.lower() == tier.lower():
+                teams_in_tier.append(team)
+        return teams_in_tier
 
     def log_info(self, message):
         self.data_cog.logger().info("[TeamManager] " + message)
