@@ -406,8 +406,8 @@ class TeamManager:
         teams_in_tier = []
         teams = self._teams(ctx)
         for team in teams:
-            tier = self._roles_for_team(ctx, team)[1]
-            if tier.lower() == tier.lower():
+            team_tier = self._roles_for_team(ctx, team)[1]
+            if team_tier.name.lower() == tier.lower():
                 teams_in_tier.append(team)
         return teams_in_tier
 
