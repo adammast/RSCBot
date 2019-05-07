@@ -156,7 +156,7 @@ class PrefixManager:
 
     def _prefixes(self, ctx):
         all_data = self._all_data(ctx)
-        prefixes = all_data.setdefault(self.PREFIXES_KEY, [])
+        prefixes = all_data.setdefault(self.PREFIXES_KEY, {})
         return prefixes
 
     def _save_prefixes(self, ctx, prefixes):
