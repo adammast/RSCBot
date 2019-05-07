@@ -23,16 +23,16 @@ class PrefixManager:
         Arguments:
 
         prefixes_to_add -- One or more teams in the following format:
-        ```
-        "['<gm_name>','<prefix>']"
-        ```
+
+        \t"['<gm_name>','<prefix>']"
+
         Each prefix should be separated by a space.
 
         Examples:
-        ```
-        [p]addPrefixes "['Shamu','STM']"
-        [p]addPrefixes "['Shamu','STM']" "['Adammast','OCE']"
-        ```
+
+        \t[p]addPrefixes "['Shamu','STM']"
+        \t[p]addPrefixes "['Shamu','STM']" "['Adammast','OCE']"
+
         """
         addedCount = 0
         try:
