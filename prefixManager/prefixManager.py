@@ -75,7 +75,7 @@ class PrefixManager:
         """Used to remove a single prefix"""
         prefixes = self._prefixes(ctx)
         try:
-            prefixes.remove(gm_name)
+            del prefixes[gm_name]
         except ValueError:
             await self.bot.say(
                 "{0} does not have a prefix.".format(gm_name))
