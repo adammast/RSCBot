@@ -61,11 +61,11 @@ class PrefixManager:
         prefixes = self._prefixes(ctx)
 
         if(len(prefixes.items()) > 0):
+            message = "```Prefixes:"
             for key, value in prefixes.items():
-                try:
-                    await self.bot.say("Prefix for {0} = {1}".format(key, value))
-                except IndexError:
-                    await self.bot.say(":x: Error finding key value pair in prefix dictionary")
+                message += "\n\t{0} = {1}".format(key, value)
+            message += "```"
+            await self.bot.say(message)
         else:
             await self.bot.say(":x: No prefixes are set in the dictionary")
 
