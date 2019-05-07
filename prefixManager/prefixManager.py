@@ -1,110 +1,168 @@
 import discord
-import os.path
-import os
+import re
+import ast
 
-from .utils.dataIO import dataIO
 from discord.ext import commands
 from cogs.utils import checks
 
 class PrefixManager:
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    DATA_FOLDER = "data/transactionConfiguration"
-    CONFIG_FILE_PATH = DATA_FOLDER + "/config.json"
+    DATASET = "PrefixData"
+    PREFIXES_KEY = "Prefixes"
 
-    CONFIG_DEFAULT = {}
+    def __init__(self, bot):
+        self.bot = bot
+        self.data_cog = self.bot.get_cog("RscData")
 
     @commands.command(pass_context=True, no_pm=True)
-    async def setPrefixes(self, ctx, *gmNameAndPrefix):
-        """Used to set prefixes for the given role name"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        prefix_dict = server_dict.setdefault("Prefixes", {})
+    @checks.admin_or_permissions(manage_server=True)
+    async def addPrefixes(self, ctx, *prefixes_to_add):
+        """Add the prefixes and corresponding GM name.
 
-        for arg in gmNameAndPrefix:
-            keyValuePair = arg.split('=')
-            try:
-                prefix_dict[keyValuePair[0]] = keyValuePair[1]
-                self.save_data()
-                await self.bot.say("Prefix for {0} = {1}".format(keyValuePair[0], keyValuePair[1]))
-            except IndexError:
-                await self.bot.say(":x: Error finding key value pair in arguments")
+        Arguments:
+
+        prefixes_to_add -- One or more teams in the following format:
+        ```
+        "['<gm_name>','<prefix>']"
+        ```
+        Each prefix should be separated by a space.
+
+        Examples:
+        ```
+        [p]addPrefixes "['Shamu','STM']"
+        [p]addPrefixes "['Shamu','STM']" "['Adammast','OCE']"
+        ```
+        """
+        addedCount = 0
+        try:
+            for prefixStr in prefixes_to_add:
+                prefix = ast.literal_eval(prefixStr)
+                await self.bot.say("Adding prefix: {0}".format(repr(prefix)))
+                prefixAdded = await self._add_prefix(ctx, *prefix)
+                if prefixAdded:
+                    addedCount += 1
+        finally:
+            await self.bot.say("Added {0} prefixes(s).".format(addedCount))
+        await self.bot.say("Done.")
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def addPrefix(self, ctx, gm_name: str, prefix: str):
+        prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
+        if(prefixAdded):
+            await self.bot.say("Done.")
+        else:
+            await self.bot.say("Error adding prefix: {0}".format(prefix))
 
     @commands.command(pass_context=True, no_pm=True)
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        prefix_dict = server_dict.setdefault("Prefixes", {})
+        prefixes = self._prefixes(ctx)
 
-        if(len(prefix_dict.items()) > 0):
-            for key, value in prefix_dict.items():
+        if(len(prefixes.items()) > 0):
+            for key, value in prefixes.items():
                 try:
                     await self.bot.say("Prefix for {0} = {1}".format(key, value))
                 except IndexError:
                     await self.bot.say(":x: Error finding key value pair in prefix dictionary")
         else:
             await self.bot.say(":x: No prefixes are set in the dictionary")
-        
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def removePrefix(self, ctx, gm_name: str):
+        """Used to remove a single prefix"""
+        prefixes = self._prefixes(ctx)
+        try:
+            prefixes.remove(gm_name)
+        except ValueError:
+            await self.bot.say(
+                "{0} does not have a prefix.".format(gm_name))
+            return
+        self._save_prefixes(ctx, prefixes)
+        await self.bot.say("Done.")
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        prefix_dict = server_dict.setdefault("Prefixes", {})
+        prefixes = self._prefixes(ctx)
 
         try:
-            prefix_dict.clear()
-            self.save_data()
+            prefixes.clear()
+            self._save_prefixes(ctx, prefixes)
             await self.bot.say(":white_check_mark: All prefixes have been removed from dictionary")
         except:
             await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def lookupPrefix(self, ctx, gmName: str):
-        server = ctx.message.server
-        server_dict = self.config.setdefault(server.id, {})
-        prefix_dict = server_dict.setdefault("Prefixes", {})
+        prefixes = self._prefixes(ctx)
 
         try:
-            prefix = prefix_dict[gmName]
+            prefix = prefixes[gmName]
             await self.bot.say("Prefix for {0} = {1}".format(gmName, prefix))
         except KeyError:
             await self.bot.say(":x: Prefix not found for {0}".format(gmName))
 
-    def find_role(self, roles, roleId):
+    def _find_role(self, ctx, role_id):
+        server = ctx.message.server
+        roles = server.roles
         for role in roles:
-            if role.id == roleId:
+            if role.id == role_id:
                 return role
-        raise LookupError('roleId not found in server roles')
+        raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.check_configs()
-        self.load_data()
+    async def _add_prefix(self, ctx, gm_name: str, prefix: str):
+        prefixes = self._prefixes(ctx)
 
-    # Config
-    def check_configs(self):
-        self.check_folders()
-        self.check_files()
+        proper_gm_name = self._get_proper_gm_name(ctx, gm_name)
 
-    def check_folders(self):
-        if not os.path.exists(self.DATA_FOLDER):
-            os.makedirs(self.DATA_FOLDER, exist_ok=True)
+        # Validation of input
+        # There are other validations we could do, but don't
+        #     - that there aren't extra args
+        errors = []
+        if not proper_gm_name:
+            errors.append("GM not found with name {0}.".format(gm_name))
+        if not prefix:
+            errors.append("Prefix not found from input for GM {0}.".format(gm_name))
+        if errors:
+            await self.bot.say(":x: Errors with input:\n\n  "
+                               "* {0}\n".format("\n  * ".join(errors)))
+            return
 
-    def check_files(self):
-        self.check_file(self.CONFIG_FILE_PATH, self.CONFIG_DEFAULT)
+        try:
+            prefixes.append(proper_gm_name, prefix)
+        except:
+            return False
+        self._save_prefixes(ctx, prefixes)
+        return True
 
-    def check_file(self, file, default):
-        if not dataIO.is_valid_json(file):
-            dataIO.save_json(file, default)
+    def _get_proper_gm_name(self, ctx, gm_name):
+        server = ctx.message.server
+        roles = server.roles
+        for role in roles:
+            try:
+                gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
+                if gmNameFromRole.lower() == gm_name.lower():
+                    return gmNameFromRole
+            except:
+                continue
 
-    def load_data(self):
-        self.config = dataIO.load_json(self.CONFIG_FILE_PATH)
+    def _all_data(self, ctx):
+        return self.data_cog.load(ctx, self.DATASET)
 
-    def save_data(self):
-        dataIO.save_json(self.CONFIG_FILE_PATH, self.config)
+    def _prefixes(self, ctx):
+        all_data = self._all_data(ctx)
+        prefixes = all_data.setdefault(self.PREFIXES_KEY, [])
+        return prefixes
+
+    def _save_prefixes(self, ctx, prefixes):
+        all_data = self._all_data(ctx)
+        all_data[self.PREFIXES_KEY] = prefixes
+        self.data_cog.save(ctx, self.DATASET, all_data)
 
 def setup(bot):
     bot.add_cog(PrefixManager(bot))

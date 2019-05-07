@@ -12,6 +12,7 @@ class Transactions:
         self.bot = bot
         self.CONFIG_COG = self.bot.get_cog("TransactionConfiguration")
         self.TEAM_MANAGER = self.bot.get_cog("TeamManager")
+        self.prefix_cog = self.bot.get_cog("PrefixManager")
 
     @commands.command(pass_context=True, no_pm=True)
     async def draft(self, ctx, user: discord.Member, team_name: str, round: int = None, pick: int = None):
@@ -212,7 +213,7 @@ class Transactions:
         if channel is not None:
             leagueRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "League")
             if leagueRole is not None:
-                prefix = await self.get_prefix(server_dict, franchise_role)
+                prefix = await self.get_prefix(ctx, franchise_role)
                 if prefix is not None:
                     currentTier = self.get_current_tier_role(ctx, user)
                     if currentTier is not None and currentTier != tier_role:
@@ -231,7 +232,7 @@ class Transactions:
         channel = await self.CONFIG_COG.get_transaction_channel(server_dict, ctx.message.server)
         if channel is not None:
             if franchise_role is not None:
-                prefix = await self.get_prefix(server_dict, franchise_role)
+                prefix = await self.get_prefix(ctx, franchise_role)
                 if prefix is not None:
                     await self.bot.remove_roles(user, franchise_role)
                     return channel
@@ -246,9 +247,9 @@ class Transactions:
             return currentNickname
         return user.name
 
-    async def get_prefix(self, server_dict, franchiseRole: discord.Role):
+    async def get_prefix(self, ctx, franchiseRole: discord.Role):
         try:
-            prefix_dict = server_dict.setdefault("Prefixes", {})
+            prefix_dict = self.prefix_cog._prefixes(ctx)
             try:
                 gmName = self.get_gm_name(franchiseRole)
                 try:
@@ -256,7 +257,7 @@ class Transactions:
                 except KeyError:
                     await self.bot.say(":x: Prefix not found for {0}".format(gmName))
             except LookupError:
-                await self.bot.say('GM name not found from role {0}'.format(franchiseRole.name))
+                await self.bot.say(':x: GM name not found from role {0}'.format(franchiseRole.name))
         except KeyError:
             await self.bot.say(":x: Couldn't find prefix dictionary")
 
