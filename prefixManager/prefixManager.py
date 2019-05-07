@@ -134,7 +134,7 @@ class PrefixManager:
             return
 
         try:
-            prefixes["{0}".format(proper_gm_name)] = prefix
+            prefixes[proper_gm_name] = prefix
         except:
             return False
         self._save_prefixes(ctx, prefixes)
