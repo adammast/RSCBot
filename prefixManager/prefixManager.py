@@ -136,6 +136,7 @@ class PrefixManager:
         try:
             prefixes[proper_gm_name] = prefix
         except:
+            await self.bot.say("Can't add prefix {0} to GM {1}".format(prefix, proper_gm_name))
             return False
         self._save_prefixes(ctx, prefixes)
         return True
