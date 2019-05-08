@@ -83,7 +83,7 @@ class TeamManager:
             message += "```"
             await self.bot.say(message)
         else:
-            await self.bot.say("No franchise  or tier with name: {0}".format(franchise_tier_prefix))
+            await self.bot.say("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
