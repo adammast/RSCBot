@@ -1,6 +1,7 @@
 import discord
 import re
 import ast
+import difflib
 
 from discord.ext import commands
 from cogs.utils import checks
@@ -86,15 +87,15 @@ class TeamManager:
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
-        team = self._match_team_name(ctx, team_name)
-        if team is not None:
+        team, found = self._match_team_name(ctx, team_name)
+        if found:
             franchise_role, tier_role = self._roles_for_team(ctx, team)
             if franchise_role is None or tier_role is None:
                 await self.bot.say("No franchise and tier roles set up for {0}".format(team))
                 return
             await self.bot.say(self.format_roster_info(ctx, team))
         else:
-            await self.bot.say("No team with name: {0}".format(team_name))
+            await self.bot.say("No team with name: {0}\nDo you mean one of these teams: {1}?".format(team_name, team))
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -425,7 +426,8 @@ class TeamManager:
         teams = self._teams(ctx)
         for team in teams:
             if team_name.lower() == team.lower():
-                return team
+                return team, True
+        return difflib.get_close_matches(team_name, teams, n=3, cutoff=0.6), False
 
     def _find_teams_for_tier(self, ctx, tier):
         teams_in_tier = []
