@@ -99,7 +99,7 @@ class TeamManager:
             if len(team) > 0:
                 message += "\nDo you mean one of these teams:"
                 for possible_team in team:
-                    message += " {0}".format(possible_team)
+                    message += " `{0}`".format(possible_team)
             await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
