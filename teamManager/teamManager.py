@@ -47,7 +47,7 @@ class TeamManager:
             for key, value in prefixes.items():
                 if franchise_tier_prefix.lower() == value.lower():
                     gm_name = key
-                    franchise_role = self._get_franchise_role(ctx, gm_name)
+                    franchise_role = await self._get_franchise_role(ctx, gm_name)
                     teams = self._find_teams_for_franchise(ctx, franchise_role)
                     message = "```{0}:".format(franchise_role.name)
                     for team in teams:
