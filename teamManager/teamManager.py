@@ -95,7 +95,12 @@ class TeamManager:
                 return
             await self.bot.say(self.format_roster_info(ctx, team))
         else:
-            await self.bot.say("No team with name: {0}\nDo you mean one of these teams: {1}?".format(team_name, team))
+            message = "No team with name: {0}".format(team_name)
+            if len(team) > 0:
+                message += "\nDo you mean one of these teams:"
+                for possible_team in team:
+                    message += " {0}".format(possible_team)
+            await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
     async def tierList(self, ctx):
@@ -427,7 +432,7 @@ class TeamManager:
         for team in teams:
             if team_name.lower() == team.lower():
                 return team, True
-        return difflib.get_close_matches(team_name, teams, n=3, cutoff=0.6), False
+        return difflib.get_close_matches(team_name, teams, n=3, cutoff=0.4), False
 
     def _find_teams_for_tier(self, ctx, tier):
         teams_in_tier = []
