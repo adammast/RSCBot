@@ -21,6 +21,7 @@ class TeamManager:
     def __init__(self, bot):
         self.bot = bot
         self.data_cog = self.bot.get_cog("RscData")
+        self.prefix_cog = self.bot.get_cog("PrefixManager")
 
     @commands.command(pass_context=True, no_pm=True)
     async def franchises(self, ctx):
@@ -32,11 +33,35 @@ class TeamManager:
         await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
-    async def teams(self, ctx, *, franchise_name_or_tier: str):
+    async def teams(self, ctx, *, franchise_tier_prefix: str):
+        """Returns a list of teams based on the input. 
+        You can either give it the name of a franchise, a tier, or the prefix for a franchise.
+        
+        Examples:
+        \t[p]teams The Ocean
+        \t[p]teams Challenger
+        \t[p]teams OCE"""
+        # Prefix
+        prefixes = self.prefix_cog._prefixes(ctx)
+        if(len(prefixes.items()) > 0):
+            for key, value in prefixes.items():
+                if franchise_tier_prefix.lower() == value.lower():
+                    gm_name = key
+                    franchise_role = self._get_franchise_role(ctx, gm_name)
+                    teams = self._find_teams_for_franchise(ctx, franchise_role)
+                    message = "```{0}:".format(franchise_role.name)
+                    for team in teams:
+                        tier_role = self._roles_for_team(ctx, team)[1]
+                        message += "\n\t{0} ({1})".format(team, tier_role.name)
+                    message += "```"
+                    await self.bot.say(message)
+                    return
+
+        # Tier
         tiers = self._tiers(ctx)
         for tier in tiers:
-            if tier.lower() == franchise_name_or_tier.lower():
-                teams = self._find_teams_for_tier(ctx, franchise_name_or_tier)
+            if tier.lower() == franchise_tier_prefix.lower():
+                teams = self._find_teams_for_tier(ctx, franchise_tier_prefix)
                 message = "```{0} teams:".format(tier)
                 for team in teams:
                     franchise_role = self._roles_for_team(ctx, team)[0]
@@ -46,8 +71,8 @@ class TeamManager:
                 await self.bot.say(message)
                 return
 
-        ## Franchise name, not tier
-        franchise_role = self.get_franchise_role_from_name(ctx, franchise_name_or_tier)
+        # Franchise name
+        franchise_role = self.get_franchise_role_from_name(ctx, franchise_tier_prefix)
         if franchise_role is not None:
             teams = self._find_teams_for_franchise(ctx, franchise_role)
             message = "```{0}:".format(franchise_role.name)
@@ -57,7 +82,7 @@ class TeamManager:
             message += "```"
             await self.bot.say(message)
         else:
-            await self.bot.say("No franchise  or tier with name: {0}".format(franchise_name_or_tier))
+            await self.bot.say("No franchise  or tier with name: {0}".format(franchise_tier_prefix))
 
     @commands.command(pass_context=True, no_pm=True)
     async def roster(self, ctx, *, team_name: str):
