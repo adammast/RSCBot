@@ -18,6 +18,7 @@ class TeamManager:
     TIER_ROLE_KEY = "Tier Role"
     GM_ROLE = "General Manager"
     CAPTAN_ROLE = "Captain"
+    PERM_FA_ROLE = "PermFA"
 
     def __init__(self, bot):
         self.bot = bot
@@ -224,10 +225,14 @@ class TeamManager:
             await self.bot.say("No free agent role with name: {0}".format(tier_name + "FA"))
             return
 
+        perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
+
         message = "```{0} Free Agents:".format(tier_name)
         for member in ctx.message.server.members:
             if fa_role in member.roles:
                 message += "\n\t{0}".format(member.nick)
+                if perm_fa_role is not None and perm_fa_role in member.roles:
+                    message += " (Permanent FA)"
         await self.bot.say(message + "```")
 
 
