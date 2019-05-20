@@ -206,6 +206,31 @@ class TeamManager:
         self._save_team_roles(ctx, team_roles)
         await self.bot.say("Done.")
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def freeAgents(self, ctx, tier: str):
+        tiers = self._tiers(ctx)
+        tier_name = None
+        for _tier in tiers:
+            if tier.lower() == _tier.lower():
+                tier_name = _tier
+                break
+        
+        if tier_name is None:
+            await self.bot.say("No tier with name: {0}".format(tier))
+            return
+
+        fa_role = self._find_role_by_name(ctx, tier_name + "FA")
+        if fa_role is None:
+            await self.bot.say("No free agent role with name: {0}".format(tier_name + "FA"))
+            return
+
+        message = "```{0} Free Agents:".format(tier_name)
+        for member in ctx.message.server.members:
+            if fa_role in member.roles:
+                message += "\n\t{0}".format(member.nick)
+        await self.bot.say(message + "```")
+
+
     def is_gm(self, member):
         for role in member.roles:
             if role.name == self.GM_ROLE:
@@ -355,6 +380,14 @@ class TeamManager:
             if role.id == role_id:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
+
+    def _find_role_by_name(self, ctx, role_name):
+        server = ctx.message.server
+        roles = server.roles
+        for role in roles:
+            if role.name.lower() == role_name.lower():
+                return role
+        return None
 
     async def _get_franchise_role(self, ctx, gm_name):
         server = ctx.message.server
