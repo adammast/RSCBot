@@ -82,7 +82,7 @@ class Transactions:
         if channel is not None:
             try:
                 if freeAgentRole is None:
-                    freeAgentRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "{0}FA".format(self.get_current_tier_role(ctx, user).name))
+                    freeAgentRole = self.CONFIG_COG.find_role_by_name(ctx.message.server.roles, "{0}FA".format(self.TEAM_MANAGER.get_current_tier_role(ctx, user).name))
                 await self.bot.change_nickname(user, "FA | {0}".format(self.get_player_nickname(user)))
                 await self.bot.add_roles(user, freeAgentRole)
                 gm_name = self.get_gm_name(franchise_role)
@@ -142,7 +142,7 @@ class Transactions:
     @commands.command(pass_context=True, no_pm=True)
     async def promote(self, ctx, user: discord.Member, team_name: str):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        old_team_name = self.get_current_team_name(ctx, user)
+        old_team_name = self.TEAM_MANAGER.get_current_team_name(ctx, user)
         if old_team_name is not None:
             if self.TEAM_MANAGER._roles_for_team(ctx, old_team_name)[0] != self.TEAM_MANAGER._roles_for_team(ctx, team_name)[0]:
                 await self.bot.say(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))
@@ -182,19 +182,6 @@ class Transactions:
         except:
             raise LookupError('GM name not found from role {0}'.format(franchiseRole.name))
 
-    def get_current_team_name(self, ctx, user: discord.Member):
-        tier_role = self.get_current_tier_role(ctx, user)
-        franchise_role = self.TEAM_MANAGER.get_current_franchise_role(user)
-        return self.TEAM_MANAGER._find_team_name(ctx, franchise_role, tier_role)
-
-
-    def get_current_tier_role(self, ctx, user: discord.Member):
-        tierList = self.TEAM_MANAGER._tiers(ctx)
-        for role in user.roles:
-            if role.name in tierList:
-                return role
-        return None
-
     def find_free_agent_role(self, free_agent_dict, user):
         if(len(free_agent_dict.items()) > 0):
             for value in free_agent_dict.items():
@@ -215,7 +202,7 @@ class Transactions:
             if leagueRole is not None:
                 prefix = await self.get_prefix(ctx, franchise_role)
                 if prefix is not None:
-                    currentTier = self.get_current_tier_role(ctx, user)
+                    currentTier = self.TEAM_MANAGER.get_current_tier_role(ctx, user)
                     if currentTier is not None and currentTier != tier_role:
                         await self.bot.remove_roles(user, currentTier)
                     await self.bot.change_nickname(user, "{0} | {1}".format(prefix, self.get_player_nickname(user)))

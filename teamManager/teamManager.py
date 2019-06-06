@@ -455,6 +455,18 @@ class TeamManager:
             except:
                 continue
 
+    def get_current_tier_role(self, ctx, user: discord.Member):
+        tierList = self._tiers(ctx)
+        for role in user.roles:
+            if role.name in tierList:
+                return role
+        return None
+
+    def get_current_team_name(self, ctx, user: discord.Member):
+        tier_role = self.get_current_tier_role(ctx, user)
+        franchise_role = self.get_current_franchise_role(user)
+        return self._find_team_name(ctx, franchise_role, tier_role)
+
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
         roles = ctx.message.server.roles
         for role in roles:
