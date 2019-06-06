@@ -36,7 +36,7 @@ class FaRegister:
 
         try:
             await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
-        except asyncio.TimeoutError:
+        except:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
             return
         # else:
