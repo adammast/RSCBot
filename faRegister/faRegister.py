@@ -13,7 +13,6 @@ class FaRegister:
         self.team_manager_cog = self.bot.get_cog("TeamManager")
         self.match_cog = self.bot.get_cog("Match")
 
-    @commands.event
     @commands.command(pass_context=True, no_pm=True, aliases=["ra"])
     async def registerAvailability(self, ctx):
         user = ctx.message.author
