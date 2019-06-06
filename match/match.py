@@ -23,6 +23,7 @@ class Match:
         self.team_manager = self.bot.get_cog("TeamManager")
 
     @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
     async def setMatchDay(self, ctx, day: str):
         """Sets the active match day to the specified day.
 
