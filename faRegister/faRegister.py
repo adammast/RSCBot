@@ -21,7 +21,7 @@ class FaRegister:
         tier = self._find_tier_from_fa_role(ctx, user)
 
         embed = discord.Embed(title="Register Availability", 
-            desciption="By registering your availability you are letting GMs know that you are active to play on the following match day in the following tier. To confirm react with 👍 ",
+            description="By registering your availability you are letting GMs know that you are active to play on the following match day in the following tier. To confirm react with 👍 ",
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
