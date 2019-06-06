@@ -36,6 +36,9 @@ class FaRegister:
 
         try:
             reaction, user = await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
+        except asyncio.TimeoutError:
+            await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
+            return
         except:
             await self.bot.send_message(user, "Sorry, something went wrong. Please contact an admin.")
             return
@@ -43,8 +46,6 @@ class FaRegister:
         if str(reaction.emoji) == '👍':
             self._register_user(ctx, user, match_day, tier)
             await self.bot.send_message(user, "Thank you for registering!")
-        else:
-            await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier: str, match_day: int = None):
