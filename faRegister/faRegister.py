@@ -21,14 +21,14 @@ class FaRegister:
 
         message = await self.bot.send_message(user, "By registering your availability you are letting GMs know "
             "that you are active to play on the following match day in the following tier: "
-            "\n\tMatch Day: {0}"
-            "\n\tTier: {1}"
-            "\n\nIf this information is correct please press the :thumbsup: reaction below.".format(match_day, tier))
+            "```\n\t**Match Day:** {0}"
+            "\n\t**Tier:** {1}```"
+            "\n\nIf this information is correct please press the 👍 reaction below.".format(match_day, tier))
 
-        await self.bot.add_reaction(message, ':thumbsup:')
+        await self.bot.add_reaction(message, '👍')
 
         def check(reaction, user):
-            return user == ctx.message.author and str(reaction.emoji) == ':thumbsup:'
+            return user == ctx.message.author and str(reaction.emoji) == '👍'
 
         try:
             await self.bot.event.wait_for('reaction_add', timeout=60.0, check=check)
