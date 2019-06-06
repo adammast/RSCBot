@@ -37,6 +37,9 @@ class FaRegister:
         except asyncio.TimeoutError:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
             return
+        else:
+            await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
+            return
             
         await self.bot.send_message(user, "Thank you for registering!")
 
