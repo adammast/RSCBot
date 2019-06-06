@@ -25,7 +25,7 @@ class FaRegister:
             "\n\tTier: {1}"
             "\n\nIf this information is correct please press the :thumbsup: reaction below.".format(match_day, tier))
 
-        self.bot.add_reaction(message, ':thumbsup:')
+        await self.bot.add_reaction(message, ':thumbsup:')
 
         def check(reaction, user):
             return user == ctx.message.author and str(reaction.emoji) == ':thumbsup:'
