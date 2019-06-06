@@ -39,9 +39,9 @@ class FaRegister:
         except asyncio.TimeoutError:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
             return
-        else:
-            await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
-            return
+        # else:
+        #     await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
+        #     return
 
         self._register_user(ctx, user, match_day, tier)
         await self.bot.send_message(user, "Thank you for registering!")
@@ -51,10 +51,10 @@ class FaRegister:
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
         tier_list = self._tier_data(ctx, match_day, tier)
-        message = "`​`​`Availability for {0} tier on match day {1}:".format(tier, match_day)
+        message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
         for fa in tier_list:
             message += "\n\t{0}".format(fa)
-        message += "`​`​`"
+        message += "```"
         await self.bot.say(message)
 
     def _register_user(self, ctx, user, match_day, tier):
