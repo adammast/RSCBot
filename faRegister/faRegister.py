@@ -31,7 +31,7 @@ class FaRegister:
             return user == ctx.message.author and str(reaction.emoji) == ':thumbsup:'
 
         try:
-            await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+            await self.bot.event.wait_for('reaction_add', timeout=60.0, check=check)
         except asyncio.TimeoutError:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
         else:
