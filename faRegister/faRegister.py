@@ -35,12 +35,9 @@ class FaRegister:
             return str(reaction.emoji) == '👍'
 
         try:
-            reaction, user = await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
-        except asyncio.TimeoutError:
-            await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
-            return
+            reaction = await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
         except:
-            await self.bot.send_message(user, "Sorry, something went wrong. Please contact an admin.")
+            await self.bot.send_message(user, "Sorry, you either didn't react quick enough or something went wrong. Please try again.")
             return
 
         if str(reaction.emoji) == '👍':
