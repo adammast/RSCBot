@@ -13,6 +13,7 @@ class FaRegister:
         self.team_manager_cog = self.bot.get_cog("TeamManager")
         self.match_cog = self.bot.get_cog("Match")
 
+    @commands.bot.event
     @commands.command(pass_context=True, no_pm=True, aliases=["ra"])
     async def registerAvailability(self, ctx):
         user = ctx.message.author
@@ -21,8 +22,8 @@ class FaRegister:
 
         message = await self.bot.send_message(user, "By registering your availability you are letting GMs know "
             "that you are active to play on the following match day in the following tier: "
-            "```\n\t**Match Day:** {0}"
-            "\n\t**Tier:** {1}```"
+            "\n\t**Match Day:** `{0}`"
+            "\n\t**Tier:** `{1}`"
             "\n\nIf this information is correct please press the 👍 reaction below.".format(match_day, tier))
 
         await self.bot.add_reaction(message, '👍')
@@ -31,7 +32,7 @@ class FaRegister:
             return user == ctx.message.author and str(reaction.emoji) == '👍'
 
         try:
-            await self.bot.event.wait_for('reaction_add', timeout=60.0, check=check)
+            await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
         except asyncio.TimeoutError:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
         else:
