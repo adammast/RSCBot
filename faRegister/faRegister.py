@@ -1,5 +1,6 @@
 import discord
 import asyncio
+import datetime
 
 from discord.ext import commands
 
@@ -19,11 +20,12 @@ class FaRegister:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
-        message = await self.bot.send_message(user, "By registering your availability you are letting GMs know "
-            "that you are active to play on the following match day in the following tier: "
-            "\n\t**Match Day:** `{0}`"
-            "\n\t**Tier:** `{1}`"
-            "\n\nIf this information is correct please press the 👍 reaction below.".format(match_day, tier))
+        embed = discord.Embed(title="Register Availability", 
+            desciption="By registering your availability you are letting GMs know that you are active to play on the following match day in the following tier. To confirm react with 👍 ",
+            colour=discord.Colour.blue())
+        embed.add_field(name="Match Day", value=match_day, inline=True)
+        embed.add_field(name="Tier", value=tier, inline=True)
+        message = await self.bot.send_message(user, embed=embed)
 
         await self.bot.add_reaction(message, '👍')
 
