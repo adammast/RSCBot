@@ -21,7 +21,7 @@ class FaRegister:
         tier = self._find_tier_from_fa_role(ctx, user)
 
         embed = discord.Embed(title="Register Availability", 
-            description="By registering your availability you are letting GMs know that you are active to play on the following match day in the following tier. To confirm react with 👍 ",
+            description="By registering your availability you are letting GMs know that you are available to play on the following match day in the following tier. To confirm react with 👍 ",
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
@@ -30,14 +30,15 @@ class FaRegister:
         await self.bot.add_reaction(message, '👍')
 
         def check(reaction, user):
-            return user == ctx.message.author and str(reaction.emoji) == '👍'
+            return str(reaction.emoji) == '👍'
 
         try:
-            await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
+            await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
         except asyncio.TimeoutError:
             await self.bot.send_message(user, "Sorry, you took too long to respond. Please try again.")
-        else:
-            await self.bot.send_message(user, "Thank you for registering!")
+            return
+            
+        await self.bot.send_message(user, "Thank you for registering!")
 
     def _find_tier_from_fa_role(self, ctx, user: discord.Member):
         tiers = self.team_manager_cog._tiers(ctx)
