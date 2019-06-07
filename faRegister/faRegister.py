@@ -3,6 +3,7 @@ import asyncio
 import datetime
 
 from discord.ext import commands
+from cogs.utils import checks
 
 class FaRegister:
 
@@ -48,6 +49,22 @@ class FaRegister:
                         message += " (Permanent FA)"
         message += "```"
         await self.bot.say(message)
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def clearAvailability(self, ctx, tier: str = None, match_day: str = None):
+        if match_day is None:
+            match_day = self.match_cog._match_day(ctx)
+
+        if tier is None:
+            self._save_match_data(ctx, match_day, {})
+        else:
+            self._save_tier_data(ctx, match_day, tier, [])
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def clearAllAvailability(self, ctx):
+        self._save_data(ctx, {})
 
     async def _send_register_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Register Availability", 
@@ -104,12 +121,12 @@ class FaRegister:
     def _register_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)
         tier_list.append(user.id)
-        self._save_data(ctx, match_day, tier, tier_list)
+        self._save_tier_data(ctx, match_day, tier, tier_list)
 
     def _unregister_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)
         tier_list.remove(user.id)
-        self._save_data(ctx, match_day, tier, tier_list)
+        self._save_tier_data(ctx, match_day, tier, tier_list)
 
     def _find_tier_from_fa_role(self, ctx, user: discord.Member):
         tiers = self.team_manager_cog._tiers(ctx)
@@ -119,10 +136,18 @@ class FaRegister:
                 return tier
         return None
 
-    def _save_data(self, ctx, match_day, tier, tier_data):
+    def _save_tier_data(self, ctx, match_day, tier, tier_data):
         all_data = self._all_data(ctx)
         match_data = all_data.setdefault(match_day, {})
         match_data[tier] = tier_data
+        self.data_cog._save_data(ctx, self.DATASET, all_data)
+
+    def _save_match_data(self, ctx, match_day, match_data):
+        all_data = self._all_data(ctx)
+        all_data[match_day] = match_data
+        self.data_cog._save_data(ctx, self.DATASET, all_data)
+
+    def _save_data(self, ctx, all_data):
         self.data_cog._save_data(ctx, self.DATASET, all_data)
 
     def _tier_data(self, ctx, match_day, tier):
