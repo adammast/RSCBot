@@ -74,7 +74,7 @@ class FaRegister:
 
     async def _send_unregister_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Register Availability", 
-            description="You have alreayd marked your availability for the following match day and tier. "
+            description="You have already marked your availability for the following match day and tier. "
                 "Do you wish to take yourself off the availability list? To confirm you want to unregister, react with 👎",
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
