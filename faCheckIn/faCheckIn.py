@@ -28,7 +28,7 @@ class FaCheckIn:
             if user.id not in tier_data:
                 await self._send_check_in_message(ctx, user, match_day, tier)
             else:
-                await self.bot.send_message(user, "You've already checked in. If you want to check out, use the [p]checkOut command.")
+                await self.bot.send_message(user, "You've already checked in. If you want to check out, use the {0}checkOut command.".format(ctx.prefix))
         else:
             await self.bot.send_message(user, "Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
@@ -47,7 +47,7 @@ class FaCheckIn:
             if user.id in tier_data:
                 await self._send_check_out_message(ctx, user, match_day, tier)
             else:
-                await self.bot.send_message(user, "You aren't currently checked in. If you want to check in, use the [p]checkIn command.")
+                await self.bot.send_message(user, "You aren't currently checked in. If you want to check in, use the {0}checkIn command.".format(ctx.prefix))
         else:
             await self.bot.send_message(user, "Your tier could not be determined. If you are in the league please contact an admin for help.")
 
