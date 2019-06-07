@@ -37,6 +37,8 @@ class FaCheckIn:
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
+        if tier is None:
+            tier = self.team_manager_cog.get_current_tier_role(ctx, user)
 
         await self.bot.delete_message(ctx.message)
 
@@ -47,7 +49,7 @@ class FaCheckIn:
             else:
                 await self.bot.send_message(user, "You aren't currently checked in. If you want to check in, use the [p]checkIn command.")
         else:
-            await self.bot.send_message(user, "Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
+            await self.bot.send_message(user, "Your tier could not be determined. If you are in the league please contact an admin for help.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier: str, match_day: str = None):
