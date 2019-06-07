@@ -21,9 +21,9 @@ class FaCheckIn:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
-        if tier is not None:
-            await self.bot.delete_message(ctx.message)
+        await self.bot.delete_message(ctx.message)
 
+        if tier is not None:
             tier_data = self._tier_data(ctx, match_day, tier)
             if user.id not in tier_data:
                 await self._send_check_in_message(ctx, user, match_day, tier)
@@ -38,9 +38,9 @@ class FaCheckIn:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
-        if tier is not None:
-            await self.bot.delete_message(ctx.message)
+        await self.bot.delete_message(ctx.message)
 
+        if tier is not None:
             tier_data = self._tier_data(ctx, match_day, tier)
             if user.id in tier_data:
                 await self._send_check_out_message(ctx, user, match_day, tier)
