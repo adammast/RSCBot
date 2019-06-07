@@ -60,11 +60,13 @@ class FaRegister:
             self._save_match_data(ctx, match_day, {})
         else:
             self._save_tier_data(ctx, match_day, tier, [])
+        await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def clearAllAvailability(self, ctx):
         self._save_data(ctx, {})
+        await self.bot.say("Done.")
 
     async def _send_register_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Register Availability", 
