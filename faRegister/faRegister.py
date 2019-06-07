@@ -33,9 +33,16 @@ class FaRegister:
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
         tier_list = self._tier_data(ctx, match_day, tier)
+        perm_fa_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.PERM_FA_ROLE)
+
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
-        for fa in tier_list:
-            message += "\n\t{0}".format(fa.nick)
+        for user in tier_list:
+            member = commands.MemberConverter(ctx, user).convert()
+            if member in ctx.message.server.members:
+                if self._find_tier_from_fa_role(ctx, user) is not None:
+                    message += "\n\t{0}".format(user.nick)
+                    if perm_fa_role is not None and perm_fa_role in member.roles:
+                        message += " (Permanent FA)"
         message += "```"
         await self.bot.say(message)
 
@@ -93,7 +100,7 @@ class FaRegister:
 
     def _register_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)
-        tier_list.append(user)
+        tier_list.append(user.id)
         self._save_data(ctx, match_day, tier, tier_list)
 
     def _unregister_user(self, ctx, user, match_day, tier):
