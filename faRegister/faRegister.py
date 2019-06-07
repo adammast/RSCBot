@@ -21,7 +21,7 @@ class FaRegister:
         tier = self._find_tier_from_fa_role(ctx, user)
 
         tier_data = self._tier_data(ctx, match_day, tier)
-        if user not in tier_data:
+        if user.id not in tier_data:
             await self._send_register_message(ctx, user, match_day, tier)
         else:
             await self._send_unregister_message(ctx, user, match_day, tier)
