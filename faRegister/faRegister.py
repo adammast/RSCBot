@@ -22,9 +22,9 @@ class FaRegister:
 
         tier_data = self._tier_data(ctx, match_day, tier)
         if user not in tier_data:
-            self._send_register_message(ctx, user, match_day, tier)
+            await self._send_register_message(ctx, user, match_day, tier)
         else:
-            self._send_unregister_message(ctx, user, match_day, tier)
+            await self._send_unregister_message(ctx, user, match_day, tier)
 
         await self.bot.delete_message(ctx.message)
 
