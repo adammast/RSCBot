@@ -33,7 +33,7 @@ class FaRegister:
             await self.bot.say("Only free agents are allowed to register. If you are a free agent and are unable to register please message an admin.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
-    async def checkAvailability(self, ctx, tier: str, match_day: int = None):
+    async def checkAvailability(self, ctx, tier: str, match_day: str = None):
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
         tier_list = self._tier_data(ctx, match_day, tier)
