@@ -20,13 +20,16 @@ class FaRegister:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
-        await self.bot.delete_message(ctx.message)
+        if tier is not None:
+            await self.bot.delete_message(ctx.message)
 
-        tier_data = self._tier_data(ctx, match_day, tier)
-        if user.id not in tier_data:
-            await self._send_register_message(ctx, user, match_day, tier)
+            tier_data = self._tier_data(ctx, match_day, tier)
+            if user.id not in tier_data:
+                await self._send_register_message(ctx, user, match_day, tier)
+            else:
+                await self._send_unregister_message(ctx, user, match_day, tier)
         else:
-            await self._send_unregister_message(ctx, user, match_day, tier)
+            await self.bot.say("Only free agents are allowed to register. If you are a free agent and are unable to register please message an admin.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier: str, match_day: int = None):
