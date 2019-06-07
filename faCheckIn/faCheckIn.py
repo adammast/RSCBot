@@ -5,7 +5,7 @@ import datetime
 from discord.ext import commands
 from cogs.utils import checks
 
-class FaRegister:
+class FaCheckIn:
 
     DATASET = "FaCheckInData"
 
@@ -15,8 +15,8 @@ class FaRegister:
         self.team_manager_cog = self.bot.get_cog("TeamManager")
         self.match_cog = self.bot.get_cog("Match")
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["ra"])
-    async def registerAvailability(self, ctx):
+    @commands.command(pass_context=True, no_pm=True, aliases=["ci"])
+    async def checkIn(self, ctx):
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
@@ -26,11 +26,28 @@ class FaRegister:
 
             tier_data = self._tier_data(ctx, match_day, tier)
             if user.id not in tier_data:
-                await self._send_register_message(ctx, user, match_day, tier)
+                await self._send_check_in_message(ctx, user, match_day, tier)
             else:
-                await self._send_unregister_message(ctx, user, match_day, tier)
+                await self.bot.send_message(user, "You've already checked in. If you want to check out, use the [p]checkOut command.")
         else:
-            await self.bot.say("Only free agents are allowed to register. If you are a free agent and are unable to register please message an admin.")
+            await self.bot.send_message(user, "Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
+
+    @commands.command(pass_context=True, no_pm=True, aliases=["co"])
+    async def checkOut(self, ctx):
+        user = ctx.message.author
+        match_day = self.match_cog._match_day(ctx)
+        tier = self._find_tier_from_fa_role(ctx, user)
+
+        if tier is not None:
+            await self.bot.delete_message(ctx.message)
+
+            tier_data = self._tier_data(ctx, match_day, tier)
+            if user.id in tier_data:
+                await self._send_check_out_message(ctx, user, match_day, tier)
+            else:
+                await self.bot.send_message(user, "You aren't currently checked in. If you want to check in, use the [p]checkIn command.")
+        else:
+            await self.bot.send_message(user, "Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier: str, match_day: str = None):
@@ -68,9 +85,9 @@ class FaRegister:
         self._save_data(ctx, {})
         await self.bot.say("Done.")
 
-    async def _send_register_message(self, ctx, user, match_day, tier):
-        embed = discord.Embed(title="Register Availability", 
-            description="By registering your availability you are letting GMs know that you are available to play "
+    async def _send_check_in_message(self, ctx, user, match_day, tier):
+        embed = discord.Embed(title="Check In", 
+            description="By checking in you are letting GMs know that you are available to play "
                 "on the following match day in the following tier. To confirm react with 👍",
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
@@ -90,14 +107,14 @@ class FaRegister:
 
         if result:
             self._register_user(ctx, user, match_day, tier)
-            await self.bot.send_message(user, "Thank you for registering! GMs will now be able to see that you're available.")
+            await self.bot.send_message(user, "Thank you for checking in! GMs will now be able to see that you're available.")
         else:
             await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
 
-    async def _send_unregister_message(self, ctx, user, match_day, tier):
-        embed = discord.Embed(title="Register Availability", 
-            description="You have already marked your availability for the following match day and tier. "
-                "Do you wish to take yourself off the availability list? To confirm you want to unregister, react with 👎",
+    async def _send_check_out_message(self, ctx, user, match_day, tier):
+        embed = discord.Embed(title="Check Out", 
+            description="You are currently checked in as available for the following match day and tier. "
+                "Do you wish to take yourself off the availability list? To confirm you want to check out, react with 👎",
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
@@ -167,4 +184,4 @@ class FaRegister:
         return all_data
 
 def setup(bot):
-    bot.add_cog(FaRegister(bot))
+    bot.add_cog(FaCheckIn(bot))
