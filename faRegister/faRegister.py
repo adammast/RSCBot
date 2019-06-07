@@ -20,13 +20,13 @@ class FaRegister:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
+        await self.bot.delete_message(ctx.message)
+
         tier_data = self._tier_data(ctx, match_day, tier)
         if user.id not in tier_data:
             await self._send_register_message(ctx, user, match_day, tier)
         else:
             await self._send_unregister_message(ctx, user, match_day, tier)
-
-        await self.bot.delete_message(ctx.message)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier: str, match_day: int = None):
@@ -105,7 +105,7 @@ class FaRegister:
 
     def _unregister_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)
-        tier_list.remove(user)
+        tier_list.remove(user.id)
         self._save_data(ctx, match_day, tier, tier_list)
 
     def _find_tier_from_fa_role(self, ctx, user: discord.Member):
