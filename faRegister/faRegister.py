@@ -39,8 +39,8 @@ class FaRegister:
         for user in tier_list:
             member = commands.MemberConverter(ctx, user).convert()
             if member in ctx.message.server.members:
-                if self._find_tier_from_fa_role(ctx, user) is not None:
-                    message += "\n\t{0}".format(user.nick)
+                if self._find_tier_from_fa_role(ctx, member) is not None:
+                    message += "\n\t{0}".format(member.nick)
                     if perm_fa_role is not None and perm_fa_role in member.roles:
                         message += " (Permanent FA)"
         message += "```"
