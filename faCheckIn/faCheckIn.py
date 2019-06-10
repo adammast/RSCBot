@@ -141,7 +141,7 @@ class FaCheckIn:
 
     def _register_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)
-        tier_list.append("{0}".format(user.id))
+        tier_list.append(user.id)
         self._save_tier_data(ctx, match_day, tier, tier_list)
 
     def _unregister_user(self, ctx, user, match_day, tier):
