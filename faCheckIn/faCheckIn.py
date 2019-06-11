@@ -1,6 +1,6 @@
 import discord
 import asyncio
-import datetime
+import difflib
 
 from discord.ext import commands
 from cogs.utils import checks
@@ -52,9 +52,14 @@ class FaCheckIn:
             await self.bot.send_message(user, "Your tier could not be determined. If you are in the league please contact an admin for help.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
-    async def checkAvailability(self, ctx, tier: str, match_day: str = None):
+    async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
+        tier = self.team_manager_cog._match_tier_name(ctx, tier_name)
+        if tier is None or tier == "":
+            await self.bot.say("No tier with name: `{0}`".format(tier_name))
+            return
+
         tier_list = self._tier_data(ctx, match_day, tier)
         perm_fa_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.PERM_FA_ROLE)
 

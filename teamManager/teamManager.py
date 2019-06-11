@@ -484,6 +484,13 @@ class TeamManager:
                 return team, True
         return difflib.get_close_matches(team_name, teams, n=3, cutoff=0.4), False
 
+    def _match_tier_name(self, ctx, tier_name):
+        tiers = self._tiers(ctx)
+        for tier in tiers:
+            if tier_name.lower() == tier.lower():
+                return tier
+        return difflib.get_close_matches(tier_name, tiers, n=1, cutoff=0.6)
+
     def _find_teams_for_tier(self, ctx, tier):
         teams_in_tier = []
         teams = self._teams(ctx)
