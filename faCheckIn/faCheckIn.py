@@ -56,7 +56,7 @@ class FaCheckIn:
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
         tier = self.team_manager_cog._match_tier_name(ctx, tier_name)
-        if tier is None or tier == "":
+        if tier is None:
             await self.bot.say("No tier with name: `{0}`".format(tier_name))
             return
 
