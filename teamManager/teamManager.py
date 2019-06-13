@@ -249,7 +249,7 @@ class TeamManager:
                 return True
         return False
 
-    def is_on_ir(self, member):
+    def is_IR(self, member):
         for role in member.roles:
             if role.name == self.IR_ROLE:
                 return True
