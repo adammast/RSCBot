@@ -302,6 +302,8 @@ class TeamManager:
         name = member.nick if member.nick else member.name
         if self.is_captain(member):
             extraRoles.append("C")
+        if self.is_IR(member):
+            extraRoles.append("IR")
         roleString = ""
         if extraRoles:
             roleString = " ({0})".format("|".join(extraRoles))
