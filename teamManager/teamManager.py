@@ -249,6 +249,12 @@ class TeamManager:
                 return True
         return False
 
+    def on_IR(self, member):
+        for role in member.roles:
+            if role.name == self.IR_ROLE:
+                return True
+        return False
+
     def teams_for_user(self, ctx, user):
         tiers = self._tiers(ctx)
         teams = []
