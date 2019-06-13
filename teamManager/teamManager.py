@@ -18,6 +18,7 @@ class TeamManager:
     TIER_ROLE_KEY = "Tier Role"
     GM_ROLE = "General Manager"
     CAPTAN_ROLE = "Captain"
+    IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
 
     def __init__(self, bot):
