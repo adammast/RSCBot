@@ -18,7 +18,6 @@ class TeamManager:
     TIER_ROLE_KEY = "Tier Role"
     GM_ROLE = "General Manager"
     CAPTAN_ROLE = "Captain"
-    IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
 
     def __init__(self, bot):
@@ -249,12 +248,6 @@ class TeamManager:
                 return True
         return False
 
-    def on_IR(self, member):
-        for role in member.roles:
-            if role.name == self.IR_ROLE:
-                return True
-        return False
-
     def teams_for_user(self, ctx, user):
         tiers = self._tiers(ctx)
         teams = []
@@ -302,8 +295,6 @@ class TeamManager:
         name = member.nick if member.nick else member.name
         if self.is_captain(member):
             extraRoles.append("C")
-        if self.on_IR(member):
-            extraRoles.append("IR")
         roleString = ""
         if extraRoles:
             roleString = " ({0})".format("|".join(extraRoles))
