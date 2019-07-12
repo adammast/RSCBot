@@ -11,7 +11,5 @@ class AnnoyJK:
         if message.author.id == self.JK_ID:
             await self.bot.add_reaction(message, '👍')
 
-        await self.bot.process_commands(message)
-
 def setup(bot):
     bot.add_cog(AnnoyJK(bot))
