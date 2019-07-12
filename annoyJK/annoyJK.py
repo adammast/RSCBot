@@ -9,6 +9,8 @@ class AnnoyJK:
 
     async def on_message(self, message):
         await self.bot.add_reaction(message, '👍')
+        if message.content == "Test":
+            await self.bot.send_message(message.channel, "{0}".format(message.author.id))
         #if message.author.id == self.JK_ID:
         #    await self.bot.add_reaction(message, '👍')
 
