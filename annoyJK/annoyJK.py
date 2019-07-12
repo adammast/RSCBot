@@ -6,7 +6,7 @@ class AnnoyJK:
         self.bot = bot
 
     async def on_message(self, message):
-        if message.author.name == "adammast":
+        if message.author.name == "JKmadness":
             emoji = get(self.bot.get_all_emojis(), name='EventElf')
             await self.bot.add_reaction(message, emoji)
 
