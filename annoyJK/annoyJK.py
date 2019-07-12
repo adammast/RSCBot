@@ -1,13 +1,11 @@
 class AnnoyJK:
 
-    JK_ID = 226869393626234881
-
     def __init__(self, bot):
         self.bot = bot
 
     async def on_message(self, message):
         if message.author.name == "adammast":
-            await self.bot.add_reaction(message, '👍')
+            await self.bot.add_reaction(message, 'EventElf')
 
 def setup(bot):
     n = AnnoyJK(bot)
