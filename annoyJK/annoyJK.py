@@ -1,3 +1,5 @@
+from discord.utils import get
+
 class AnnoyJK:
 
     def __init__(self, bot):
@@ -5,7 +7,8 @@ class AnnoyJK:
 
     async def on_message(self, message):
         if message.author.name == "adammast":
-            await self.bot.add_reaction(message, 'EventElf')
+            emoji = get(self.bot.get_all_emojis(), name='EventElf')
+            await self.bot.add_reaction(message, emoji)
 
 def setup(bot):
     n = AnnoyJK(bot)
