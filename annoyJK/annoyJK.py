@@ -1,5 +1,3 @@
-from discord.ext import commands
-
 class AnnoyJK:
 
     JK_ID = 226869393626234881
@@ -8,7 +6,7 @@ class AnnoyJK:
         self.bot = bot
 
     async def on_message(self, message):
-        if message.author.id == 226869393626234881:
+        if message.author.name == "adammast":
             await self.bot.add_reaction(message, '👍')
 
 def setup(bot):
