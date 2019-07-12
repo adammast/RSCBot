@@ -12,4 +12,5 @@ class AnnoyJK:
             await self.bot.add_reaction(message, '👍')
 
 def setup(bot):
+    bot.add_listener(AnnoyJK(bot).on_message, "on_message")
     bot.add_cog(AnnoyJK(bot))
