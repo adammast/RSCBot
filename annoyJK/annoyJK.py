@@ -8,8 +8,7 @@ class AnnoyJK:
         self.bot = bot
 
     async def on_message(self, message):
-        if message.author.id == self.JK_ID:
-            await self.bot.add_reaction(message, '👍')
+        await self.bot.add_reaction(message, '👍')
 
 def setup(bot):
     n = AnnoyJK(bot)
