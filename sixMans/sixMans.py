@@ -121,8 +121,8 @@ class SixMans:
 
     def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
-        self.game = Game(players)
-        self.game.channel = await self.create_channel(ctx)
+        channel = await self.create_channel(ctx)
+        self.game = Game(players, channel)
 
     async def create_channel(self, ctx):
         server = ctx.message.server
@@ -131,14 +131,14 @@ class SixMans:
         return channel
 
 class Game:
-    def __init__(self, players):
+    def __init__(self, players, channel):
         self.players = set(players)
         self.captains = random.sample(self.players, 2)
         self.orange = set()
         self.blue = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.channel = None
+        self.channel = channel
 
     def add_to_blue(self, player):
         self.players.remove(player)
