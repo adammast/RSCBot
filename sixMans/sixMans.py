@@ -17,7 +17,6 @@ class SixMans:
         self.bot = bot
         self.queue = PlayerQueue()
         self.game = None
-        self.busy = False
 
     CHANNEL_INDEX = 1
 
@@ -115,7 +114,6 @@ class SixMans:
         embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
         embed.add_field(name="Orange Team", value="{}".format(", ".join([player.mention for player in self.game.orange])))
         embed.add_field(name="Blue Team", value="{}".format(", ".join([player.mention for player in self.game.blue])))
-        embed.add_field(name="", value="")
         embed.add_field(name="Lobby Info", value="Name = {0}\nPass = {1}".format(self.game.roomName, self.game.roomPass))
         await self.bot.send_message(channel, embed=embed)
 
