@@ -23,10 +23,25 @@ class SixMans:
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
+            if member in self.queue:
+                await self.bot.say("{} is already in queue.".format(member.display_name))
+                break
             self.queue.put(member)
+            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+        if self.queue_full():
+            self.bot.say("Queue is full! Teams are as follows:")
+            self.randomize_teams()
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["q"])
-    async def queue(self, ctx):
+    @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
+    @checks.admin_or_permissions(manage_server=True)
+    async def dequeue_all(self, ctx, *members: discord.Member):
+        """Mass queueing for testing purposes"""
+        for member in members:
+            self.queue.put(member)
+            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+
+    @commands.command(pass_context=True, no_pm=True, aliases=["queue"])
+    async def q(self, ctx):
         """Add yourself to the queue"""
         player = ctx.message.author
 
