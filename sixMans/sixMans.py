@@ -17,6 +17,7 @@ class SixMans:
         self.bot = bot
         self.queue = PlayerQueue()
         self.game = None
+        self.busy = False
 
     CHANNEL_INDEX = 1
 
