@@ -113,7 +113,8 @@ class SixMans:
 
     async def create_channel(self, ctx):
         server = ctx.message.server
-        return await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
+        channel = await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
+        return channel
 
 class Game:
     def __init__(self, players):
