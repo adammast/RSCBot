@@ -119,7 +119,7 @@ class SixMans:
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(self.game.roomName, self.game.roomPass), inline=False)
         await self.bot.send_message(channel, embed=embed)
 
-    def create_game(self, ctx):
+    async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         channel = await self.create_channel(ctx)
         self.game = Game(players, channel)
