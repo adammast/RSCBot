@@ -9,6 +9,7 @@ from discord.ext import commands
 from cogs.utils import checks
 
 TEAM_SIZE = 6
+CAT_ID = 599665527433986085
 
 class SixMans:
 
@@ -17,6 +18,8 @@ class SixMans:
         self.queue = PlayerQueue()
         self.game = None
         self.busy = False
+
+    CHANNEL_INDEX = 1
 
     @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
     @checks.admin_or_permissions(manage_server=True)
@@ -104,14 +107,17 @@ class SixMans:
         for player in blue:
             self.game.add_to_blue(player)
 
-        await self.display_teams(channel)
+        await self.display_game_info(channel)
 
         self.busy = False
 
-    async def display_teams(self, channel):
-        await self.bot.send_message(channel, "Lobby info:\n\tName = {0}\n\tPass = {1}".format(self.game.roomName, self.game.roomPass))
-        await self.bot.send_message(channel, "🔶 ORANGE 🔶: {}".format(", ".join([player.mention for player in self.game.orange])))
-        await self.bot.send_message(channel, "🔷 BLUE 🔷: {}".format(", ".join([player.mention for player in self.game.blue])))
+    async def display_game_info(self, channel):
+        embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
+        embed.add_field(name="Orange Team", value="{}".format(", ".join([player.mention for player in self.game.orange])))
+        embed.add_field(name="Blue Team", value="{}".format(", ".join([player.mention for player in self.game.blue])))
+        embed.add_field(name="", value="")
+        embed.add_field(name="Lobby Info", value="Name = {0}\nPass = {1}".format(self.game.roomName, self.game.roomPass))
+        await self.bot.send_message(channel, embed=embed)
 
     def create_game(self):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
@@ -119,7 +125,9 @@ class SixMans:
 
     async def create_channel(self, ctx):
         server = ctx.message.server
-        return await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
+        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.CHANNEL_INDEX), type=discord.ChannelType.text)
+        self.CHANNEL_INDEX += 1
+        return channel
 
 class Game:
     def __init__(self, players):
