@@ -57,6 +57,7 @@ class SixMans:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
+            await self.bot.say("{}".format(", ".join([player.display_name for player in game.players])))
             if player in game.players:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
                 return
