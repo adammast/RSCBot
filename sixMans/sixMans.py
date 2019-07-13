@@ -113,9 +113,9 @@ class SixMans:
 
     async def display_game_info(self, channel):
         embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
-        embed.add_field(name="Orange Team", value="{}".format(", ".join([player.mention for player in self.game.orange])))
-        embed.add_field(name="Blue Team", value="{}".format(", ".join([player.mention for player in self.game.blue])))
-        embed.add_field(name="Lobby Info", value="Name = {0}\nPass = {1}".format(self.game.roomName, self.game.roomPass))
+        embed.add_field(name="Orange Team", value="{}".format(", ".join([player.mention for player in self.game.orange])), inline=False)
+        embed.add_field(name="Blue Team", value="{}".format(", ".join([player.mention for player in self.game.blue])), inline=False)
+        embed.add_field(name="Lobby Info", value="Name = {0}\nPass = {1}".format(self.game.roomName, self.game.roomPass), inline=False)
         await self.bot.send_message(channel, embed=embed)
 
     def create_game(self):
