@@ -29,8 +29,8 @@ class SixMans:
             self.queue.put(member)
             await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            self.bot.say("Queue is full! Teams are as follows:")
-            self.randomize_teams()
+            await self.bot.say("Queue is full! Teams are as follows:")
+            await self.randomize_teams()
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
     @checks.admin_or_permissions(manage_server=True)
@@ -56,8 +56,8 @@ class SixMans:
 
         await self.bot.say("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            self.bot.say("Queue is full! Teams are as follows:")
-            self.randomize_teams()
+            await self.bot.say("Queue is full! Teams are as follows:")
+            await self.randomize_teams()
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dq"])
     async def dequeue(self, ctx):
