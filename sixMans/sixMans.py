@@ -56,9 +56,9 @@ class SixMans:
         else:
             await self.bot.say("{} is not in queue.".format(player.display_name))
 
-    @commands.command(no_pm=True)
+    @commands.command(no_pm=True, aliases=["kq"])
     @checks.admin_or_permissions(manage_server=True)
-    async def kick(self, player: discord.Member):
+    async def kick_queue(self, player: discord.Member):
         """Remove someone else from the queue"""
         if player in self.queue:
             self.queue.remove(player)
