@@ -21,7 +21,8 @@ class SixMans:
     @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
     @checks.admin_or_permissions(manage_server=True)
     async def test_channel(self, ctx):
-        self.make_channel(ctx)
+        await self.create_channel(ctx)
+
 
     @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
     @checks.admin_or_permissions(manage_server=True)
@@ -93,7 +94,7 @@ class SixMans:
     async def randomize_teams(self, ctx):
         self.busy = True
         self.create_game()
-        channel = self.make_channel(ctx)
+        channel = await self.create_channel(ctx)
 
         orange = random.sample(self.game.players, 3)
         for player in orange:
@@ -116,10 +117,9 @@ class SixMans:
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         self.game = Game(players)
 
-    async def make_channel(self, ctx):
+    async def create_channel(self, ctx):
         server = ctx.message.server
-        channel = await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
-        return channel
+        return await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
 
 class Game:
     def __init__(self, players):
