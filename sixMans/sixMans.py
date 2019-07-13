@@ -30,7 +30,7 @@ class SixMans:
             await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
             await self.bot.say("Queue is full! Teams are as follows:")
-            await self.randomize_teams()
+            await self.randomize_teams(ctx)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
     @checks.admin_or_permissions(manage_server=True)
@@ -56,8 +56,8 @@ class SixMans:
 
         await self.bot.say("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are as follows:")
-            await self.randomize_teams()
+            await self.bot.say("Queue is full! Teams are being created.")
+            await self.randomize_teams(ctx)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dq"])
     async def dequeue(self, ctx):
@@ -85,9 +85,10 @@ class SixMans:
     def queue_full(self):
         return self.queue.qsize() >= TEAM_SIZE
 
-    async def randomize_teams(self):
+    async def randomize_teams(self, ctx):
         self.busy = True
         self.create_game()
+        channel = self.create_channel(ctx)
 
         orange = random.sample(self.game.players, 3)
         for player in orange:
@@ -97,17 +98,22 @@ class SixMans:
         for player in blue:
             self.game.add_to_blue(player)
 
-        await self.display_teams()
+        await self.display_teams(channel)
 
         self.busy = False
 
-    async def display_teams(self):
-        await self.bot.say("🔶 ORANGE 🔶: {}".format(", ".join([player.display_name for player in self.game.orange])))
-        await self.bot.say("🔷 BLUE 🔷: {}".format(", ".join([player.display_name for player in self.game.blue])))
+    async def display_teams(self, channel):
+        await self.bot.send_message(channel, "Lobby info:\n\tName = {0}\n\tPass = {1}".format(self.game.roomName, self.game.roomPass))
+        await self.bot.send_message(channel, "🔶 ORANGE 🔶: {}".format(", ".join([player.mention for player in self.game.orange])))
+        await self.bot.send_message(channel, "🔷 BLUE 🔷: {}".format(", ".join([player.mention for player in self.game.blue])))
 
     def create_game(self):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         self.game = Game(players)
+
+    async def create_channel(self, ctx):
+        server = ctx.message.server
+        return await self.bot.create_channel(server, '6mans-channel', type=discord.ChannelType.text)
 
 class Game:
     def __init__(self, players):
@@ -115,6 +121,8 @@ class Game:
         self.captains = random.sample(self.players, 2)
         self.orange = set()
         self.blue = set()
+        self.roomName = self._generate_name_pass()
+        self.roomPass = self._generate_name_pass()
 
     def add_to_blue(self, player):
         self.players.remove(player)
@@ -126,6 +134,54 @@ class Game:
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
+
+    def _generate_name_pass(self):
+        # TODO: Load from file?
+        set = [
+            'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
+            'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
+            'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
+            'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
+            'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
+            'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
+            'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
+            'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
+            'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
+            'vulcan', 'zippy',
+
+            'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
+            'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
+            'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
+            'dunkhouse', 'throwback', 'underpass', 'badlands',
+
+            '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
+            'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
+            'stormwatch', 'tora', 'trigon', 'wetpaint',
+
+            'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
+            'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
+            'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
+            'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
+            'voltaic', 'wonderment', 'zomba',
+
+            'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
+            'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
+            'platinum', 'diamond',
+
+            'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
+            'doubles', 'standard', 'chaos',
+
+            'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
+            'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
+            'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
+            'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
+            'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
+            'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
+            'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
+            'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
+            'tex', 'tusk', 'viper', 'wolfman', 'yuri'
+        ]
+        return set[random.randrange(len(set))]
 
 class OrderedSet(collections.MutableSet):
     def __init__(self, iterable=None):
