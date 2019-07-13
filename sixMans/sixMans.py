@@ -16,10 +16,9 @@ class SixMans:
     def __init__(self, bot):
         self.bot = bot
         self.queue = PlayerQueue()
-        self.game = None
+        self.games = []
         self.busy = False
-
-    CHANNEL_INDEX = 1
+        self.channel_index = 1
 
     @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
     @checks.admin_or_permissions(manage_server=True)
@@ -57,9 +56,10 @@ class SixMans:
         if player in self.queue:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
-        if self.busy and player in self.game:
-            await self.bot.say("{} is already in a game.".format(player.display_name))
-            return
+        for game in self.games:
+            if self.busy and player in game.players:
+                await self.bot.say("{} is already in a game.".format(player.display_name))
+                return
 
         self.queue.put(player)
 
@@ -96,8 +96,7 @@ class SixMans:
 
     async def randomize_teams(self, ctx):
         self.busy = True
-        self.create_game()
-        channel = await self.create_channel(ctx)
+        await self.create_game(ctx)
 
         orange = random.sample(self.game.players, 3)
         for player in orange:
@@ -107,7 +106,9 @@ class SixMans:
         for player in blue:
             self.game.add_to_blue(player)
 
-        await self.display_game_info(channel)
+        await self.display_game_info(self.game.channel)
+
+        self.games.append(self.game)
 
         self.busy = False
 
@@ -118,14 +119,15 @@ class SixMans:
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(self.game.roomName, self.game.roomPass), inline=False)
         await self.bot.send_message(channel, embed=embed)
 
-    def create_game(self):
+    def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         self.game = Game(players)
+        self.game.channel = await self.create_channel(ctx)
 
     async def create_channel(self, ctx):
         server = ctx.message.server
-        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.CHANNEL_INDEX), type=discord.ChannelType.text)
-        self.CHANNEL_INDEX += 1
+        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.channel_index), type=discord.ChannelType.text)
+        self.channel_index += 1
         return channel
 
 class Game:
@@ -136,6 +138,7 @@ class Game:
         self.blue = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
+        self.channel = None
 
     def add_to_blue(self, player):
         self.players.remove(player)
