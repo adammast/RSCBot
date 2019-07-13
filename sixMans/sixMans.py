@@ -57,7 +57,7 @@ class SixMans:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
-            if self.busy and player in game.players:
+            if player in game.players:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
                 return
 
@@ -96,33 +96,33 @@ class SixMans:
 
     async def randomize_teams(self, ctx):
         self.busy = True
-        await self.create_game(ctx)
+        game = await self.create_game(ctx)
 
-        orange = random.sample(self.game.players, 3)
+        orange = random.sample(game.players, 3)
         for player in orange:
-            self.game.add_to_orange(player)
+            game.add_to_orange(player)
 
-        blue = list(self.game.players)
+        blue = list(game.players)
         for player in blue:
-            self.game.add_to_blue(player)
+            game.add_to_blue(player)
 
-        await self.display_game_info(self.game.channel)
+        await self.display_game_info(game)
 
-        self.games.append(self.game)
+        self.games.append(game)
 
         self.busy = False
 
-    async def display_game_info(self, channel):
+    async def display_game_info(self, game):
         embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.game.orange])), inline=False)
-        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.game.blue])), inline=False)
-        embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(self.game.roomName, self.game.roomPass), inline=False)
-        await self.bot.send_message(channel, embed=embed)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
+        embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
+        await self.bot.send_message(game.channel, embed=embed)
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         channel = await self.create_channel(ctx)
-        self.game = Game(players, channel)
+        return Game(players, channel)
 
     async def create_channel(self, ctx):
         server = ctx.message.server
