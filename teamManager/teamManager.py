@@ -8,7 +8,7 @@ from cogs.utils import checks
 
 
 class TeamManager:
-    """Used to get the match information"""
+    """Used to match roles to teams"""
 
     DATASET = "TeamData"
     TIERS_KEY = "Tiers"
