@@ -127,8 +127,7 @@ class SixMans:
 
     async def create_channel(self, ctx):
         server = ctx.message.server
-        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.channel_index), type=discord.ChannelType.text)
-        channel.setParent(CAT_ID)
+        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.channel_index), type=discord.ChannelType.text, position=100)
         self.channel_index += 1
         return channel
 
