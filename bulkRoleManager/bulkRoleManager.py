@@ -9,7 +9,7 @@ class BulkRoleManager:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
@@ -22,13 +22,13 @@ class BulkRoleManager:
                     messageList.append("{0.name}#{0.discriminator}".format(member))
                 count += 1
         if count == 0:
-            await self.bot.say("Nobody has the {0} role".format(role.mention))
+            await ctx.send("Nobody has the {0} role".format(role.mention))
         else:
             for message in messageList:
-                await self.bot.say(message)
-            await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
+                await ctx.send(message)
+            await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def removeRoleFromAll(self, ctx, role: discord.Role):
         """Removes the role from every member who has it in the server"""
@@ -38,12 +38,12 @@ class BulkRoleManager:
                 await member.remove_roles(role)
                 empty = False
         if empty:
-            await self.bot.say(":x: Nobody has the {0} role".format(role.mention))
+            await ctx.send(":x: Nobody has the {0} role".format(role.mention))
         else:
-            await self.bot.say(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
+            await ctx.send(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def addRole(self, ctx, role: discord.Role, *userList):
         """Adds the role to every member that can be found from the userList"""
@@ -54,7 +54,7 @@ class BulkRoleManager:
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
-                if member in ctx.message.guild.members:
+                if member in guild.members:
                     if role not in member.roles:
                         await member.add_roles(role)
                         added += 1
@@ -63,8 +63,8 @@ class BulkRoleManager:
                     empty = False
             except:
                 if notFound == 0:
-                    await self.bot.say("Couldn't find:")
-                await self.bot.say(user)
+                    await ctx.send("Couldn't find:")
+                await ctx.send(user)
                 notFound += 1
         if empty:
             message = ":x: Nobody was given the role {0}".format(role.mention)
@@ -76,33 +76,34 @@ class BulkRoleManager:
             message += ". {0} user(s) already had the role".format(had)
         if added > 0:
             message += ". {0} user(s) had the role added to them".format(added)
-        await self.bot.say(message)
+        await ctx.send(message)
 
     
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getId(self, ctx, *userList):
         notFound = []
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
-                if member in ctx.message.guild.members:
+                if member in guild.members:
                     nickname = self.get_player_nickname(member)
                     await self.bot.say("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
             except:
                 notFound.append(user)
         if len(notFound) > 0:
-            await self.bot.say(":x: Couldn't find:")
+            await ctx.send(":x: Couldn't find:")
             for user in notFound:
-                await self.bot.say(user)
+                await ctx.send(user)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
         """Gives the roleToGive to every member who already has the currentRole"""
         count = 0
         hadRoleCount = 0
         countGiven = 0
-        for member in ctx.message.guild.members:
+        
+        for member in guild.members:
             if currentRole in member.roles:
                 count += 1
                 if roleToGive in member.roles:
@@ -118,7 +119,7 @@ class BulkRoleManager:
                 message += ". {0} user(s) already had the {1} role".format(hadRoleCount, roleToGive.name)
             if countGiven > 0:
                 message += ". {0} user(s) had the {1} role added to them".format(countGiven, roleToGive.name)
-        await self.bot.say(message)
+        await ctx.send(message)
 
     def get_player_nickname(self, user: discord.Member):
         if user.nick is not None:

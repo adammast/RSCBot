@@ -26,16 +26,16 @@ class TeamManager:
         self.data_cog = self.bot.get_cog("RscData")
         self.prefix_cog = self.bot.get_cog("PrefixManager")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def franchises(self, ctx):
         franchise_roles = self._get_all_franchise_roles(ctx)
         message = "```Franchises:"
         for role in franchise_roles:
             message += "\n\t{0}".format(role.name)
         message += "```"
-        await self.bot.say(message)
+        await ctx.send(message)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def teams(self, ctx, *, franchise_tier_prefix: str):
         """Returns a list of teams based on the input. 
         You can either give it the name of a franchise, a tier, or the prefix for a franchise.
@@ -57,7 +57,7 @@ class TeamManager:
                         tier_role = self._roles_for_team(ctx, team)[1]
                         message += "\n\t{0} ({1})".format(team, tier_role.name)
                     message += "```"
-                    await self.bot.say(message)
+                    await ctx.send(message)
                     return
 
         # Tier
@@ -71,7 +71,7 @@ class TeamManager:
                     gmNameFromRole = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
                     message += "\n\t{0} ({1})".format(team, gmNameFromRole)
                 message += "```"
-                await self.bot.say(message)
+                await ctx.send(message)
                 return
 
         # Franchise name
@@ -83,76 +83,76 @@ class TeamManager:
                 tier_role = self._roles_for_team(ctx, team)[1]
                 message += "\n\t{0} ({1})".format(team, tier_role.name)
             message += "```"
-            await self.bot.say(message)
+            await ctx.send(message)
         else:
-            await self.bot.say("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
+            await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def roster(self, ctx, *, team_name: str):
         team, found = self._match_team_name(ctx, team_name)
         if found:
             franchise_role, tier_role = self._roles_for_team(ctx, team)
             if franchise_role is None or tier_role is None:
-                await self.bot.say("No franchise and tier roles set up for {0}".format(team))
+                await ctx.send("No franchise and tier roles set up for {0}".format(team))
                 return
-            await self.bot.say(self.format_roster_info(ctx, team))
+            await ctx.send(self.format_roster_info(ctx, team))
         else:
             message = "No team with name: {0}".format(team_name)
             if len(team) > 0:
                 message += "\nDo you mean one of these teams:"
                 for possible_team in team:
                     message += " `{0}`".format(possible_team)
-            await self.bot.say(message)
+            await ctx.send(message)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def tierList(self, ctx):
         tiers = self._tiers(ctx)
         if tiers:
-            await self.bot.say(
+            await ctx.send(
                 "Tiers set up in this server: {0}".format(", ".join(tiers)))
         else:
-            await self.bot.say("No tiers set up in this server.")
+            await ctx.send("No tiers set up in this server.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         tiers.append(tier_name)
         self._save_tiers(ctx, tiers)
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         try:
             tiers.remove(tier_name)
         except ValueError:
-            await self.bot.say(
+            await ctx.send(
                 "{0} does not seem to be a tier.".format(tier_name))
             return
         self._save_tiers(ctx, tiers)
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def listTeams(self, ctx):
         teams = self._teams(ctx)
         if teams:
-            await self.bot.say(
+            await ctx.send(
                 "Teams set up in this server: {0}".format(", ".join(teams)))
         else:
-            await self.bot.say("No teams set up in this server.")
+            await ctx.send("No teams set up in this server.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def teamRoles(self, ctx, team_name: str):
         franchise_role, tier_role = self._roles_for_team(ctx, team_name)
         if franchise_role and tier_role:
-            await self.bot.say(
+            await ctx.send(
                     "Franchise role for {0} = {1}\nTier role for {0} = {2}".format(team_name, franchise_role.name, tier_role.name))
         else:
-            await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
+            await ctx.send("No franchise and tier roles set up for {0}".format(team_name))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addTeams(self, ctx, *teams_to_add):
         """Add the teams provided to the team list.
@@ -175,24 +175,24 @@ class TeamManager:
         try:
             for teamStr in teams_to_add:
                 team = ast.literal_eval(teamStr)
-                await self.bot.say("Adding team: {0}".format(repr(team)))
+                await ctx.send("Adding team: {0}".format(repr(team)))
                 teamAdded = await self._add_team(ctx, *team)
                 if teamAdded:
                     addedCount += 1
         finally:
-            await self.bot.say("Added {0} team(s).".format(addedCount))
-        await self.bot.say("Done.")
+            await ctx.send("Added {0} team(s).".format(addedCount))
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
         teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
-            await self.bot.say("Done.")
+            await ctx.send("Done.")
         else:
-            await self.bot.say("Error adding team: {0}".format(team_name))
+            await ctx.send("Error adding team: {0}".format(team_name))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTeam(self, ctx, team_name: str):
         teams = self._teams(ctx)
@@ -201,14 +201,14 @@ class TeamManager:
             teams.remove(team_name)
             del team_roles[team_name]
         except ValueError:
-            await self.bot.say(
+            await ctx.send(
                 "{0} does not seem to be a team.".format(team_name))
             return
         self._save_teams(ctx, teams)
         self._save_team_roles(ctx, team_roles)
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def freeAgents(self, ctx, tier: str):
         tiers = self._tiers(ctx)
         tier_name = None
@@ -218,12 +218,12 @@ class TeamManager:
                 break
         
         if tier_name is None:
-            await self.bot.say("No tier with name: {0}".format(tier))
+            await ctx.send("No tier with name: {0}".format(tier))
             return
 
         fa_role = self._find_role_by_name(ctx, tier_name + "FA")
         if fa_role is None:
-            await self.bot.say("No free agent role with name: {0}".format(tier_name + "FA"))
+            await ctx.send("No free agent role with name: {0}".format(tier_name + "FA"))
             return
 
         perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
@@ -234,7 +234,7 @@ class TeamManager:
                 message += "\n\t{0}".format(member.nick)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
-        await self.bot.say(message + "```")
+        await ctx.send(message + "```")
 
 
     def is_gm(self, member):
@@ -344,7 +344,7 @@ class TeamManager:
         if not tier_role:
             errors.append("Tier role not found.")
         if errors:
-            await self.bot.say(":x: Errors with input:\n\n  "
+            await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 
@@ -407,7 +407,7 @@ class TeamManager:
                     return role
             except:
                 continue
-        await self.bot.say(":x: Franchise role not found for {0}".format(gm_name))
+        await ctx.send(":x: Franchise role not found for {0}".format(gm_name))
 
     def _get_all_franchise_roles(self, ctx):
         franchise_roles = []

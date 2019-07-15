@@ -21,7 +21,7 @@ class TransactionConfiguration:
         self.check_configs()
         self.load_data()
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def genericAnnounce(self, ctx, message):
         """Posts the message to the transaction log channel"""
@@ -32,11 +32,11 @@ class TransactionConfiguration:
             channelId = server_dict['Transaction Channel']
             channel = guild.get_channel(channelId)
             await channel.send(message)
-            await self.bot.say("Done")
+            await ctx.send("Done")
         except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
+            await ctx.send(":x: Transaction log channel not set")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def addFreeAgentRole(self, ctx, tier, role : discord.Role):
         """Used to set the free agent roles for the different tiers"""
@@ -46,11 +46,11 @@ class TransactionConfiguration:
         try:
             free_agent_dict[tier] = role.id
             self.save_data()
-            await self.bot.say("Free agent role for {0} = {1}".format(tier, role.mention))
+            await ctx.send("Free agent role for {0} = {1}".format(tier, role.mention))
         except IndexError:
-            await self.bot.say(":x: Error adding info to the free agent role dictionary")
+            await ctx.send(":x: Error adding info to the free agent role dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getFreeAgentRoles(self, ctx):
         """Used to get all free agent roles for the different tiers"""
         guild = ctx.message.guild
@@ -62,15 +62,15 @@ class TransactionConfiguration:
                 try:
                     try:
                         freeAgentRole = self.find_role(guild.roles, value)
-                        await self.bot.say("Free agent role for {0} tier = {1}".format(key, freeAgentRole.name))
+                        await ctx.send("Free agent role for {0} tier = {1}".format(key, freeAgentRole.name))
                     except LookupError:
-                        await self.bot.say(":x: Could not find free agent role with id of {0}".format(value))
+                        await ctx.send(":x: Could not find free agent role with id of {0}".format(value))
                 except IndexError:
-                    await self.bot.say(":x: Error finding key value pair in free agent role dictionary")
+                    await ctx.send(":x: Error finding key value pair in free agent role dictionary")
         else:
-            await self.bot.say(":x: No free agent roles are set in the dictionary")
+            await ctx.send(":x: No free agent roles are set in the dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_roles=True)
     async def clearFreeAgentRoles(self, ctx):
         """Used to clear the free agent role dictionary"""
@@ -80,11 +80,11 @@ class TransactionConfiguration:
         try:
             free_agent_dict.clear()
             self.save_data()
-            await self.bot.say(":white_check_mark: All free agent roles have been removed from dictionary")
+            await ctx.send(":white_check_mark: All free agent roles have been removed from dictionary")
         except:
-            await self.bot.say(":x: Something went wrong when trying to clear the free agent role dictionary")
+            await ctx.send(":x: Something went wrong when trying to clear the free agent role dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def setTransactionLogChannel(self, ctx, tlog : discord.Channel):
         """Assigns the specified channel as the channel where all transactions will be announced"""
@@ -93,19 +93,19 @@ class TransactionConfiguration:
         try:
             server_dict.setdefault('Transaction Channel', tlog.id)
             self.save_data()
-            await self.bot.say(":white_check_mark: Transaction log channel now set to {0}".format(tlog.mention))
+            await ctx.send(":white_check_mark: Transaction log channel now set to {0}".format(tlog.mention))
         except:
-            await self.bot.say(":x: Error setting transaction log channel to {0}".format(tlog.mention))
+            await ctx.send(":x: Error setting transaction log channel to {0}".format(tlog.mention))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getTransactionLogChannel(self, ctx):
         """Gets the transaction-log channel"""
-        channel = await self.get_transaction_channel(self.get_server_dict(ctx), ctx.message.guild)
+        channel = await self.get_transaction_channel(ctx, self.get_server_dict(ctx), ctx.message.guild)
         if(channel is not None):
-            await self.bot.say("Transaction log channel currently set to {0}".format(channel.mention))
+            await ctx.send("Transaction log channel currently set to {0}".format(channel.mention))
              
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetTransactionLogChannel(self, ctx):
         """Unassignes the transaction-log channel"""
@@ -116,11 +116,11 @@ class TransactionConfiguration:
         if channelId:
             channel = guild.get_channel(channelId)
             self.save_data()
-            await self.bot.say(":white_check_mark: Transaction log channel no longer set to {0}".format(channel.mention))
+            await ctx.send(":white_check_mark: Transaction log channel no longer set to {0}".format(channel.mention))
         else:
-            await self.bot.say(":x: Transaction log channel has not been set")
+            await ctx.send(":x: Transaction log channel has not been set")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def setDraftLogChannel(self, ctx, dlog : discord.Channel):
         """Assigns the specified channel as the channel where all draft transactions will be announced"""
@@ -129,19 +129,19 @@ class TransactionConfiguration:
         try:
             server_dict.setdefault('Draft Channel', dlog.id)
             self.save_data()
-            await self.bot.say(":white_check_mark: Draft log channel now set to {0}".format(dlog.mention))
+            await ctx.send(":white_check_mark: Draft log channel now set to {0}".format(dlog.mention))
         except:
-            await self.bot.say(":x: Error setting draft log channel to {0}".format(dlog.mention))
+            await ctx.send(":x: Error setting draft log channel to {0}".format(dlog.mention))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getDraftLogChannel(self, ctx):
         """Gets the draft-log channel"""
-        channel = await self.get_draft_channel(self.get_server_dict(ctx), ctx.message.guild)
+        channel = await self.get_draft_channel(ctx, self.get_server_dict(ctx), ctx.message.guild)
         if(channel is not None):
-            await self.bot.say("Draft log channel currently set to {0}".format(channel.mention))
+            await ctx.send("Draft log channel currently set to {0}".format(channel.mention))
              
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetDraftLogChannel(self, ctx):
         """Unassignes the draft-log channel"""
@@ -152,9 +152,9 @@ class TransactionConfiguration:
         if channelId:
             channel = guild.get_channel(channelId)
             self.save_data()
-            await self.bot.say(":white_check_mark: Draft log channel no longer set to {0}".format(channel.mention))
+            await ctx.send(":white_check_mark: Draft log channel no longer set to {0}".format(channel.mention))
         else:
-            await self.bot.say(":x: Draft log channel has not been set")
+            await ctx.send(":x: Draft log channel has not been set")
 
     def find_role(self, roles, roleId):
         for role in roles:
@@ -173,25 +173,25 @@ class TransactionConfiguration:
         server_dict = self.config.setdefault(ctx.message.guild.id, {})
         return server_dict
 
-    async def get_transaction_channel(self, server_dict, guild):
+    async def get_transaction_channel(self, ctx, server_dict, guild):
         try:
             channelId = server_dict['Transaction Channel']
             try:
                 return guild.get_channel(channelId)
             except:
-                await self.bot.say(":x: Transaction log channel not found with id of {0}".format(channelId))
+                await ctx.send(":x: Transaction log channel not found with id of {0}".format(channelId))
         except KeyError:
-            await self.bot.say(":x: Transaction log channel not set")
+            await ctx.send(":x: Transaction log channel not set")
 
-    async def get_draft_channel(self, server_dict, guild):
+    async def get_draft_channel(self, ctx, server_dict, guild):
         try:
             channelId = server_dict['Draft Channel']
             try:
                 return guild.get_channel(channelId)
             except:
-                await self.bot.say(":x: Draft log channel not found with id of {0}".format(channelId))
+                await ctx.send(":x: Draft log channel not found with id of {0}".format(channelId))
         except KeyError:
-            await self.bot.say(":x: Draft log channel not set")
+            await ctx.send(":x: Draft log channel not set")
 
     # Config
     def check_configs(self):

@@ -15,7 +15,7 @@ class FaCheckIn:
         self.team_manager_cog = self.bot.get_cog("TeamManager")
         self.match_cog = self.bot.get_cog("Match")
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["ci"])
+    @commands.command(no_pm=True, aliases=["ci"])
     async def checkIn(self, ctx):
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
@@ -32,7 +32,7 @@ class FaCheckIn:
         else:
             await user.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["co"])
+    @commands.command(no_pm=True, aliases=["co"])
     async def checkOut(self, ctx):
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
@@ -51,13 +51,13 @@ class FaCheckIn:
         else:
             await user.send("Your tier could not be determined. If you are in the league please contact an admin for help.")
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
+    @commands.command(no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
         tier = self.team_manager_cog._match_tier_name(ctx, tier_name)
         if tier is None:
-            await self.bot.say("No tier with name: `{0}`".format(tier_name))
+            await ctx.send("No tier with name: `{0}`".format(tier_name))
             return
 
         tier_list = self._tier_data(ctx, match_day, tier)
@@ -72,9 +72,9 @@ class FaCheckIn:
                     if perm_fa_role is not None and perm_fa_role in member.roles:
                         message += " (Permanent FA)"
         message += "```"
-        await self.bot.say(message)
+        await ctx.send(message)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAvailability(self, ctx, tier: str = None, match_day: str = None):
         if match_day is None:
@@ -84,13 +84,13 @@ class FaCheckIn:
             self._save_match_data(ctx, match_day, {})
         else:
             self._save_tier_data(ctx, match_day, tier, [])
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAllAvailability(self, ctx):
         self._save_data(ctx, {})
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
     async def _send_check_in_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Check In", 

@@ -21,11 +21,9 @@ class MassDM:
                 roled.append(member)
         return roled
 
-    @commands.command(no_pm=True, pass_context=True, name="massdm2",
-                      aliases=["mdm2"])
+    @commands.command(no_pm=True, name="massdm2", aliases=["mdm2"])
     @checks.mod_or_permissions(administrator=True)
-    async def _mdm(self, ctx: commands.Context,
-                   role: discord.Role, *, message: str):
+    async def _mdm(self, ctx, role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.
         Allows for the following customizations:
         {0} is the member being messaged.
@@ -44,7 +42,7 @@ class MassDM:
             except (discord.Forbidden, discord.HTTPException):
                 continue
 
-        await self.bot.say("Done")
+        await ctx.send("Done")
 
 
 def setup(bot: commands.Bot):

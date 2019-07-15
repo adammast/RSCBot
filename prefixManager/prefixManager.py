@@ -15,7 +15,7 @@ class PrefixManager:
         self.bot = bot
         self.data_cog = self.bot.get_cog("RscData")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
@@ -38,24 +38,24 @@ class PrefixManager:
         try:
             for prefixStr in prefixes_to_add:
                 prefix = ast.literal_eval(prefixStr)
-                await self.bot.say("Adding prefix: {0}".format(repr(prefix)))
+                await ctx.send("Adding prefix: {0}".format(repr(prefix)))
                 prefixAdded = await self._add_prefix(ctx, *prefix)
                 if prefixAdded:
                     addedCount += 1
         finally:
-            await self.bot.say("Added {0} prefixes(s).".format(addedCount))
-        await self.bot.say("Done.")
+            await ctx.send("Added {0} prefixes(s).".format(addedCount))
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
-            await self.bot.say("Done.")
+            await ctx.send("Done.")
         else:
-            await self.bot.say("Error adding prefix: {0}".format(prefix))
+            await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
         prefixes = self._prefixes(ctx)
@@ -65,11 +65,11 @@ class PrefixManager:
             for key, value in prefixes.items():
                 message += "\n\t{0} = {1}".format(key, value)
             message += "```"
-            await self.bot.say(message)
+            await ctx.send(message)
         else:
-            await self.bot.say(":x: No prefixes are set in the dictionary")
+            await ctx.send(":x: No prefixes are set in the dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Used to remove a single prefix"""
@@ -77,13 +77,12 @@ class PrefixManager:
         try:
             del prefixes[gm_name]
         except ValueError:
-            await self.bot.say(
-                "{0} does not have a prefix.".format(gm_name))
+            await ctx.send("{0} does not have a prefix.".format(gm_name))
             return
         self._save_prefixes(ctx, prefixes)
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
@@ -92,19 +91,19 @@ class PrefixManager:
         try:
             prefixes.clear()
             self._save_prefixes(ctx, prefixes)
-            await self.bot.say(":white_check_mark: All prefixes have been removed from dictionary")
+            await ctx.send(":white_check_mark: All prefixes have been removed from dictionary")
         except:
-            await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
+            await ctx.send(":x: Something went wrong when trying to clear the prefix dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def lookupPrefix(self, ctx, gmName: str):
         prefixes = self._prefixes(ctx)
 
         try:
             prefix = prefixes[gmName]
-            await self.bot.say("Prefix for {0} = {1}".format(gmName, prefix))
+            await ctx.send("Prefix for {0} = {1}".format(gmName, prefix))
         except KeyError:
-            await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+            await ctx.send(":x: Prefix not found for {0}".format(gmName))
 
     def _find_role(self, ctx, role_id):
         guild = ctx.message.guild
@@ -128,7 +127,7 @@ class PrefixManager:
         if not prefix:
             errors.append("Prefix not found from input for GM {0}.".format(gm_name))
         if errors:
-            await self.bot.say(":x: Errors with input:\n\n  "
+            await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 

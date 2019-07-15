@@ -15,25 +15,25 @@ class SheetTest:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def test(self, ctx):
         """Edits the spreadsheet"""
         wks = self.gc.open('Test').sheet1
-        await self.bot.say(wks.get_all_records())
+        await ctx.send(wks.get_all_records())
 
         wks.append_row(['This should go in column 1', 'This should go in column 2'])
-        await self.bot.say(wks.get_all_records())
+        await ctx.send(wks.get_all_records())
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def read(self, ctx, rowIndex: int = None, columnIndex: int = None):
         """Reads data from the spreadsheet at the specified row and column, or reads all data if no row or column are specified."""
         wks = self.gc.open('Test').sheet1
         if(rowIndex and columnIndex):
-            await self.bot.say(wks.cell(rowIndex, columnIndex).value)
+            await ctx.send(wks.cell(rowIndex, columnIndex).value)
         else:
-            await self.bot.say(wks.get_all_records())
+            await ctx.send(wks.get_all_records())
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def write(self, ctx, message, rowIndex: int = None, columnIndex: int = None):
         """Writes data to the spreadsheet at the specified row and column, or at the bottom of the sheet if no row or column are specified."""
         wks = self.gc.open('Test').sheet1

@@ -19,75 +19,75 @@ class SixMans:
         self.busy = False
         self.channel_index = 1
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
+    @commands.command(no_pm=True, aliases=["tc"])
     @checks.admin_or_permissions(manage_guild=True)
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
+    @commands.command(no_pm=True, aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
             if member in self.queue:
-                await self.bot.say("{} is already in queue.".format(member.display_name))
+                await ctx.send("{} is already in queue.".format(member.display_name))
                 break
             self.queue.put(member)
-            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are being created.")
+            await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
+    @commands.command(no_pm=True, aliases=["dqa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def dequeue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
             self.queue.put(member)
-            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["queue"])
+    @commands.command(no_pm=True, aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
         player = ctx.message.author
 
         if player in self.queue:
-            await self.bot.say("{} is already in queue.".format(player.display_name))
+            await ctx.send("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
             if player in game:
-                await self.bot.say("{} is already in a game.".format(player.display_name))
+                await ctx.send("{} is already in a game.".format(player.display_name))
                 return
 
         self.queue.put(player)
 
-        await self.bot.say("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are being created.")
+            await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["dq"])
+    @commands.command(no_pm=True, aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
         player = ctx.message.author
 
         if player in self.queue:
             self.queue.remove(player)
-            await self.bot.say(
+            await ctx.send(
                 "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         else:
-            await self.bot.say("{} is not in queue.".format(player.display_name))
+            await ctx.send("{} is not in queue.".format(player.display_name))
 
     @commands.command(no_pm=True, aliases=["kq"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def kick_queue(self, player: discord.Member):
+    async def kick_queue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
         if player in self.queue:
             self.queue.remove(player)
-            await self.bot.say(
+            await ctx.send(
                 "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         else:
-            await self.bot.say("{} is not in queue.".format(player.display_name))
+            await ctx.send("{} is not in queue.".format(player.display_name))
 
     def queue_full(self):
         return self.queue.qsize() >= TEAM_SIZE

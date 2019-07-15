@@ -22,7 +22,7 @@ class Match:
         self.data_cog = self.bot.get_cog("RscData")
         self.team_manager = self.bot.get_cog("TeamManager")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def setMatchDay(self, ctx, day: str):
         """Sets the active match day to the specified day.
@@ -30,20 +30,20 @@ class Match:
         This match day is used when accessing the info in the !match command.
         """
         self._save_match_day(ctx, str(day))
-        await self.bot.say("Done")
+        await ctx.send("Done")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def getMatchDay(self, ctx):
         """Gets the currently active match day."""
         match_day = self._match_day(ctx)
         if match_day:
-            await self.bot.say(
+            await ctx.send(
                 "Current match day is: {0}".format(match_day))
         else:
-            await self.bot.say(":x: Match day not set. Set with setMatchDay "
+            await ctx.send(":x: Match day not set. Set with setMatchDay "
                                "command.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def printScheduleData(self, ctx):
         """Print all raw schedule data.
@@ -56,17 +56,17 @@ class Match:
         """
         schedule = self._schedule(ctx)
         dump = json.dumps(schedule, indent=4, sort_keys=True)
-        await self.bot.say("Here is all of the schedule data in "
+        await ctx.send("Here is all of the schedule data in "
                            "JSON format.\n```json\n{0}\n```".format(dump))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSchedule(self, ctx):
         """Clear all scheduled matches."""
         self._save_schedule(ctx, {})
-        await self.bot.say("Done.")
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     async def match(self, ctx, *args):
         """Get match info.
 
@@ -88,7 +88,7 @@ class Match:
         """
         match_day = args[0] if args else self._match_day(ctx)
         if not match_day:
-            await self.bot.say("Match day not provided and not set for "
+            await ctx.send("Match day not provided and not set for "
                                "the server.")
             return
         team_names = []
@@ -102,7 +102,7 @@ class Match:
             team_names = user_team_names
 
         if not team_names:
-            await self.bot.say("No teams found. If you provided teams, "
+            await ctx.send("No teams found. If you provided teams, "
                                "check the spelling. If not, you do not have "
                                "roles corresponding to a team.")
             return
@@ -122,7 +122,7 @@ class Match:
                 )
         await self.bot.delete_message(ctx.message)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatches(self, ctx, *matches):
         """Add the matches provided to the schedule.
@@ -151,14 +151,14 @@ class Match:
         try:
             for matchStr in matches:
                 match = ast.literal_eval(matchStr)
-                await self.bot.say("Adding match: {0}".format(repr(match)))
+                await ctx.send("Adding match: {0}".format(repr(match)))
                 resultMatch = await self._add_match(ctx, *match)
                 if resultMatch:
                     addedCount += 1
         finally:
-            await self.bot.say("Added {0} match(es).".format(addedCount))
+            await ctx.send("Added {0} match(es).".format(addedCount))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatch(self, ctx, match_day, match_date, home, away, *args):
         """Adds a single match to the schedule.
@@ -178,7 +178,7 @@ class Match:
         match = await self._add_match(ctx, match_day, match_date,
                                       home, away, *args)
         if match:
-            await self.bot.say("Done")
+            await ctx.send("Done")
 
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
@@ -206,7 +206,7 @@ class Match:
         if not awayRoles:
             errors.append("Away team roles not found.")
         if errors:
-            await self.bot.say(":x: Errors with input:\n\n  "
+            await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 
@@ -234,7 +234,7 @@ class Match:
             errors.append("Away team already has a match for "
                           "match day {0}".format(match_day))
         if errors:
-            await self.bot.say(":x: Could not create match:\n"
+            await ctx.send(":x: Could not create match:\n"
                                "\n  * {0}\n".format("\n  * ".join(errors)))
             return
 
