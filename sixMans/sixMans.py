@@ -67,7 +67,7 @@ class SixMans:
             return
         for game in self.games:
             await self.bot.say("Game channel: {}".format(game.channel.mention))
-            if player in game.players:
+            if player in game:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
                 return
 
@@ -150,6 +150,7 @@ class Game:
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
         self.channel = channel
+        self.playerIds = self._get_player_ids(players)
 
     def add_to_blue(self, player):
         self.players.remove(player)
@@ -161,6 +162,12 @@ class Game:
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
+
+    def _get_player_ids(self, players):
+        ids = []
+        for player in players:
+            ids.append(player.id)
+        return ids
 
     def _generate_name_pass(self):
         # TODO: Load from file?
