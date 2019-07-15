@@ -21,7 +21,8 @@ class MassDM:
                 roled.append(member)
         return roled
 
-    @commands.command(no_pm=True, name="massdm2", aliases=["mdm2"])
+    @commands.guild_only()
+    @commands.command(name="massdm2", aliases=["mdm2"])
     @checks.mod_or_permissions(administrator=True)
     async def _mdm(self, ctx, role: discord.Role, *, message: str):
         """Sends a DM to all Members with the given Role.

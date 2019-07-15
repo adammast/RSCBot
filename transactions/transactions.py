@@ -15,7 +15,7 @@ class Transactions:
         self.TEAM_MANAGER = self.bot.get_cog("TeamManager")
         self.prefix_cog = self.bot.get_cog("PrefixManager")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def draft(self, ctx, user: discord.Member, team_name: str, round: int = None, pick: int = None):
         """Assigns the franchise, tier, and league role to a user when they are drafted and posts to the assigned channel"""
@@ -50,7 +50,7 @@ class Transactions:
             return
 
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def sign(self, ctx, user: discord.Member, team_name: str):
         """Assigns the team role, franchise role and prefix to a user when they are signed and posts to the assigned channel"""
@@ -76,7 +76,7 @@ class Transactions:
            except LookupError:
                await ctx.send(":x: Free agent role not found in server")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def cut(self, ctx, user : discord.Member, team_name: str, freeAgentRole: discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix to a user and posts to the assigned channel"""
@@ -98,7 +98,7 @@ class Transactions:
             except LookupError:
                 await ctx.send(":x: Free agent role not found in server")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def trade(self, ctx, user: discord.Member, new_team_name: str, user_2: discord.Member, new_team_name_2: str):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
@@ -124,7 +124,7 @@ class Transactions:
            await channel.send(message)
            await ctx.send("Done")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
         """Adds the team role to the user and posts to the assigned channel"""
@@ -145,7 +145,7 @@ class Transactions:
                 await channel.send(message)
                 await ctx.send("Done")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def promote(self, ctx, user: discord.Member, team_name: str):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)

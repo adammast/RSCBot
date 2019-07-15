@@ -15,7 +15,8 @@ class FaCheckIn:
         self.team_manager_cog = self.bot.get_cog("TeamManager")
         self.match_cog = self.bot.get_cog("Match")
 
-    @commands.command(no_pm=True, aliases=["ci"])
+    @commands.guild_only()
+    @commands.command(aliases=["ci"])
     async def checkIn(self, ctx):
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
@@ -32,7 +33,8 @@ class FaCheckIn:
         else:
             await user.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
-    @commands.command(no_pm=True, aliases=["co"])
+    @commands.guild_only()
+    @commands.command(aliases=["co"])
     async def checkOut(self, ctx):
         user = ctx.message.author
         match_day = self.match_cog._match_day(ctx)
@@ -51,7 +53,8 @@ class FaCheckIn:
         else:
             await user.send("Your tier could not be determined. If you are in the league please contact an admin for help.")
 
-    @commands.command(no_pm=True, aliases=["ca"])
+    @commands.guild_only()
+    @commands.command(aliases=["ca"])
     async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
@@ -74,7 +77,7 @@ class FaCheckIn:
         message += "```"
         await ctx.send(message)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAvailability(self, ctx, tier: str = None, match_day: str = None):
         if match_day is None:
@@ -86,7 +89,7 @@ class FaCheckIn:
             self._save_tier_data(ctx, match_day, tier, [])
         await ctx.send("Done.")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAllAvailability(self, ctx):
         self._save_data(ctx, {})

@@ -23,6 +23,7 @@ class RscData:
     def __init__(self, bot):
         self.bot = bot
 
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def dumpDataset(self, ctx, dataset):
         json_dump = json.dumps(

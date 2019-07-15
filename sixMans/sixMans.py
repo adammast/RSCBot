@@ -19,12 +19,14 @@ class SixMans:
         self.busy = False
         self.channel_index = 1
 
-    @commands.command(no_pm=True, aliases=["tc"])
+    @commands.guild_only()
+    @commands.command(aliases=["tc"])
     @checks.admin_or_permissions(manage_guild=True)
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
-    @commands.command(no_pm=True, aliases=["qa"])
+    @commands.guild_only()
+    @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
@@ -38,7 +40,8 @@ class SixMans:
             await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(no_pm=True, aliases=["dqa"])
+    @commands.guild_only()
+    @commands.command(aliases=["dqa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def dequeue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
@@ -46,7 +49,8 @@ class SixMans:
             self.queue.put(member)
             await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
 
-    @commands.command(no_pm=True, aliases=["queue"])
+    @commands.guild_only()
+    @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
         player = ctx.message.author
@@ -66,7 +70,8 @@ class SixMans:
             await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(no_pm=True, aliases=["dq"])
+    @commands.guild_only()
+    @commands.command(aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
         player = ctx.message.author
@@ -78,7 +83,8 @@ class SixMans:
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
-    @commands.command(no_pm=True, aliases=["kq"])
+    @commands.guild_only()
+    @commands.command(aliases=["kq"])
     @checks.admin_or_permissions(manage_guild=True)
     async def kick_queue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""

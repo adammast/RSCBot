@@ -9,7 +9,7 @@ class BulkRoleManager:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
@@ -28,7 +28,7 @@ class BulkRoleManager:
                 await ctx.send(message)
             await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def removeRoleFromAll(self, ctx, role: discord.Role):
         """Removes the role from every member who has it in the server"""
@@ -43,7 +43,7 @@ class BulkRoleManager:
             await ctx.send(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def addRole(self, ctx, role: discord.Role, *userList):
         """Adds the role to every member that can be found from the userList"""
@@ -79,7 +79,7 @@ class BulkRoleManager:
         await ctx.send(message)
 
     
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def getId(self, ctx, *userList):
         notFound = []
         for user in userList:
@@ -95,7 +95,7 @@ class BulkRoleManager:
             for user in notFound:
                 await ctx.send(user)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
         """Gives the roleToGive to every member who already has the currentRole"""

@@ -22,7 +22,7 @@ class Match:
         self.data_cog = self.bot.get_cog("RscData")
         self.team_manager = self.bot.get_cog("TeamManager")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setMatchDay(self, ctx, day: str):
         """Sets the active match day to the specified day.
@@ -32,7 +32,7 @@ class Match:
         self._save_match_day(ctx, str(day))
         await ctx.send("Done")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def getMatchDay(self, ctx):
         """Gets the currently active match day."""
         match_day = self._match_day(ctx)
@@ -43,7 +43,7 @@ class Match:
             await ctx.send(":x: Match day not set. Set with setMatchDay "
                                "command.")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def printScheduleData(self, ctx):
         """Print all raw schedule data.
@@ -59,14 +59,14 @@ class Match:
         await ctx.send("Here is all of the schedule data in "
                            "JSON format.\n```json\n{0}\n```".format(dump))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSchedule(self, ctx):
         """Clear all scheduled matches."""
         self._save_schedule(ctx, {})
         await ctx.send("Done.")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def match(self, ctx, *args):
         """Get match info.
 
@@ -122,7 +122,7 @@ class Match:
                 )
         await self.bot.delete_message(ctx.message)
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatches(self, ctx, *matches):
         """Add the matches provided to the schedule.
@@ -158,7 +158,7 @@ class Match:
         finally:
             await ctx.send("Added {0} match(es).".format(addedCount))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatch(self, ctx, match_day, match_date, home, away, *args):
         """Adds a single match to the schedule.

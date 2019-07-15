@@ -15,7 +15,7 @@ class PrefixManager:
         self.bot = bot
         self.data_cog = self.bot.get_cog("RscData")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
@@ -46,7 +46,7 @@ class PrefixManager:
             await ctx.send("Added {0} prefixes(s).".format(addedCount))
         await ctx.send("Done.")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
@@ -55,7 +55,7 @@ class PrefixManager:
         else:
             await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
         prefixes = self._prefixes(ctx)
@@ -69,7 +69,7 @@ class PrefixManager:
         else:
             await ctx.send(":x: No prefixes are set in the dictionary")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Used to remove a single prefix"""
@@ -82,7 +82,7 @@ class PrefixManager:
         self._save_prefixes(ctx, prefixes)
         await ctx.send("Done.")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
@@ -95,7 +95,7 @@ class PrefixManager:
         except:
             await ctx.send(":x: Something went wrong when trying to clear the prefix dictionary")
 
-    @commands.command(no_pm=True)
+    @commands.guild_only()
     async def lookupPrefix(self, ctx, gmName: str):
         prefixes = self._prefixes(ctx)
 
