@@ -15,7 +15,7 @@ class SixMans:
     def __init__(self, bot):
         self.bot = bot
         self.queue = PlayerQueue()
-        self.games = dict()
+        self.games = []
         self.busy = False
         self.channel_index = 1
 
@@ -30,7 +30,7 @@ class SixMans:
         if not self.games:
             await self.bot.say("No active games.")
             return
-        for game in self.games.values():
+        for game in self.games:
             self.display_game_info(game)
         await self.bot.say("Done")
 
@@ -65,8 +65,8 @@ class SixMans:
         if player in self.queue:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
-        for game in self.games.values():
-            await self.bot.say("{}".format(", ".join([player.display_name for player in game.players])))
+        for game in self.games:
+            await self.bot.say("Game channel: {}".format(game.channel.mention))
             if player in game.players:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
                 return
@@ -118,7 +118,7 @@ class SixMans:
 
         await self.display_game_info(game)
 
-        self.games[game.channel.id] = game
+        self.games.append(game)
 
         self.busy = False
 
@@ -284,22 +284,6 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
-
-class ActiveGames(dict):
-    def _init(self, maxsize):
-        self.dict = dict()
-
-    def put(self, Game):
-        self.dict[Game.channel] = Game
-
-    def get(self, key):
-        return self.dict[key]
-
-    def remove(self, key):
-        del self.dict[key]
-
-    def contains(self, key):
-        return key in self.dict
 
 def setup(bot):
     bot.add_cog(SixMans(bot))
