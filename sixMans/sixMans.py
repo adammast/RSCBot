@@ -15,7 +15,7 @@ class SixMans:
     def __init__(self, bot):
         self.bot = bot
         self.queue = PlayerQueue()
-        self.games = ActiveGames()
+        self.games = dict()
         self.busy = False
         self.channel_index = 1
 
@@ -114,7 +114,7 @@ class SixMans:
 
         await self.display_game_info(game)
 
-        self.games.put(game)
+        self.games[game.channel] = game
 
         self.busy = False
 
