@@ -15,7 +15,7 @@ class SixMans:
     def __init__(self, bot):
         self.bot = bot
         self.queue = PlayerQueue()
-        self.games = []
+        self.games = ActiveGames()
         self.busy = False
         self.channel_index = 1
 
@@ -114,7 +114,7 @@ class SixMans:
 
         await self.display_game_info(game)
 
-        self.games.append(game)
+        self.games.put(game)
 
         self.busy = False
 
@@ -280,6 +280,22 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
+
+class ActiveGames(dict):
+    def _init(self, maxsize):
+        self.dict = dict()
+
+    def put(self, Game):
+        self.dict[Game.channel] = Game
+
+    def get(self, key):
+        return self.dict[key]
+
+    def remove(self, key):
+        del self.dict[key]
+
+    def contains(self, key):
+        return key in self.dict
 
 def setup(bot):
     bot.add_cog(SixMans(bot))
