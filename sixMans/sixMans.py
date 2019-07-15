@@ -24,11 +24,15 @@ class SixMans:
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command(no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
-    async def check_games(self, ctx):
+    async def check_games(self):
+        if not self.games:
+            await self.bot.say("No active games.")
+            return
         for channel, game in self.games.items():
             self.display_game_info(game)
+        await self.bot.say("Done")
 
 
     @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
@@ -61,7 +65,7 @@ class SixMans:
         if player in self.queue:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
-        for game in self.games:
+        for channel, game in self.games:
             await self.bot.say("{}".format(", ".join([player.display_name for player in game.players])))
             if player in game.players:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
