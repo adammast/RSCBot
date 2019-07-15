@@ -20,12 +20,12 @@ class SixMans:
         self.channel_index = 1
 
     @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
@@ -39,7 +39,7 @@ class SixMans:
             await self.randomize_teams(ctx)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def dequeue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
@@ -79,7 +79,7 @@ class SixMans:
             await self.bot.say("{} is not in queue.".format(player.display_name))
 
     @commands.command(no_pm=True, aliases=["kq"])
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def kick_queue(self, player: discord.Member):
         """Remove someone else from the queue"""
         if player in self.queue:
@@ -114,12 +114,12 @@ class SixMans:
         self.busy = False
 
     async def display_game_info(self, game):
-        await self.bot.send_message(game.channel, "{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
+        await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        embed = discord.Embed(title="6 Mans Game Info", color=discord.Colour.blue())
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
-        await self.bot.send_message(game.channel, embed=embed)
+        await game.channel.send(embed=embed)
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
@@ -127,9 +127,8 @@ class SixMans:
         return Game(players, channel)
 
     async def create_channel(self, ctx):
-        server = ctx.message.server
-        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.channel_index), type=discord.ChannelType.text)
-        channel.position = 10
+        guild = ctx.message.guild
+        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), category=category)
         self.channel_index += 1
         return channel
 

@@ -13,14 +13,11 @@ class MassDM:
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    def _member_has_role(self, member: discord.Member, role: discord.Role):
-        return role in member.roles
-
-    def _get_users_with_role(self, server: discord.Server,
+    def _get_users_with_role(self, guild: discord.Guild,
                              role: discord.Role) -> List[discord.User]:
         roled = []
-        for member in server.members:
-            if self._member_has_role(member, role):
+        for member in guild.members:
+            if role in member.roles:
                 roled.append(member)
         return roled
 
@@ -36,22 +33,18 @@ class MassDM:
         {2} is the person sending the message.
         """
 
-        server = ctx.message.server
+        guild = ctx.message.guild
         sender = ctx.message.author
 
-        try:
-            await self.bot.delete_message(ctx.message)
-        except:
-            pass
-
-        dm_these = self._get_users_with_role(server, role)
+        dm_these = self._get_users_with_role(guild, role)
 
         for user in dm_these:
             try:
-                await self.bot.send_message(user,
-                                            message.format(user, role, sender))
+                await user.send(message.format(user, role, sender))
             except (discord.Forbidden, discord.HTTPException):
                 continue
+
+        await self.bot.say("Done")
 
 
 def setup(bot: commands.Bot):

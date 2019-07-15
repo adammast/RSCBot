@@ -24,7 +24,7 @@ class RscData:
         self.bot = bot
 
     @commands.command(pass_context=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def dumpDataset(self, ctx, dataset):
         json_dump = json.dumps(
             self.load(ctx, dataset), indent=4, sort_keys=True)
@@ -59,8 +59,8 @@ class RscData:
     def _server_set_for(self, ctx):
         """Return the name of the dict to be used for the server in the
         provided context."""
-        if ctx.message.server:
-            return str(ctx.message.server.id)
+        if ctx.message.guild:
+            return str(ctx.message.guild.id)
         else:
             return self.SERVERLESS
 

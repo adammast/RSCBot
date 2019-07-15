@@ -114,7 +114,7 @@ class TeamManager:
             await self.bot.say("No tiers set up in this server.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def addTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         tiers.append(tier_name)
@@ -122,7 +122,7 @@ class TeamManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
         tiers = self._tiers(ctx)
         try:
@@ -153,7 +153,7 @@ class TeamManager:
             await self.bot.say("No franchise and tier roles set up for {0}".format(team_name))
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def addTeams(self, ctx, *teams_to_add):
         """Add the teams provided to the team list.
 
@@ -184,7 +184,7 @@ class TeamManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
         teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
@@ -193,7 +193,7 @@ class TeamManager:
             await self.bot.say("Error adding team: {0}".format(team_name))
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def removeTeam(self, ctx, team_name: str):
         teams = self._teams(ctx)
         team_roles = self._team_roles(ctx)
@@ -229,7 +229,7 @@ class TeamManager:
         perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
 
         message = "```{0} Free Agents:".format(tier_name)
-        for member in ctx.message.server.members:
+        for member in ctx.message.guild.members:
             if fa_role in member.roles:
                 message += "\n\t{0}".format(member.nick)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
@@ -272,7 +272,7 @@ class TeamManager:
         """
         gm = None
         team_members = []
-        for member in ctx.message.server.members:
+        for member in ctx.message.guild.members:
             if franchise_role in member.roles:
                 if self.is_gm(member):
                     gm = member
@@ -361,7 +361,7 @@ class TeamManager:
         return True
 
     def _get_tier_role(self, ctx, tier: str):
-        roles = ctx.message.server.roles
+        roles = ctx.message.guild.roles
         for role in roles:
             if role.name.lower() == tier.lower():
                 return role
@@ -388,25 +388,19 @@ class TeamManager:
         self.data_cog.save(ctx, self.DATASET, all_data)
 
     def _find_role(self, ctx, role_id):
-        server = ctx.message.server
-        roles = server.roles
-        for role in roles:
+        for role in ctx.message.guild.roles:
             if role.id == role_id:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
     def _find_role_by_name(self, ctx, role_name):
-        server = ctx.message.server
-        roles = server.roles
-        for role in roles:
+        for role in ctx.message.guild.roles:
             if role.name.lower() == role_name.lower():
                 return role
         return None
 
     async def _get_franchise_role(self, ctx, gm_name):
-        server = ctx.message.server
-        roles = server.roles
-        for role in roles:
+        for role in ctx.message.guild.roles:
             try:
                 gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
                 if gmNameFromRole == gm_name:
@@ -417,9 +411,7 @@ class TeamManager:
 
     def _get_all_franchise_roles(self, ctx):
         franchise_roles = []
-        server = ctx.message.server
-        roles = server.roles
-        for role in roles:
+        for role in ctx.message.guild.roles:
             try:
                 gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
                 if gmNameFromRole is not None:
@@ -477,8 +469,7 @@ class TeamManager:
         return self._find_team_name(ctx, franchise_role, tier_role)
 
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
-        roles = ctx.message.server.roles
-        for role in roles:
+        for role in ctx.message.guild.roles:
             try:
                 matchedString = re.findall(r'.+?(?= \()', role.name)[0]
                 if matchedString.lower() == franchise_name.lower():

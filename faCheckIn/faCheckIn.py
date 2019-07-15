@@ -21,16 +21,16 @@ class FaCheckIn:
         match_day = self.match_cog._match_day(ctx)
         tier = self._find_tier_from_fa_role(ctx, user)
 
-        await self.bot.delete_message(ctx.message)
+        await ctx.message.delete()
 
         if tier is not None:
             tier_data = self._tier_data(ctx, match_day, tier)
             if user.id not in tier_data:
                 await self._send_check_in_message(ctx, user, match_day, tier)
             else:
-                await self.bot.send_message(user, "You've already checked in. If you want to check out, use the `{0}checkOut` command.".format(ctx.prefix))
+                await user.send("You've already checked in. If you want to check out, use the `{0}checkOut` command.".format(ctx.prefix))
         else:
-            await self.bot.send_message(user, "Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
+            await user.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["co"])
     async def checkOut(self, ctx):
@@ -40,16 +40,16 @@ class FaCheckIn:
         if tier is None:
             tier = self.team_manager_cog.get_current_tier_role(ctx, user)
 
-        await self.bot.delete_message(ctx.message)
+        await ctx.message.delete()
 
         if tier is not None:
             tier_data = self._tier_data(ctx, match_day, tier)
             if user.id in tier_data:
                 await self._send_check_out_message(ctx, user, match_day, tier)
             else:
-                await self.bot.send_message(user, "You aren't currently checked in. If you want to check in, use the `{0}checkIn` command.".format(ctx.prefix))
+                await user.send("You aren't currently checked in. If you want to check in, use the `{0}checkIn` command.".format(ctx.prefix))
         else:
-            await self.bot.send_message(user, "Your tier could not be determined. If you are in the league please contact an admin for help.")
+            await user.send("Your tier could not be determined. If you are in the league please contact an admin for help.")
 
     @commands.command(pass_context=True, no_pm=True, aliases=["ca"])
     async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
@@ -66,7 +66,7 @@ class FaCheckIn:
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
         for user in tier_list:
             member = commands.MemberConverter(ctx, user).convert()
-            if member in ctx.message.server.members:
+            if member in ctx.message.guild.members:
                 if self._find_tier_from_fa_role(ctx, member) is not None:
                     message += "\n\t{0}".format(member.nick)
                     if perm_fa_role is not None and perm_fa_role in member.roles:
@@ -75,7 +75,7 @@ class FaCheckIn:
         await self.bot.say(message)
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def clearAvailability(self, ctx, tier: str = None, match_day: str = None):
         if match_day is None:
             match_day = self.match_cog._match_day(ctx)
@@ -87,7 +87,7 @@ class FaCheckIn:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def clearAllAvailability(self, ctx):
         self._save_data(ctx, {})
         await self.bot.say("Done.")
@@ -99,24 +99,24 @@ class FaCheckIn:
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
-        message = await self.bot.send_message(user, embed=embed)
+        message = await user.send(embed=embed)
 
-        await self.bot.add_reaction(message, '👍')
+        await message('👍')
 
         def check(reaction, user):
             return str(reaction.emoji) == '👍'
 
         try:
-            result = await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
+            result = await self.bot.wait_for('reaction_add', message=message, timeout=30.0, check=check, user=user)
         except:
-            await self.bot.send_message(user, "Sorry, you either didn't react quick enough or something went wrong. Please try again.")
+            await user.send("Sorry, you either didn't react quick enough or something went wrong. Please try again.")
             return
 
         if result:
             self._register_user(ctx, user, match_day, tier)
-            await self.bot.send_message(user, "Thank you for checking in! GMs will now be able to see that you're available.")
+            await user.send("Thank you for checking in! GMs will now be able to see that you're available.")
         else:
-            await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
+            await user.send("Sorry, you didn't react quick enough. Please try again.")
 
     async def _send_check_out_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Check Out", 
@@ -125,24 +125,24 @@ class FaCheckIn:
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
-        message = await self.bot.send_message(user, embed=embed)
+        message = await user.send(embed=embed)
 
-        await self.bot.add_reaction(message, '👎')
+        await message.add_reaction('👎')
 
         def check(reaction, user):
             return str(reaction.emoji) == '👎'
 
         try:
-            result = await self.bot.wait_for_reaction(message=message, timeout=30.0, check=check, user=user)
+            result = await self.bot.wait_for('reaction_add', message=message, timeout=30.0, check=check, user=user)
         except:
-            await self.bot.send_message(user, "Sorry, you either didn't react quick enough or something went wrong. Please try again.")
+            await user.send("Sorry, you either didn't react quick enough or something went wrong. Please try again.")
             return
 
         if result:
             self._unregister_user(ctx, user, match_day, tier)
-            await self.bot.send_message(user, "You have been removed from the list. Thank you for updating your availability!")
+            await user.send("You have been removed from the list. Thank you for updating your availability!")
         else:
-            await self.bot.send_message(user, "Sorry, you didn't react quick enough. Please try again.")
+            await user.send("Sorry, you didn't react quick enough. Please try again.")
 
     def _register_user(self, ctx, user, match_day, tier):
         tier_list = self._tier_data(ctx, match_day, tier)

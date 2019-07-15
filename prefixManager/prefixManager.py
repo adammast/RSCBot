@@ -16,7 +16,7 @@ class PrefixManager:
         self.data_cog = self.bot.get_cog("RscData")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
 
@@ -30,8 +30,8 @@ class PrefixManager:
 
         Examples:
 
-        \t[p]addPrefixes "['Shamu','STM']"
-        \t[p]addPrefixes "['Shamu','STM']" "['Adammast','OCE']"
+        \t[p]addPrefixes "['Adammast','OCE']"
+        \t[p]addPrefixes "['Adammast','OCE']" "['Shamu','STM']"
 
         """
         addedCount = 0
@@ -47,7 +47,7 @@ class PrefixManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
@@ -70,7 +70,7 @@ class PrefixManager:
             await self.bot.say(":x: No prefixes are set in the dictionary")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Used to remove a single prefix"""
         prefixes = self._prefixes(ctx)
@@ -84,7 +84,7 @@ class PrefixManager:
         await self.bot.say("Done.")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
         prefixes = self._prefixes(ctx)
@@ -97,7 +97,6 @@ class PrefixManager:
             await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
 
     @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
     async def lookupPrefix(self, ctx, gmName: str):
         prefixes = self._prefixes(ctx)
 
@@ -108,8 +107,8 @@ class PrefixManager:
             await self.bot.say(":x: Prefix not found for {0}".format(gmName))
 
     def _find_role(self, ctx, role_id):
-        server = ctx.message.server
-        roles = server.roles
+        guild = ctx.message.guild
+        roles = guild.roles
         for role in roles:
             if role.id == role_id:
                 return role
@@ -141,8 +140,8 @@ class PrefixManager:
         return True
 
     def _get_proper_gm_name(self, ctx, gm_name):
-        server = ctx.message.server
-        roles = server.roles
+        guild = ctx.message.guild
+        roles = guild.roles
         for role in roles:
             try:
                 gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
