@@ -30,7 +30,7 @@ class SixMans:
         if not self.games:
             await self.bot.say("No active games.")
             return
-        for channel_id, game in self.games.items():
+        for game in self.games.values():
             self.display_game_info(game)
         await self.bot.say("Done")
 
@@ -65,7 +65,7 @@ class SixMans:
         if player in self.queue:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
-        for channel_id, game in self.games:
+        for game in self.games.values():
             await self.bot.say("{}".format(", ".join([player.display_name for player in game.players])))
             if player in game.players:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
