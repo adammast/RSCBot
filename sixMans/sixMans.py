@@ -100,10 +100,15 @@ class SixMans:
         orange = random.sample(game.players, 3)
         for player in orange:
             game.add_to_orange(player)
-
+            game.player.add(player)
+        
         blue = list(game.players)
         for player in blue:
             game.add_to_blue(player)
+            game.player.add(player)
+
+        game.reset_players()
+        game.get_new_captains_from_teams()
 
         await self.display_game_info(game)
 
@@ -112,12 +117,12 @@ class SixMans:
         self.busy = False
 
     async def display_game_info(self, game):
+        await self.bot.send_message(game.channel, "{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         await self.bot.send_message(game.channel, embed=embed)
-        await self.bot.send_message(game.channel, "{}\n".format(", ".join([player.mention for player in game.players])))
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
@@ -134,7 +139,7 @@ class SixMans:
 class Game:
     def __init__(self, players, channel):
         self.players = set(players)
-        self.captains = random.sample(self.players, 2)
+        self.captains = list(random.sample(self.players, 2))
         self.orange = set()
         self.blue = set()
         self.roomName = self._generate_name_pass()
@@ -148,6 +153,14 @@ class Game:
     def add_to_orange(self, player):
         self.players.remove(player)
         self.orange.add(player)
+
+    def reset_players(self):
+        self.players.update(self.orange)
+        self.players.update(self.blue)
+
+    def get_new_captains_from_teams(self):
+        self.captains.append(list(self.orange)[0])
+        self.captains.append(list(self.blue)[0])
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
