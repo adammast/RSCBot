@@ -35,7 +35,7 @@ class SixMans:
             self.queue.put(member)
             await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are as follows:")
+            await self.bot.say("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
     @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
@@ -55,7 +55,6 @@ class SixMans:
             await self.bot.say("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
-            await self.bot.say("Game channel: {}".format(game.channel.mention))
             if player in game:
                 await self.bot.say("{} is already in a game.".format(player.display_name))
                 return
