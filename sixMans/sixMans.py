@@ -27,7 +27,7 @@ class SixMans:
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def check_games(self, ctx):
-        for game in self.games:
+        for channel, game in self.games.items():
             self.display_game_info(game)
 
 
