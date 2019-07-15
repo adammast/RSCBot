@@ -100,12 +100,10 @@ class SixMans:
         orange = random.sample(game.players, 3)
         for player in orange:
             game.add_to_orange(player)
-            game.player.add(player)
         
         blue = list(game.players)
         for player in blue:
             game.add_to_blue(player)
-            game.player.add(player)
 
         game.reset_players()
         game.get_new_captains_from_teams()
