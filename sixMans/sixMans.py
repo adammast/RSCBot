@@ -9,7 +9,6 @@ from discord.ext import commands
 from cogs.utils import checks
 
 TEAM_SIZE = 6
-CAT_ID = 599665527433986085
 
 class SixMans:
 
@@ -24,6 +23,12 @@ class SixMans:
     @checks.admin_or_permissions(manage_server=True)
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
+
+    @commands.command(pass_context=True, no_pm=True)
+    @checks.admin_or_permissions(manage_server=True)
+    async def check_games(self, ctx):
+        for game in self.games:
+            self.display_game_info(game)
 
 
     @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
