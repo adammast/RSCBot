@@ -24,17 +24,6 @@ class SixMans:
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
-    @commands.command(no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
-    async def check_games(self):
-        if not self.games:
-            await self.bot.say("No active games.")
-            return
-        for game in self.games:
-            self.display_game_info(game)
-        await self.bot.say("Done")
-
-
     @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
     @checks.admin_or_permissions(manage_server=True)
     async def queue_all(self, ctx, *members: discord.Member):
@@ -128,6 +117,7 @@ class SixMans:
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         await self.bot.send_message(game.channel, embed=embed)
+        await self.bot.send_message(game.channel, "{}\n".format(", ".join([player.mention for player in game.players])))
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
@@ -150,7 +140,6 @@ class Game:
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
         self.channel = channel
-        self.playerIds = self._get_player_ids(players)
 
     def add_to_blue(self, player):
         self.players.remove(player)
@@ -162,12 +151,6 @@ class Game:
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
-
-    def _get_player_ids(self, players):
-        ids = []
-        for player in players:
-            ids.append(player.id)
-        return ids
 
     def _generate_name_pass(self):
         # TODO: Load from file?
