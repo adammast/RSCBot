@@ -1,9 +1,9 @@
 import os.path
 import os
 import json
-import dataIO
 
 from redbot.core import commands
+from cogs.utils.dataIO import dataIO
 from cogs.utils import checks
 
 
