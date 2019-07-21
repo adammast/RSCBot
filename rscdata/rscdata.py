@@ -1,14 +1,13 @@
 import os.path
 import os
 import json
-import logging
 
 from .utils.dataIO import dataIO
-from discord.ext import commands
+from redbot.core import commands
 from cogs.utils import checks
 
 
-class RscData:
+class RscData(commands.cog):
     """Utility cog for storing and retrieving data.
 
     Currently just writes JSON to files. Could be changed to another file
@@ -85,23 +84,7 @@ class RscData:
         self._ensure_dataset_file(dataset)
         return dataIO.load_json(self._dataset_file(dataset))
 
-
 def ensure_data_folder():
     """Create the needed data folder if it does not exist."""
     if not os.path.exists(RscData.DATA_FOLDER):
         os.makedirs(RscData.DATA_FOLDER, exist_ok=True)
-
-
-def setup(bot):
-    global logger
-    ensure_data_folder()
-    logger = logging.getLogger("rsc.data")
-    if logger.level == 0:
-        # Prevents the logger from being loaded again in case of module reload
-        logger.setLevel(logging.INFO)
-        handler = logging.FileHandler(
-            filename=RscData.LOG_FILE, encoding='utf-8', mode='a')
-        handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(message)s', datefmt="[%d/%m/%Y %H:%M]"))
-        logger.addHandler(handler)
-    bot.add_cog(RscData(bot))
