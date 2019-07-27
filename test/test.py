@@ -18,7 +18,7 @@ class Test(commands.Cog):
         await ctx.send(f"{user.name} was added to the word list.")
 
     @commands.command()
-    async def getUserName(self, ctx, id: int):
+    async def getUserName(self, ctx, id):
         users = await self.config.guild(ctx.guild).Users()
         username = users[id]
         await ctx.send("Name = {0}".format(username))
