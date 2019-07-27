@@ -5,7 +5,7 @@ from redbot.core import commands
 
 defaults = {"Users": []}
 
-class Test:
+class Test(commands.Cog):
     def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
 
