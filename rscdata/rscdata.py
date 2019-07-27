@@ -3,7 +3,7 @@ import os
 import json
 
 from redbot.core import commands
-from cogs.utils.dataIO import dataIO
+from redbot.core import Config
 from cogs.utils import checks
 
 
@@ -21,6 +21,7 @@ class RscData(commands.cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=1234567890)
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -52,14 +53,14 @@ class RscData(commands.cog):
     def _ensure_dataset_file(self, dataset):
         """Create the specified file if it does not exist."""
         dataset_file = self._dataset_file(dataset)
-        if not dataIO.is_valid_json(dataset_file):
-            dataIO.save_json(dataset_file, self.DATA_BOOTSTRAP)
+        if not self.config.is_valid_json(dataset_file):
+            self.config.save_json(dataset_file, self.DATA_BOOTSTRAP)
 
     def _server_set_for(self, ctx):
         """Return the name of the dict to be used for the server in the
         provided context."""
-        if ctx.message.guild:
-            return str(ctx.message.guild.id)
+        if ctx.guild:
+            return str(ctx.guild.id)
         else:
             return self.SERVERLESS
 
@@ -78,11 +79,11 @@ class RscData(commands.cog):
         server_set = self._server_set_for(ctx)
         all_data = self._all_data(dataset)
         all_data[server_set] = data
-        dataIO.save_json(self._dataset_file(dataset), all_data)
+        self.config.save_json(self._dataset_file(dataset), all_data)
 
     def _all_data(self, dataset):
         self._ensure_dataset_file(dataset)
-        return dataIO.load_json(self._dataset_file(dataset))
+        return self.config.load_json(self._dataset_file(dataset))
 
 def ensure_data_folder():
     """Create the needed data folder if it does not exist."""
