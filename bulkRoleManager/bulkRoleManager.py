@@ -14,19 +14,27 @@ class BulkRoleManager:
     async def getAllWithRole(self, ctx, role : discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
-        message = "Players with {0} role:\n```".format(role.name)
+        messages = []
+        messageIndex = 0
+        await self.bot.say("Players with {0} role:\n".format(role.name))
         for member in ctx.message.server.members:
             if role in member.roles:
                 if getNickname:
                     message += "{0.nick}: {0.name}#{0.discriminator}\n".format(member)
                 else:
                     message += "{0.name}#{0.discriminator}\n".format(member)
+                if len(message) > 1900:
+                    messages[messageIndex] = message
+                    messageIndex += 1
+                    message = ""
                 count += 1
         if count == 0:
-            await self.bot.say("Nobody has the {0} role".format(role.mention))
+            await self.bot.say("Nobody has the {0} role".format(role.name))
         else:
-            message += "```"
-            await self.bot.say(message)
+            if message is not "":
+                messages[messageIndex] = message
+            for message in messages:
+                await self.bot.say("{0}{1}{0}").format("```", message)
             await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command(pass_context=True, no_pm=True)
@@ -64,8 +72,8 @@ class BulkRoleManager:
                     empty = False
             except:
                 if notFound == 0:
-                    await self.bot.say("Couldn't find:")
-                await self.bot.say(user)
+                    message = "Couldn't find:\n"
+                message += "{0}\n".format(user)
                 notFound += 1
         if empty:
             message = ":x: Nobody was given the role {0}".format(role.mention)
@@ -82,18 +90,26 @@ class BulkRoleManager:
     @commands.command(pass_context=True, no_pm=True)
     @checks.admin_or_permissions(manage_server=True)
     async def makeDE(self, ctx, *userList):
-        """Adds the Draft Eligible role and adds the DE prefix to every member that can be found from the userList"""
+        """Adds the Draft Eligible and League roles, removes Spectator role, and adds the DE prefix to every member that can be found from the userList"""
         empty = True
         added = 0
         had = 0
         notFound = 0
         deRole = None
+        leagueRole = None
+        spectatorRole = None
         for role in ctx.message.server.roles:
             if role.name == "Draft Eligible":
                 deRole = role
+            elif role.name == "League":
+                leagueRole = role
+            elif role.name == "Spectator":
+                spectatorRole = role
+            if leagueRole and deRole and spectatorRole:
                 break
-        if deRole is None:
-            await self.bot.say("Couldn't find the Draft Eligible role in the server")
+
+        if deRole is None or leagueRole is None or spectatorRole is None:
+            await self.bot.say("Couldn't find either the Draft Eligible, League, or Spectator role in the server")
             return
 
         for user in userList:
@@ -101,16 +117,17 @@ class BulkRoleManager:
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in ctx.message.server.members:
                     if deRole not in member.roles:
-                        await self.bot.add_roles(member, deRole)
+                        await self.bot.add_roles(member, deRole, leagueRole)
                         added += 1
                         await self.bot.change_nickname(member, "{0} | {1}".format("DE", self.get_player_nickname(member)))
+                        await self.bot.remove_roles(member, spectatorRole)
                     else:
                         had += 1
                     empty = False
             except:
                 if notFound == 0:
-                    await self.bot.say("Couldn't find:")
-                await self.bot.say(user)
+                    message = "Couldn't find:\n"
+                message += "{0}\n".format(user)
                 notFound += 1
         if empty:
             message = ":x: Nobody was given the role {0}".format(role.mention)
