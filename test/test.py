@@ -3,7 +3,7 @@ import discord
 from redbot.core import Config
 from redbot.core import commands
 
-defaults = {"Users": []}
+defaults = {"Users": {}}
 
 class Test(commands.Cog):
     def __init__(self):
@@ -14,7 +14,7 @@ class Test(commands.Cog):
     @commands.command()
     async def registerUser(self, ctx, user: discord.Member):
         async with self.config.guild(ctx.guild).Users() as users:
-            users.append({user.id: user.name})
+            users[user.id] = user.name
         await ctx.send(f"{user.name} was added to the word list.")
 
     @commands.command()
