@@ -1,7 +1,8 @@
 from discord.utils import get
+from redbot.core import commands
 
-class AnnoyJK():
-    async def on_message(self, message):
+class AnnoyJK(commands.Cog):
+    async def on_message(self, ctx, message):
         if message.author.name == "adammast":
-            emoji = get(guild.emojis(), name='EventElf')
+            emoji = get(ctx.guild.emojis(), name='EventElf')
             await message.add_reaction(emoji)
