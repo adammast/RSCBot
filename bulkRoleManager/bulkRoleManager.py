@@ -33,7 +33,7 @@ class BulkRoleManager:
             if message is not "":
                 messages.append(message)
             for msg in messages:
-                await self.bot.say("{0}{1}{0}").format("```", msg)
+                await self.bot.say("{0}{1}{0}".format("```", msg))
             await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command(pass_context=True, no_pm=True)
