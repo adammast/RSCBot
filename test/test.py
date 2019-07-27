@@ -8,7 +8,6 @@ defaults = {"Users": {}}
 class Test(commands.Cog):
     def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
-
         self.config.register_guild(**defaults)
 
     @commands.command()

@@ -2,18 +2,18 @@ import discord
 import re
 import ast
 
-from discord.ext import commands
+from redbot.core import Config
+from redbot.core import commands
 from cogs.utils import checks
 
-class PrefixManager:
+defaults = {"Prefixes": {}}
+
+class PrefixManager(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    DATASET = "PrefixData"
-    PREFIXES_KEY = "Prefixes"
-
     def __init__(self, bot):
-        self.bot = bot
-        self.data_cog = self.bot.get_cog("RscData")
+        self.config = Config.get_conf(self, identifier=1234567891, force_registration=True)
+        self.config.register_guild(**defaults)
 
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -153,14 +153,11 @@ class PrefixManager:
         return self.data_cog.load(ctx, self.DATASET)
 
     def _prefixes(self, ctx):
-        all_data = self._all_data(ctx)
-        prefixes = all_data.setdefault(self.PREFIXES_KEY, {})
+        prefixes = await self.config.guild(ctx.guild).Prefixes()
         return prefixes
 
     def _save_prefixes(self, ctx, prefixes):
-        all_data = self._all_data(ctx)
-        all_data[self.PREFIXES_KEY] = prefixes
-        self.data_cog.save(ctx, self.DATASET, all_data)
+        await self.config.guild(ctx.guild).Prefixes.set(prefixes)
 
 def setup(bot):
     bot.add_cog(PrefixManager(bot))
