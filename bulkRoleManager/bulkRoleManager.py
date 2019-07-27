@@ -15,7 +15,6 @@ class BulkRoleManager:
         """Prints out a list of members with the specific role"""
         count = 0
         messages = []
-        messageIndex = 0
         message = ""
         await self.bot.say("Players with {0} role:\n".format(role.name))
         for member in ctx.message.server.members:
@@ -25,17 +24,16 @@ class BulkRoleManager:
                 else:
                     message += "{0.name}#{0.discriminator}\n".format(member)
                 if len(message) > 1900:
-                    messages[messageIndex] = message
-                    messageIndex += 1
+                    messages.append(message)
                     message = ""
                 count += 1
         if count == 0:
             await self.bot.say("Nobody has the {0} role".format(role.name))
         else:
             if message is not "":
-                messages[messageIndex] = message
-            for message in messages:
-                await self.bot.say("{0}{1}{0}").format("```", message)
+                messages.append(message)
+            for msg in messages:
+                await self.bot.say("{0}{1}{0}").format("```", msg)
             await self.bot.say(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command(pass_context=True, no_pm=True)
