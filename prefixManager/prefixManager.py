@@ -1,4 +1,3 @@
-import discord
 import re
 import ast
 
@@ -11,7 +10,7 @@ defaults = {"Prefixes": {}}
 class PrefixManager(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    def __init__(self, bot):
+    def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567891, force_registration=True)
         self.config.register_guild(**defaults)
 
