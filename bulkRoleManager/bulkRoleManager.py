@@ -16,6 +16,7 @@ class BulkRoleManager:
         count = 0
         messages = []
         messageIndex = 0
+        message = ""
         await self.bot.say("Players with {0} role:\n".format(role.name))
         for member in ctx.message.server.members:
             if role in member.roles:
