@@ -19,8 +19,7 @@ class TeamManager(commands.Cog):
     IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self):
         self.prefix_cog = self.bot.get_cog("PrefixManager")
 
     @commands.command()
