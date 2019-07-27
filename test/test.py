@@ -14,8 +14,13 @@ class Test(commands.Cog):
     @commands.command()
     async def registerUser(self, ctx, user: discord.Member):
         async with self.config.guild(ctx.guild).Users() as users:
-            users.append(user.name.lower())
+            users.append({user.id: user.name})
         await ctx.send(f"{user.name} was added to the word list.")
+
+    @commands.command()
+    async def getUserName(self, ctx, id: int):
+        async with self.config.guild(ctx.guild).Users() as users:
+            await ctx.send("Name = {0}".format(users[id]))
 
     @commands.command()
     async def userData(self, ctx):
@@ -29,5 +34,5 @@ class Test(commands.Cog):
 
     @commands.command()
     async def addTestData(self, ctx):
-        await self.config.guild(ctx.guild).Users.set(["adammast", "cakekyst"])
+        await self.config.guild(ctx.guild).Users.set({226869393626234881: "adammast", 137652497178296320: "cakekyst"})
         await ctx.send("Data set to test data.")
