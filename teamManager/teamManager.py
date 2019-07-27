@@ -3,6 +3,7 @@ import re
 import ast
 import difflib
 
+from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
@@ -19,8 +20,10 @@ class TeamManager(commands.Cog):
     IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
 
-    def __init__(self):
-        self.prefix_cog = self.bot.get_cog("PrefixManager")
+    def __init__(self, bot):
+        self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
+        self.config.register_guild(**defaults)
+        self.prefix_cog = bot.get_cog("PrefixManager")
 
     @commands.command()
     @commands.guild_only()
