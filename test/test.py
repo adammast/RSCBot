@@ -19,8 +19,9 @@ class Test(commands.Cog):
 
     @commands.command()
     async def getUserName(self, ctx, id: int):
-        async with self.config.guild(ctx.guild).Users() as users:
-            await ctx.send("Name = {0}".format(users[id]))
+        users = await self.config.guild(ctx.guild).Users()
+        username = users[id]
+        await ctx.send("Name = {0}".format(username))
 
     @commands.command()
     async def userData(self, ctx):
