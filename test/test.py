@@ -29,5 +29,5 @@ class Test(commands.Cog):
 
     @commands.command()
     async def addTestData(self, ctx):
-        async with self.config.guild(ctx.guild).Users.set(["adammast", "cakekyst"])
+        await self.config.guild(ctx.guild).Users.set(["adammast", "cakekyst"])
         await ctx.send("Data set to test data.")
