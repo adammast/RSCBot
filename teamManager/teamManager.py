@@ -8,7 +8,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 
-defaults = {"Tiers": [], "Teams": [], "Team_Roles": []
+defaults = {"Tiers": [], "Teams": [], "Team_Roles": []}
 
 class TeamManager(commands.Cog):
     """Used to match roles to teams"""
