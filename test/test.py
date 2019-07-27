@@ -13,10 +13,21 @@ class Test(commands.Cog):
 
     @commands.command()
     async def registerUser(self, ctx, user: discord.Member):
-        async with self.config.guild(ctx.guild).Users() as users: users.append(user.name.lower())
+        async with self.config.guild(ctx.guild).Users() as users:
+            users.append(user.name.lower())
         await ctx.send(f"{user.name} was added to the word list.")
 
     @commands.command()
     async def userData(self, ctx):
         data = await self.config.guild(ctx.guild).all()
         await ctx.send(data)
+
+    @commands.command()
+    async def clearData(self, ctx):
+        await self.config.guild(ctx.guild).Users.clear()
+        await ctx.send("User data was cleared.")
+
+    @commands.command()
+    async def addTestData(self, ctx):
+        async with self.config.guild(ctx.guild).Users() as users:
+            users.set(["adammast", "cakekyst"])
