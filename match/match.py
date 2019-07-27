@@ -92,7 +92,7 @@ class Match:
                                "the server.")
             return
         team_names = []
-        user_team_names = self.team_manager.teams_for_user(
+        user_team_names = await self.team_manager.teams_for_user(
             ctx, ctx.message.author)
 
         team_names_provided = len(args) > 1

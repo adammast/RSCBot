@@ -149,7 +149,7 @@ class Transactions:
     @checks.admin_or_permissions(manage_roles=True)
     async def promote(self, ctx, user: discord.Member, team_name: str):
         server_dict = self.CONFIG_COG.get_server_dict(ctx)
-        old_team_name = self.TEAM_MANAGER.get_current_team_name(ctx, user)
+        old_team_name = await self.TEAM_MANAGER.get_current_team_name(ctx, user)
         if old_team_name is not None:
             if self.TEAM_MANAGER._roles_for_team(ctx, old_team_name)[0] != self.TEAM_MANAGER._roles_for_team(ctx, team_name)[0]:
                 await ctx.send(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))

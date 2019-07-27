@@ -1,14 +1,12 @@
 import discord
 
-from discord.ext import commands
-from cogs.utils import checks
+from redbot.core import commands
+from redbot.core import checks
 
-class BulkRoleManager:
+class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
 
-    def __init__(self, bot):
-        self.bot = bot
-
+    @commands.command()
     @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
@@ -28,6 +26,7 @@ class BulkRoleManager:
                 await ctx.send(message)
             await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def removeRoleFromAll(self, ctx, role: discord.Role):
@@ -42,7 +41,7 @@ class BulkRoleManager:
         else:
             await ctx.send(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
-
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def addRole(self, ctx, role: discord.Role, *userList):
@@ -78,7 +77,7 @@ class BulkRoleManager:
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
 
-    
+    @commands.command()
     @commands.guild_only()
     async def getId(self, ctx, *userList):
         notFound = []
@@ -95,6 +94,7 @@ class BulkRoleManager:
             for user in notFound:
                 await ctx.send(user)
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
@@ -103,7 +103,7 @@ class BulkRoleManager:
         hadRoleCount = 0
         countGiven = 0
         
-        for member in guild.members:
+        for member in ctx.guild.members:
             if currentRole in member.roles:
                 count += 1
                 if roleToGive in member.roles:
@@ -130,7 +130,3 @@ class BulkRoleManager:
                 currentNickname = array[0]
             return currentNickname
         return user.name
-       
-
-def setup(bot):
-    bot.add_cog(BulkRoleManager(bot))

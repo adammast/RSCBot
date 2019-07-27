@@ -155,8 +155,7 @@ class PrefixManager(commands.Cog):
                 continue
 
     async def _prefixes(self, ctx):
-        prefixes = await self.config.guild(ctx.guild).Prefixes()
-        return prefixes
+        return await self.config.guild(ctx.guild).Prefixes()
 
     async def _save_prefixes(self, ctx, prefixes):
         await self.config.guild(ctx.guild).Prefixes.set(prefixes)
