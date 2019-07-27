@@ -14,7 +14,7 @@ class PrefixManager(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567891, force_registration=True)
         self.config.register_guild(**defaults)
 
-    @commands.guild_only()
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
@@ -45,7 +45,7 @@ class PrefixManager(commands.Cog):
             await ctx.send("Added {0} prefixes(s).".format(addedCount))
         await ctx.send("Done.")
 
-    @commands.guild_only()
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
@@ -54,7 +54,7 @@ class PrefixManager(commands.Cog):
         else:
             await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.guild_only()
+    @commands.command()
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
         prefixes = await self._prefixes(ctx)
@@ -68,7 +68,7 @@ class PrefixManager(commands.Cog):
         else:
             await ctx.send(":x: No prefixes are set in the dictionary")
 
-    @commands.guild_only()
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Used to remove a single prefix"""
@@ -81,7 +81,7 @@ class PrefixManager(commands.Cog):
         await self._save_prefixes(ctx, prefixes)
         await ctx.send("Done.")
 
-    @commands.guild_only()
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
@@ -94,7 +94,7 @@ class PrefixManager(commands.Cog):
         except:
             await ctx.send(":x: Something went wrong when trying to clear the prefix dictionary")
 
-    @commands.guild_only()
+    @commands.command()
     async def lookupPrefix(self, ctx, gmName: str):
         prefixes = await self._prefixes(ctx)
 
