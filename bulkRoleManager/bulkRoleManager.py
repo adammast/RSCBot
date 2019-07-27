@@ -59,6 +59,7 @@ class BulkRoleManager:
         added = 0
         had = 0
         notFound = 0
+        message = ""
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
@@ -71,13 +72,13 @@ class BulkRoleManager:
                     empty = False
             except:
                 if notFound == 0:
-                    message = "Couldn't find:\n"
+                    message += "Couldn't find:\n"
                 message += "{0}\n".format(user)
                 notFound += 1
         if empty:
-            message = ":x: Nobody was given the role {0}".format(role.mention)
+            message += ":x: Nobody was given the role {0}".format(role.mention)
         else:
-           message = ":white_check_mark: {0} role given to everyone that was found from list".format(role.mention)
+           message += ":white_check_mark: {0} role given to everyone that was found from list".format(role.mention)
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
@@ -97,6 +98,7 @@ class BulkRoleManager:
         deRole = None
         leagueRole = None
         spectatorRole = None
+        message = ""
         for role in ctx.message.server.roles:
             if role.name == "Draft Eligible":
                 deRole = role
@@ -125,13 +127,13 @@ class BulkRoleManager:
                     empty = False
             except:
                 if notFound == 0:
-                    message = "Couldn't find:\n"
+                    message += "Couldn't find:\n"
                 message += "{0}\n".format(user)
                 notFound += 1
         if empty:
-            message = ":x: Nobody was given the role {0}".format(role.mention)
+            message += ":x: Nobody was given the role {0}".format(role.name)
         else:
-           message = ":white_check_mark: {0} role given to everyone that was found from list".format(role.mention)
+           message += ":white_check_mark: {0} role given to everyone that was found from list".format(role.name)
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
