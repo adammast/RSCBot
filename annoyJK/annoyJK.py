@@ -1,16 +1,7 @@
 from discord.utils import get
 
-class AnnoyJK:
-
-    def __init__(self, bot):
-        self.bot = bot
-
+class AnnoyJK():
     async def on_message(self, message):
-        if message.author.name == "JKmadness":
-            emoji = get(self.bot.get_all_emojis(), name='EventElf')
+        if message.author.name == "adammast":
+            emoji = get(guild.emojis(), name='EventElf')
             await message.add_reaction(emoji)
-
-def setup(bot):
-    n = AnnoyJK(bot)
-    bot.add_listener(n.on_message, "on_message")
-    bot.add_cog(n)

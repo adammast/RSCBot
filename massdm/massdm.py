@@ -1,17 +1,12 @@
-from typing import List
-
 import discord
-from discord.ext import commands
 
-from .utils import checks
+from typing import List
+from redbot.core import commands
+from redbot.core import checks
 
 
-class MassDM:
-
+class MassDM(commands.Cog):
     """Send a direct message to all members of the specified Role."""
-
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
 
     def _get_users_with_role(self, guild: discord.Guild,
                              role: discord.Role) -> List[discord.User]:
@@ -21,7 +16,7 @@ class MassDM:
                 roled.append(member)
         return roled
 
-    @commands.guild_only()
+    @commands.guil_only()
     @commands.command(name="massdm2", aliases=["mdm2"])
     @checks.mod_or_permissions(administrator=True)
     async def _mdm(self, ctx, role: discord.Role, *, message: str):
@@ -44,7 +39,3 @@ class MassDM:
                 continue
 
         await ctx.send("Done")
-
-
-def setup(bot: commands.Bot):
-    bot.add_cog(MassDM(bot))

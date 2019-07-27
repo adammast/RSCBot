@@ -15,6 +15,7 @@ class PrefixManager(commands.Cog):
         self.config.register_guild(**defaults)
 
     @commands.command()
+    @commands.guil_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
@@ -46,6 +47,7 @@ class PrefixManager(commands.Cog):
         await ctx.send("Done.")
 
     @commands.command()
+    @commands.guil_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
@@ -55,6 +57,7 @@ class PrefixManager(commands.Cog):
             await ctx.send("Error adding prefix: {0}".format(prefix))
 
     @commands.command()
+    @commands.guil_only()
     async def getPrefixes(self, ctx):
         """Used to get all prefixes in the prefix dictionary"""
         prefixes = await self._prefixes(ctx)
@@ -69,6 +72,7 @@ class PrefixManager(commands.Cog):
             await ctx.send(":x: No prefixes are set in the dictionary")
 
     @commands.command()
+    @commands.guil_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Used to remove a single prefix"""
@@ -82,6 +86,7 @@ class PrefixManager(commands.Cog):
         await ctx.send("Done.")
 
     @commands.command()
+    @commands.guil_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
         """Used to clear the prefix dictionary"""
@@ -95,6 +100,7 @@ class PrefixManager(commands.Cog):
             await ctx.send(":x: Something went wrong when trying to clear the prefix dictionary")
 
     @commands.command()
+    @commands.guil_only()
     async def lookupPrefix(self, ctx, gmName: str):
         prefixes = await self._prefixes(ctx)
 
@@ -154,6 +160,3 @@ class PrefixManager(commands.Cog):
 
     async def _save_prefixes(self, ctx, prefixes):
         await self.config.guild(ctx.guild).Prefixes.set(prefixes)
-
-def setup(bot):
-    bot.add_cog(PrefixManager(bot))
