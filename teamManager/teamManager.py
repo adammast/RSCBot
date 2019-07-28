@@ -68,7 +68,7 @@ class TeamManager(commands.Cog):
                 teams = await self._find_teams_for_tier(ctx, franchise_tier_prefix)
                 message = "```{0} teams:".format(tier)
                 for team in teams:
-                    franchise_role = await self._roles_for_team(ctx, team)[0]
+                    franchise_role = (await self._roles_for_team(ctx, team))[0]
                     gmNameFromRole = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
                     message += "\n\t{0} ({1})".format(team, gmNameFromRole)
                 message += "```"
