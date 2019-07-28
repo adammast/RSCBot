@@ -46,7 +46,7 @@ class TeamManager(commands.Cog):
         \t[p]teams Challenger
         \t[p]teams OCE"""
         # Prefix
-        prefixes = self.prefix_cog._prefixes(ctx)
+        prefixes = await self.prefix_cog._prefixes(ctx)
         if(len(prefixes.items()) > 0):
             for key, value in prefixes.items():
                 if franchise_tier_prefix.lower() == value.lower():
