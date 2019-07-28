@@ -136,7 +136,7 @@ class BulkRoleManager:
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
-            message += ". {0} user(s) already had the role".format(had)
+            message += ". {0} user(s) already had the role or were already in the league".format(had)
         if added > 0:
             message += ". {0} user(s) had the role added to them".format(added)
         await self.bot.say(message)
