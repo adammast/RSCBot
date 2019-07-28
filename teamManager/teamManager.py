@@ -20,7 +20,7 @@ class TeamManager(commands.Cog):
     IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
 
-    def __init__(self):
+    def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
