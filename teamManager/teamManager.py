@@ -8,7 +8,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 
-defaults = {"Tiers": [], "Teams": [], "Team_Roles": []}
+defaults = {"Tiers": [], "Teams": [], "Team_Roles": {}}
 
 class TeamManager(commands.Cog):
     """Used to match roles to teams"""
@@ -51,7 +51,7 @@ class TeamManager(commands.Cog):
             for key, value in prefixes.items():
                 if franchise_tier_prefix.lower() == value.lower():
                     gm_name = key
-                    franchise_role = await self._get_franchise_role(ctx, gm_name)
+                    franchise_role = self._get_franchise_role(ctx, gm_name)
                     teams = await self._find_teams_for_franchise(ctx, franchise_role)
                     message = "```{0}:".format(franchise_role.name)
                     for team in teams:
@@ -336,6 +336,8 @@ class TeamManager(commands.Cog):
 
         tier_role = self._get_tier_role(ctx, tier)
 
+        franchise_role = self._get_franchise_role(ctx, gm_name)
+
         # Validation of input
         # There are other validations we could do, but don't
         #     - that there aren't extra args
@@ -346,13 +348,14 @@ class TeamManager(commands.Cog):
             errors.append("GM name not found.")
         if not tier_role:
             errors.append("Tier role not found.")
+        if not franchise_role:
+            errors.append("Franchise role not found.")
         if errors:
             await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 
         try:
-            franchise_role = await self._get_franchise_role(ctx, gm_name)
             teams.append(team_name)
             team_data = team_roles.setdefault(team_name, {})
             team_data["Franchise Role"] = franchise_role.id
@@ -394,7 +397,7 @@ class TeamManager(commands.Cog):
                 return role
         return None
 
-    async def _get_franchise_role(self, ctx, gm_name):
+    def _get_franchise_role(self, ctx, gm_name):
         for role in ctx.message.guild.roles:
             try:
                 gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
@@ -402,7 +405,6 @@ class TeamManager(commands.Cog):
                     return role
             except:
                 continue
-        await ctx.send(":x: Franchise role not found for {0}".format(gm_name))
 
     def _get_all_franchise_roles(self, ctx):
         franchise_roles = []
