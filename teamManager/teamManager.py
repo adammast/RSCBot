@@ -440,7 +440,7 @@ class TeamManager(commands.Cog):
         franchise_teams = []
         teams = await self._teams(ctx)
         for team in teams:
-            if await self._roles_for_team(ctx, team)[0] == franchise_role:
+            if (await self._roles_for_team(ctx, team))[0] == franchise_role:
                 franchise_teams.append(team)
         return franchise_teams
 
