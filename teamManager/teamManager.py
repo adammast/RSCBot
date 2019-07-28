@@ -55,7 +55,7 @@ class TeamManager(commands.Cog):
                     teams = await self._find_teams_for_franchise(ctx, franchise_role)
                     message = "```{0}:".format(franchise_role.name)
                     for team in teams:
-                        tier_role = await self._roles_for_team(ctx, team)[1]
+                        tier_role = (await self._roles_for_team(ctx, team))[1]
                         message += "\n\t{0} ({1})".format(team, tier_role.name)
                     message += "```"
                     await ctx.send(message)
@@ -81,7 +81,7 @@ class TeamManager(commands.Cog):
             teams = await self._find_teams_for_franchise(ctx, franchise_role)
             message = "```{0}:".format(franchise_role.name)
             for team in teams:
-                tier_role = await self._roles_for_team(ctx, team)[1]
+                tier_role = (await self._roles_for_team(ctx, team))[1]
                 message += "\n\t{0} ({1})".format(team, tier_role.name)
             message += "```"
             await ctx.send(message)
@@ -495,7 +495,7 @@ class TeamManager(commands.Cog):
         teams_in_tier = []
         teams = await self._teams(ctx)
         for team in teams:
-            team_tier = await self._roles_for_team(ctx, team)[1]
+            team_tier = (await self._roles_for_team(ctx, team))[1]
             if team_tier.name.lower() == tier.lower():
                 teams_in_tier.append(team)
         return teams_in_tier
