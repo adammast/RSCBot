@@ -123,11 +123,10 @@ class BulkRoleManager:
                         await self.bot.change_nickname(member, "{0} | {1}".format("DE", self.get_player_nickname(member)))
                         await self.bot.remove_roles(member, spectatorRole)
                     else:
-                        message += "Already in League: {0}\n".format(user.mention)
+                        message += "Already in League: {0}\n".format(member.mention)
                         had += 1
                     empty = False
-            except Exception as e:
-                await self.bot.say(e)
+            except:
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
         if empty:
