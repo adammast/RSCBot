@@ -117,23 +117,22 @@ class BulkRoleManager:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in ctx.message.server.members:
-                    if deRole not in member.roles:
+                    if leagueRole not in member.roles:
                         await self.bot.add_roles(member, deRole, leagueRole)
                         added += 1
                         await self.bot.change_nickname(member, "{0} | {1}".format("DE", self.get_player_nickname(member)))
                         await self.bot.remove_roles(member, spectatorRole)
                     else:
+                        message += "Already in League: {0}\n".format(user.mention)
                         had += 1
                     empty = False
             except:
-                if notFound == 0:
-                    message += "Couldn't find:\n"
-                message += "{0}\n".format(user)
+                message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
         if empty:
-            message += ":x: Nobody was given the role {0}".format(role.name)
+            message += ":x: Nobody was given the Draft Eligible role"
         else:
-           message += ":white_check_mark: {0} role given to everyone that was found from list".format(role.name)
+           message += ":white_check_mark: Draft Eligible role given to everyone that was found from list"
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
