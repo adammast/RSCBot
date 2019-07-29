@@ -155,7 +155,6 @@ class Match(commands.Cog):
         addedCount = 0
         try:
             for matchStr in matches:
-                await ctx.send("Test")
                 match = ast.literal_eval(matchStr)
                 await ctx.send("Adding match: {0}".format(repr(match)))
                 resultMatch = await self._add_match(ctx, *match)
