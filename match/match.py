@@ -281,7 +281,8 @@ class Match(commands.Cog):
         await self.config.guild(ctx.guild).Schedule.set(schedule)
 
     async def _matches(self, ctx):
-        return await self._schedule(ctx).setdefault(self.MATHCES_KEY, {})
+        schedule = await self._schedule(ctx)
+        return schedule.setdefault(self.MATHCES_KEY, {})
 
     async def _save_matches(self, ctx, matches):
         schedule = await self._schedule(ctx)
@@ -289,7 +290,8 @@ class Match(commands.Cog):
         await self._save_schedule(ctx, schedule)
 
     async def _team_days_index(self, ctx):
-        return await self._schedule(ctx).setdefault(self.TEAM_DAY_INDEX_KEY, {})
+        schedule = await self._schedule(ctx)
+        return schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
 
     async def _save_team_days_index(self, ctx, team_days_index):
         schedule = await self._schedule(ctx)
