@@ -22,7 +22,7 @@ class PrefixManager(commands.Cog):
 
         Arguments:
 
-        prefixes_to_add -- One or more teams in the following format:
+        prefixes_to_add -- One or more prefixes in the following format:
 
         \t"['<gm_name>','<prefix>']"
 
@@ -50,6 +50,7 @@ class PrefixManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
+        """Add a single prefix and corresponding GM name."""
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
             await ctx.send("Done.")
@@ -59,7 +60,7 @@ class PrefixManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def getPrefixes(self, ctx):
-        """Used to get all prefixes in the prefix dictionary"""
+        """Get all prefixes in the prefix dictionary"""
         prefixes = await self._prefixes(ctx)
 
         if(len(prefixes.items()) > 0):
@@ -75,7 +76,7 @@ class PrefixManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
-        """Used to remove a single prefix"""
+        """Remove a single prefix. The GM will no longer have a prefix in the dictionary"""
         prefixes = await self._prefixes(ctx)
         try:
             del prefixes[gm_name]
@@ -89,7 +90,7 @@ class PrefixManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
-        """Used to clear the prefix dictionary"""
+        """Clear the prefix dictionary"""
         prefixes = await self._prefixes(ctx)
 
         try:
@@ -102,6 +103,7 @@ class PrefixManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def lookupPrefix(self, ctx, gmName: str):
+        """Gets the prefix corresponding to the GM's franchise"""
         prefixes = await self._prefixes(ctx)
 
         try:

@@ -28,6 +28,8 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def franchises(self, ctx):
+        """Provides a list of all the franchises set up in the server 
+        including the name of the GM for each franchise"""
         franchise_roles = self._get_all_franchise_roles(ctx)
         message = "```Franchises:"
         for role in franchise_roles:
@@ -91,6 +93,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def roster(self, ctx, *, team_name: str):
+        """Shows all the members associated with a team including the GM"""
         team, found = await self._match_team_name(ctx, team_name)
         if found:
             franchise_role, tier_role = await self._roles_for_team(ctx, team)
@@ -108,7 +111,8 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def tierList(self, ctx):
+    async def listTiers(self, ctx):
+        """Provides a list of all the tiers set up in the server"""
         tiers = await self._tiers(ctx)
         if tiers:
             await ctx.send(
@@ -120,6 +124,8 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addTier(self, ctx, tier_name: str):
+        """Add a tier to the tier list. 
+        This will need to be done before any transactions can be done for players in this tier"""
         tiers = await self._tiers(ctx)
         tiers.append(tier_name)
         await self._save_tiers(ctx, tiers)
@@ -129,6 +135,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
+        """Remove a tier from the tier list"""
         tiers = self._tiers(ctx)
         try:
             tiers.remove(tier_name)
@@ -142,6 +149,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def listTeams(self, ctx):
+        """Provides a list of all the teams set up in the server"""
         teams = await self._teams(ctx)
         if teams:
             await ctx.send(
@@ -152,6 +160,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def teamRoles(self, ctx, team_name: str):
+        """Prints out the franchise and tier role that corresponds with the given team"""
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         if franchise_role and tier_role:
             await ctx.send(
@@ -195,6 +204,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
+        """Add a single team and it's corresponding roles to the file system to be used for transactions and match info"""
         teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
             await ctx.send("Done.")
@@ -205,6 +215,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTeam(self, ctx, team_name: str):
+        """Removes team from the file system. Team roles will be cleared as well"""
         teams = await self._teams(ctx)
         team_roles = await self._team_roles(ctx)
         try:
@@ -221,6 +232,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def freeAgents(self, ctx, tier: str):
+        """Gets a list of all free agents in a specific tier"""
         tiers = await self._tiers(ctx)
         tier_name = None
         for _tier in tiers:

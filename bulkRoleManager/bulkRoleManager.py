@@ -143,6 +143,7 @@ class BulkRoleManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def getId(self, ctx, *userList):
+        """Gets the id for any user that can be found from the userList"""
         notFound = []
         for user in userList:
             try:

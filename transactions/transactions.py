@@ -91,7 +91,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def cut(self, ctx, user : discord.Member, team_name: str, freeAgentRole: discord.Role = None):
-        """Removes the team role and franchise role. Adds the free agent prefix to a user and posts to the assigned channel"""
+        """Removes the team role and franchise role. Adds the free agent prefix and role to a user and posts to the assigned channel"""
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
         if _trans_channel is not None:
@@ -141,7 +141,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
-        """Adds the team role to the user and posts to the assigned channel"""
+        """Adds the team roles to the user and posts to the assigned channel"""
         _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
         if _trans_channel is not None:
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
@@ -161,6 +161,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def promote(self, ctx, user: discord.Member, team_name: str):
+        """Adds the team tier role to the user and posts to the assigned channel"""
         old_team_name = await self.team_manager_cog.get_current_team_name(ctx, user)
         if old_team_name is not None:
             if (await self.team_manager_cog._roles_for_team(ctx, old_team_name))[0] != (await self.team_manager_cog._roles_for_team(ctx, team_name))[0]:
@@ -183,6 +184,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def setTransChannel(self, ctx, trans_channel: discord.TextChannel):
+        """Sets the channel where all transaction messages will be posted"""
         await self._save_trans_channel(ctx, trans_channel.id)
         await ctx.send("Done")
 
@@ -190,6 +192,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def getTransChannel(self, ctx):
+        """Gets the channel currently assigned as the transaction channel"""
         try:
             _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
             await ctx.send("Transaction log channel set to: {0}".format(_trans_channel.mention))
@@ -200,6 +203,7 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetTransChannel(self, ctx):
+        """Unsets the transaction channel. Transactions will not be performed if no transaction channel is set"""
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
 
