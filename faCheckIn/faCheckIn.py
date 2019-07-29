@@ -6,7 +6,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"CheckIns": []}
+defaults = {"CheckIns": {}}
 
 class FaCheckIn(commands.Cog):
 
@@ -194,6 +194,3 @@ class FaCheckIn(commands.Cog):
 
     async def _save_check_ins(self, ctx, check_ins):
         await self.config.guild(ctx.guild).CheckIns.set(check_ins)
-
-def setup(bot):
-    bot.add_cog(FaCheckIn(bot))
