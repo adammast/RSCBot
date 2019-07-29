@@ -168,10 +168,10 @@ class SixMans(commands.Cog):
         return channel
 
     async def _category(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).ChannelCat())
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
 
     async def _save_category(self, ctx, category):
-        await self.config.guild(ctx.guild).ChannelCat.set(category)
+        await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
 class Game:
     def __init__(self, players, channel):
