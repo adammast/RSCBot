@@ -11,19 +11,26 @@ class BulkRoleManager(commands.Cog):
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
-        messageList = ["Players with {0} role:".format(role.name)]
-        for member in ctx.message.guild.members:
+        messages = []
+        message = ""
+        await ctx.send("Players with {0} role:\n".format(role.name))
+        for member in ctx.guild.members:
             if role in member.roles:
                 if getNickname:
-                    messageList.append("{0.nick}: {0.name}#{0.discriminator}".format(member))
+                    message += "{0.nick}: {0.name}#{0.discriminator}\n".format(member)
                 else:
-                    messageList.append("{0.name}#{0.discriminator}".format(member))
+                    message += "{0.name}#{0.discriminator}\n".format(member)
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
                 count += 1
         if count == 0:
-            await ctx.send("Nobody has the {0} role".format(role.mention))
+            await ctx.send("Nobody has the {0} role".format(role.name))
         else:
-            for message in messageList:
-                await ctx.send(message)
+            if message is not "":
+                messages.append(message)
+            for msg in messages:
+                await ctx.send("{0}{1}{0}".format("```", msg))
             await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
 
     @commands.command()
