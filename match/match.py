@@ -29,14 +29,14 @@ class Match(commands.Cog):
 
         This match day is used when accessing the info in the !match command.
         """
-        self._save_match_day(ctx, str(day))
+        await self._save_match_day(ctx, str(day))
         await ctx.send("Done")
 
     @commands.command()
     @commands.guild_only()
     async def getMatchDay(self, ctx):
         """Gets the currently active match day."""
-        match_day = self._match_day(ctx)
+        match_day = await self._match_day(ctx)
         if match_day:
             await ctx.send(
                 "Current match day is: {0}".format(match_day))
@@ -56,7 +56,7 @@ class Match(commands.Cog):
 
         TODO: Might even comment this out in prod.
         """
-        schedule = self._schedule(ctx)
+        schedule = await self._schedule(ctx)
         dump = json.dumps(schedule, indent=4, sort_keys=True)
         await ctx.send("Here is all of the schedule data in "
                            "JSON format.\n```json\n{0}\n```".format(dump))
@@ -66,7 +66,7 @@ class Match(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSchedule(self, ctx):
         """Clear all scheduled matches."""
-        self._save_schedule(ctx, {})
+        await self._save_schedule(ctx, {})
         await ctx.send("Done.")
 
     @commands.command()
@@ -90,7 +90,7 @@ class Match(commands.Cog):
         roles) will get matchups for all their teams. User's without a team
         role will get nothing.
         """
-        match_day = args[0] if args else self._match_day(ctx)
+        match_day = args[0] if args else await self._match_day(ctx)
         if not match_day:
             await ctx.send("Match day not provided and not set for "
                                "the server.")
@@ -113,7 +113,7 @@ class Match(commands.Cog):
 
         for team_name in team_names:
             team_name_for_info = team_name if user_team_names else None
-            match_index = self._team_day_match_index(ctx, team_name,
+            match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
                 await ctx.message.author.send(
@@ -226,11 +226,11 @@ class Match(commands.Cog):
         # Load the data we will use. Race conditions are possible, but
         # our change will be consistent, it might just override what someone
         # else does if they do it at roughly the same time.
-        schedule = self._schedule(ctx)
+        schedule = await self._schedule(ctx)
         # Check for pre-existing matches
-        home_match_index = self._team_day_match_index(
+        home_match_index = await self._team_day_match_index(
             ctx, home, match_day)
-        away_match_index = self._team_day_match_index(
+        away_match_index = await self._team_day_match_index(
             ctx, away, match_day)
         errors = []
         if home_match_index is not None:
@@ -265,43 +265,43 @@ class Match(commands.Cog):
 
         matches.append(match_data)
 
-        self._save_schedule(ctx, schedule)
+        await self._save_schedule(ctx, schedule)
 
         result = match_data.copy()
         result['home'] = home
         result['away'] = away
         return result
 
-    def _schedule(self, ctx):
+    async def _schedule(self, ctx):
         return await self.config.guild(ctx.guild).Schedule()
 
-    def _save_schedule(self, ctx, schedule):
+    async def _save_schedule(self, ctx, schedule):
         await self.config.guild(ctx.guild).Schedule.set(schedule)
 
-    def _matches(self, ctx):
-        return self._schedule(ctx).setdefault(self.MATHCES_KEY, {})
+    async def _matches(self, ctx):
+        return await self._schedule(ctx).setdefault(self.MATHCES_KEY, {})
 
-    def _save_matches(self, ctx, matches):
-        schedule = self._schedule(ctx)
+    async def _save_matches(self, ctx, matches):
+        schedule = await self._schedule(ctx)
         schedule[self.MATHCES_KEY] = matches
-        self._save_schedule(ctx, schedule)
+        await self._save_schedule(ctx, schedule)
 
-    def _team_days_index(self, ctx):
-        return self._schedule(ctx).setdefault(self.TEAM_DAY_INDEX_KEY, {})
+    async def _team_days_index(self, ctx):
+        return await self._schedule(ctx).setdefault(self.TEAM_DAY_INDEX_KEY, {})
 
-    def _save_team_days_index(self, ctx, team_days_index):
-        schedule = self._schedule(ctx)
+    async def _save_team_days_index(self, ctx, team_days_index):
+        schedule = await self._schedule(ctx)
         schedule[self.TEAM_DAY_INDEX_KEY] = team_days_index
-        self._save_schedule(ctx, schedule)
+        await self._save_schedule(ctx, schedule)
 
-    def _match_day(self, ctx):
+    async def _match_day(self, ctx):
         return await self.config.guild(ctx.guild).MatchDay()
 
-    def _save_match_day(self, ctx, match_day):
+    async def _save_match_day(self, ctx, match_day):
         await self.config.guild(ctx.guild).MatchDay.set(match_day)
 
-    def _team_day_match_index(self, ctx, team, match_day):
-        team_days_index = self._team_days_index(ctx)
+    async def _team_day_match_index(self, ctx, team, match_day):
+        team_days_index = await self._team_days_index(ctx)
         return team_days_index.get(
             self._team_day_key(team, match_day))
 
@@ -309,7 +309,7 @@ class Match(commands.Cog):
         return "{0}|{1}".format(team, match_day)
 
     async def _format_match_info(self, ctx, match_index, user_team_name=None):
-        matches = self._matches(ctx)
+        matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:
         # match_data = {
