@@ -84,10 +84,8 @@ class Transactions(commands.Cog):
                if freeAgentRole is not None:
                    await user.remove_roles(freeAgentRole)
                await ctx.send("Done")
-           except KeyError:
-               await ctx.send(":x: Free agent role not found in dictionary")
-           except LookupError:
-               await ctx.send(":x: Free agent role not found in server")
+           except Exception as e:
+               await ctx.send(e)
 
     @commands.guild_only()
     @commands.command()
