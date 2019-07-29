@@ -15,6 +15,8 @@ defaults = {"CategoryChannel": None}
 class SixMans(commands.Cog):
 
     def __init__(self):
+        self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
+        self.config.register_guild(**defaults)
         self.queue = PlayerQueue()
         self.games = []
         self.busy = False
