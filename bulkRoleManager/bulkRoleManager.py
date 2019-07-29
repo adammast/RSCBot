@@ -115,7 +115,7 @@ class BulkRoleManager(commands.Cog):
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
-                if member in ctx.message.server.members:
+                if member in ctx.guild.members:
                     if leagueRole not in member.roles:
                         await member.add_roles(deRole, leagueRole)
                         added += 1
