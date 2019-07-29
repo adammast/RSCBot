@@ -10,6 +10,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 TEAM_SIZE = 6
+defaults = {"CategoryChannel": None}
 
 class SixMans(commands.Cog):
 
@@ -95,6 +96,32 @@ class SixMans(commands.Cog):
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setCategory(self, ctx, category_channel: discord.CategoryChannel):
+        """Sets the six mans category channel where all six mans channels will be created under"""
+        await self._save_category(ctx, category_channel.id)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getCategory(self, ctx):
+        """Gets the channel currently assigned as the transaction channel"""
+        try:
+            await ctx.send("Six mans category channel set to: {0}".format((await self._category(ctx)).mention))
+        except:
+            await ctx.send(":x: Six mans category channel not set")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unsetCategory(self, ctx):
+        """Unsets the six mans category channel. Six mans channels will not be created if this is not set"""
+        await self._save_category(ctx, None)
+        await ctx.send("Done")
+
     def queue_full(self):
         return self.queue.qsize() >= TEAM_SIZE
 
@@ -134,9 +161,15 @@ class SixMans(commands.Cog):
 
     async def create_channel(self, ctx):
         guild = ctx.message.guild
-        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), category=category)
+        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), category= await self._category(ctx))
         self.channel_index += 1
         return channel
+
+    async def _category(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).ChannelCat())
+
+    async def _save_category(self, ctx, category):
+        await self.config.guild(ctx.guild).ChannelCat.set(category)
 
 class Game:
     def __init__(self, players, channel):

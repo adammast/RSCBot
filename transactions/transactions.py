@@ -22,7 +22,7 @@ class Transactions(commands.Cog):
     async def genericAnnounce(self, ctx, message):
         """Posts the message to the transaction log channel"""
         try:
-            _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+            _trans_channel = await self._trans_channel(ctx)
             await _trans_channel.send(message)
             await ctx.send("Done")
         except KeyError:
@@ -40,7 +40,7 @@ class Transactions(commands.Cog):
         else:
             message = "Round {0} Pick {1}: {2} was drafted by the {3} ({4} - {5})".format(round, pick, user.mention, team_name, gm_name, tier_role.name)
 
-        _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+        _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
             try:
                 await self.add_player_to_team(ctx, user, team_name)
@@ -73,7 +73,7 @@ class Transactions(commands.Cog):
             await ctx.send(":x: {0} is already on the {1}".format(user.mention, team_name))
             return
 
-        _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+        _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
            try:
                await self.add_player_to_team(ctx, user, team_name)
@@ -93,7 +93,7 @@ class Transactions(commands.Cog):
     async def cut(self, ctx, user : discord.Member, team_name: str, freeAgentRole: discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix and role to a user and posts to the assigned channel"""
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-        _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+        _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
@@ -126,7 +126,7 @@ class Transactions(commands.Cog):
             await ctx.send(":x: {0} is already on the {1}".format(user_2.mention, new_team_name_2))
             return
 
-        _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+        _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
             await self.remove_player_from_team(ctx, user, new_team_name_2)
             await self.remove_player_from_team(ctx, user_2, new_team_name)
@@ -142,7 +142,7 @@ class Transactions(commands.Cog):
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
         """Adds the team roles to the user and posts to the assigned channel"""
-        _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+        _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
@@ -168,7 +168,7 @@ class Transactions(commands.Cog):
                 await ctx.send(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))
                 return
             
-            _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
+            _trans_channel = await self._trans_channel(ctx)
             if _trans_channel:
                 await self.remove_player_from_team(ctx, user, old_team_name)
                 await self.add_player_to_team(ctx, user, team_name)
@@ -194,8 +194,7 @@ class Transactions(commands.Cog):
     async def getTransChannel(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
-            await ctx.send("Transaction log channel set to: {0}".format(_trans_channel.mention))
+            await ctx.send("Transaction log channel set to: {0}".format((await self._trans_channel(ctx)).mention))
         except:
             await ctx.send(":x: Transaction log channel not set")
 
@@ -270,7 +269,7 @@ class Transactions(commands.Cog):
         return user.name
 
     async def _trans_channel(self, ctx):
-        return await self.config.guild(ctx.guild).TransChannel()
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).TransChannel())
 
     async def _save_trans_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
