@@ -16,7 +16,6 @@ class FaCheckIn(commands.Cog):
         self.prefix_cog = bot.get_cog("TeamManager")
         self.prefix_cog = bot.get_cog("Match")
 
-    @commands.command()
     @commands.guild_only()
     @commands.command(aliases=["ci"])
     async def checkIn(self, ctx):
@@ -35,7 +34,6 @@ class FaCheckIn(commands.Cog):
         else:
             await user.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
-    @commands.command()
     @commands.guild_only()
     @commands.command(aliases=["co"])
     async def checkOut(self, ctx):
@@ -56,7 +54,6 @@ class FaCheckIn(commands.Cog):
         else:
             await user.send("Your tier could not be determined. If you are in the league please contact an admin for help.")
 
-    @commands.command()
     @commands.guild_only()
     @commands.command(aliases=["ca"])
     async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
