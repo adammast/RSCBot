@@ -19,7 +19,7 @@ class Match(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager = self.bot.get_cog("TeamManager")
+        self.team_manager = bot.get_cog("TeamManager")
 
     @commands.command()
     @commands.guild_only()
