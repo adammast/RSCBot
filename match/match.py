@@ -135,9 +135,9 @@ class Match(commands.Cog):
         Arguments:
 
         matches -- One or more matches in the following format:
-        ```
+
         "['<matchDay>','<matchDate>','<home>','<away>','<roomName>','<roomPassword>']"
-        ```
+
         Each match should be separated by a space. Also, matchDate should be
         formatted with the full month name, day of month and 4-digit year.
         The room name and password are optional. They will be generated if
@@ -145,16 +145,17 @@ class Match(commands.Cog):
         important, as is the comma after the day of month.
 
         Examples:
-        ```
+
         [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards',
         'octane','worst car']"
         [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards']" "[
         '2','September 13, 2018','Leopards','Fire Ants']"
-        ```
+
         """
         addedCount = 0
         try:
             for matchStr in matches:
+                await ctx.send("Test")
                 match = ast.literal_eval(matchStr)
                 await ctx.send("Adding match: {0}".format(repr(match)))
                 resultMatch = await self._add_match(ctx, *match)
