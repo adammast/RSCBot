@@ -160,6 +160,8 @@ class Match(commands.Cog):
                 resultMatch = await self._add_match(ctx, *match)
                 if resultMatch:
                     addedCount += 1
+        except Exception as e:
+            await ctx.send(e)
         finally:
             await ctx.send("Added {0} match(es).".format(addedCount))
 
@@ -345,6 +347,7 @@ class Match(commands.Cog):
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
+        # REGULAR SEASON INFO
         message += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                     "and screenshots of the end-of-game scoreboard. Do not leave "
                     "the game until screenshots have been taken. "
@@ -352,11 +355,10 @@ class Match(commands.Cog):
                    "is over. Remember that the deadline to reschedule matches is "
                    "at 10 minutes before the currently scheduled match time. They "
                    "can be scheduled no later than 11:59 PM ET on the original match day.\n\n") 
-        # REGULAR SEASON INFO
+        # PLAYOFF INFO
                     # "Playoff matches are a best of 5 series for every round until the finals. "
                     # "Screenshots and replays do not need to be uploaded to the website for "
                     # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
-        # PLAYOFF INFO
 
         message += "**Home Team:**\n"
         message += await self.team_manager.format_roster_info(ctx, home)
