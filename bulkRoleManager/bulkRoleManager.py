@@ -125,8 +125,7 @@ class BulkRoleManager(commands.Cog):
                         message += "Already in League: {0}\n".format(member.mention)
                         had += 1
                     empty = False
-            except Exception as e:
-                await ctx.send(e)
+            except:
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
         if empty:
@@ -148,7 +147,7 @@ class BulkRoleManager(commands.Cog):
         for user in userList:
             try:
                 member = await commands.MemberConverter().convert(ctx, user)
-                if member in guild.members:
+                if member in ctx.guild.members:
                     nickname = self.get_player_nickname(member)
                     await ctx.send("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
             except:
