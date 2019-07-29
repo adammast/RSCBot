@@ -4,24 +4,24 @@ import random
 from datetime import datetime
 import json
 
-from discord.ext import commands
-from cogs.utils import checks
+from redbot.core import Config
+from redbot.core import commands
+from redbot.core import checks
 
+defaults = {"MatchDay": 0, "Schedule": {}}
 
-class Match:
+class Match(commands.Cog):
     """Used to get the match information"""
 
-    DATASET = "MatchData"
-    MATCH_DAY_KEY = "MatchDay"
-    SCHEDULE_KEY = "Schedule"
     MATHCES_KEY = "Matches"
     TEAM_DAY_INDEX_KEY = "TeamDays"
 
     def __init__(self, bot):
-        self.bot = bot
-        self.data_cog = self.bot.get_cog("RscData")
+        self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
+        self.config.register_guild(**defaults)
         self.team_manager = self.bot.get_cog("TeamManager")
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setMatchDay(self, ctx, day: str):
@@ -32,6 +32,7 @@ class Match:
         self._save_match_day(ctx, str(day))
         await ctx.send("Done")
 
+    @commands.command()
     @commands.guild_only()
     async def getMatchDay(self, ctx):
         """Gets the currently active match day."""
@@ -43,6 +44,7 @@ class Match:
             await ctx.send(":x: Match day not set. Set with setMatchDay "
                                "command.")
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def printScheduleData(self, ctx):
@@ -59,6 +61,7 @@ class Match:
         await ctx.send("Here is all of the schedule data in "
                            "JSON format.\n```json\n{0}\n```".format(dump))
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSchedule(self, ctx):
@@ -66,6 +69,7 @@ class Match:
         self._save_schedule(ctx, {})
         await ctx.send("Done.")
 
+    @commands.command()
     @commands.guild_only()
     async def match(self, ctx, *args):
         """Get match info.
@@ -113,7 +117,7 @@ class Match:
                                                      match_day)
             if match_index is not None:
                 await ctx.message.author.send(
-                    self._format_match_info(ctx, match_index,
+                    await self._format_match_info(ctx, match_index,
                                             team_name_for_info))
             else:
                 await ctx.message.author.send(
@@ -122,6 +126,7 @@ class Match:
                 )
         await self.bot.delete_message(ctx.message)
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatches(self, ctx, *matches):
@@ -158,6 +163,7 @@ class Match:
         finally:
             await ctx.send("Added {0} match(es).".format(addedCount))
 
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addMatch(self, ctx, match_day, match_date, home, away, *args):
@@ -189,8 +195,8 @@ class Match:
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
             match_date_error = "Date not valid: {0}".format(err)
-        homeRoles = self.team_manager._roles_for_team(ctx, home)
-        awayRoles = self.team_manager._roles_for_team(ctx, away)
+        homeRoles = await self.team_manager._roles_for_team(ctx, home)
+        awayRoles = await self.team_manager._roles_for_team(ctx, away)
         roomName = args[0] if args else self._generate_name_pass()
         roomPass = args[1] if len(args) > 1 else self._generate_name_pass()
 
@@ -266,16 +272,11 @@ class Match:
         result['away'] = away
         return result
 
-    def _all_data(self, ctx):
-        return self.data_cog.load(ctx, self.DATASET)
-
     def _schedule(self, ctx):
-        return self._all_data(ctx).setdefault(self.SCHEDULE_KEY, {})
+        return await self.config.guild(ctx.guild).Schedule()
 
     def _save_schedule(self, ctx, schedule):
-        all_data = self._all_data(ctx)
-        all_data[self.SCHEDULE_KEY] = schedule
-        self.data_cog.save(ctx, self.DATASET, all_data)
+        await self.config.guild(ctx.guild).Schedule.set(schedule)
 
     def _matches(self, ctx):
         return self._schedule(ctx).setdefault(self.MATHCES_KEY, {})
@@ -294,12 +295,10 @@ class Match:
         self._save_schedule(ctx, schedule)
 
     def _match_day(self, ctx):
-        return self._all_data(ctx).setdefault(self.MATCH_DAY_KEY, 0)
+        return await self.config.guild(ctx.guild).MatchDay()
 
     def _save_match_day(self, ctx, match_day):
-        all_data = self._all_data(ctx)
-        all_data[self.MATCH_DAY_KEY] = match_day
-        self.data_cog.save(ctx, self.DATASET, all_data)
+        await self.config.guild(ctx.guild).MatchDay.set(match_day)
 
     def _team_day_match_index(self, ctx, team, match_day):
         team_days_index = self._team_days_index(ctx)
@@ -309,7 +308,7 @@ class Match:
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    def _format_match_info(self, ctx, match_index, user_team_name=None):
+    async def _format_match_info(self, ctx, match_index, user_team_name=None):
         matches = self._matches(ctx)
         match = matches[match_index]
         # Match format:
@@ -360,9 +359,9 @@ class Match:
         # PLAYOFF INFO
 
         message += "**Home Team:**\n"
-        message += self.team_manager.format_roster_info(ctx, home)
+        message += await self.team_manager.format_roster_info(ctx, home)
         message += "\n**Away Team:**\n"
-        message += self.team_manager.format_roster_info(ctx, away)
+        message += await self.team_manager.format_roster_info(ctx, away)
 
         return message
 
@@ -413,13 +412,3 @@ class Match:
             'tex', 'tusk', 'viper', 'wolfman', 'yuri'
         ]
         return set[random.randrange(len(set))]
-
-    def log_info(self, message):
-        self.data_cog.logger().info("[Match] " + message)
-
-    def log_error(self, message):
-        self.data_cog.logger().error("[Match] " + message)
-
-
-def setup(bot):
-    bot.add_cog(Match(bot))
