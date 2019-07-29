@@ -125,7 +125,8 @@ class BulkRoleManager(commands.Cog):
                         message += "Already in League: {0}\n".format(member.mention)
                         had += 1
                     empty = False
-            except:
+            except Exception as e:
+                await ctx.send(e)
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
         if empty:
