@@ -158,12 +158,20 @@ class SixMans(commands.Cog):
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
-        channel = await self.create_channel(ctx)
+        channel = await self.create_channel(ctx, players)
+        for player in players:
+            overwrite = channel.overwrites_for(player) or discord.PermissionOverwrite()
+            overwrite.read_messages = True
+            await self.bot.edit_channel_permissions(channel, player, overwrite)
         return Game(players, channel)
 
-    async def create_channel(self, ctx):
+    async def create_channel(self, ctx, players):
         guild = ctx.message.guild
-        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), category= await self._category(ctx))
+        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), 
+            overwrites= {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False)
+            },
+            category= await self._category(ctx))
         self.channel_index += 1
         return channel
 
