@@ -100,7 +100,7 @@ class Transactions(commands.Cog):
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
                 if freeAgentRole is None:
-                    freeAgentRole = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(self.team_manager_cog.get_current_tier_role(ctx, user).name))
+                    freeAgentRole = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(await self.team_manager_cog.get_current_tier_role(ctx, user).name))
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
                 await user.add_roles(freeAgentRole)
                 gm_name = self.get_gm_name(franchise_role)
@@ -215,7 +215,7 @@ class Transactions(commands.Cog):
         if leagueRole is not None:
             prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
             if prefix is not None:
-                currentTier = self.team_manager_cog.get_current_tier_role(ctx, user)
+                currentTier = await self.team_manager_cog.get_current_tier_role(ctx, user)
                 if currentTier is not None and currentTier != tier_role:
                     await user.remove_roles(currentTier)
                 await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
