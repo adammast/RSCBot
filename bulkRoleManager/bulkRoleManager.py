@@ -43,17 +43,18 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_roles=True)
-    async def addRole(self, ctx, role: discord.Role, *userList):
+    @checks.admin_or_permissions(manage_server=True)
+    async def addRole(self, ctx, role : discord.Role, *userList):
         """Adds the role to every member that can be found from the userList"""
         empty = True
         added = 0
         had = 0
         notFound = 0
+        message = ""
         for user in userList:
             try:
                 member = commands.MemberConverter(ctx, user).convert()
-                if member in guild.members:
+                if member in ctx.guild.members:
                     if role not in member.roles:
                         await member.add_roles(role)
                         added += 1
@@ -62,17 +63,72 @@ class BulkRoleManager(commands.Cog):
                     empty = False
             except:
                 if notFound == 0:
-                    await ctx.send("Couldn't find:")
-                await ctx.send(user)
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
                 notFound += 1
         if empty:
-            message = ":x: Nobody was given the role {0}".format(role.mention)
+            message += ":x: Nobody was given the role {0}".format(role.name)
         else:
-           message = ":white_check_mark: {0} role given to everyone that was found from list".format(role.mention)
+           message += ":white_check_mark: {0} role given to everyone that was found from list".format(role.name)
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
         if had > 0:
             message += ". {0} user(s) already had the role".format(had)
+        if added > 0:
+            message += ". {0} user(s) had the role added to them".format(added)
+        await ctx.send(message)
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_server=True)
+    async def makeDE(self, ctx, *userList):
+        """Adds the Draft Eligible and League roles, removes Spectator role, and adds the DE prefix to every member that can be found from the userList"""
+        empty = True
+        added = 0
+        had = 0
+        notFound = 0
+        deRole = None
+        leagueRole = None
+        spectatorRole = None
+        message = ""
+        for role in ctx.guild.roles:
+            if role.name == "Draft Eligible":
+                deRole = role
+            elif role.name == "League":
+                leagueRole = role
+            elif role.name == "Spectator":
+                spectatorRole = role
+            if leagueRole and deRole and spectatorRole:
+                break
+
+        if deRole is None or leagueRole is None or spectatorRole is None:
+            await ctx.send("Couldn't find either the Draft Eligible, League, or Spectator role in the server")
+            return
+
+        for user in userList:
+            try:
+                member = commands.MemberConverter(ctx, user).convert()
+                if member in ctx.message.server.members:
+                    if leagueRole not in member.roles:
+                        await member.add_roles(deRole, leagueRole)
+                        added += 1
+                        await member.edit(nick="{0} | {1}".format("DE", self.get_player_nickname(member)))
+                        await member.remove_roles(spectatorRole)
+                    else:
+                        message += "Already in League: {0}\n".format(member.mention)
+                        had += 1
+                    empty = False
+            except:
+                message += "Couldn't find: {0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody was given the Draft Eligible role"
+        else:
+           message += ":white_check_mark: Draft Eligible role given to everyone that was found from list"
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if had > 0:
+            message += ". {0} user(s) already had the role or were already in the league".format(had)
         if added > 0:
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
@@ -86,7 +142,7 @@ class BulkRoleManager(commands.Cog):
                 member = commands.MemberConverter(ctx, user).convert()
                 if member in guild.members:
                     nickname = self.get_player_nickname(member)
-                    await self.bot.say("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
+                    await ctx.send("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
             except:
                 notFound.append(user)
         if len(notFound) > 0:
