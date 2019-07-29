@@ -184,7 +184,7 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setTransChannel(self, ctx, trans_channel: discord.Channel):
+    async def setTransChannel(self, ctx, trans_channel: discord.TextChannel):
         await self._save_trans_channel(ctx, trans_channel)
 
     @commands.guild_only()
