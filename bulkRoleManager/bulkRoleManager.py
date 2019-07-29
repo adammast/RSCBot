@@ -114,7 +114,7 @@ class BulkRoleManager(commands.Cog):
 
         for user in userList:
             try:
-                member = commands.MemberConverter(ctx, user).convert()
+                member = await commands.MemberConverter().convert(ctx, user)
                 if member in ctx.guild.members:
                     if leagueRole not in member.roles:
                         await member.add_roles(deRole, leagueRole)
@@ -147,7 +147,7 @@ class BulkRoleManager(commands.Cog):
         notFound = []
         for user in userList:
             try:
-                member = commands.MemberConverter(ctx, user).convert()
+                member = await commands.MemberConverter().convert(ctx, user)
                 if member in guild.members:
                     nickname = self.get_player_nickname(member)
                     await ctx.send("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
