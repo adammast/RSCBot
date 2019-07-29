@@ -124,7 +124,7 @@ class Match(commands.Cog):
                     "No match on day {0} for {1}".format(match_day,
                                                          team_name)
                 )
-        await self.bot.delete_message(ctx.message)
+        await ctx.message.delete()
 
     @commands.command()
     @commands.guild_only()
