@@ -186,6 +186,7 @@ class Transactions(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def setTransChannel(self, ctx, trans_channel: discord.TextChannel):
         await self._save_trans_channel(ctx, trans_channel.id)
+        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
@@ -194,7 +195,7 @@ class Transactions(commands.Cog):
         try:
             _trans_channel = ctx.guild.get_channel(await self._trans_channel(ctx))
             await ctx.send("Transaction log channel set to: {0}".format(_trans_channel.mention))
-        except KeyError:
+        except:
             await ctx.send(":x: Transaction log channel not set")
 
     @commands.guild_only()
@@ -202,6 +203,7 @@ class Transactions(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetTransChannel(self, ctx):
         await self._save_trans_channel(ctx, None)
+        await ctx.send("Done")
 
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
