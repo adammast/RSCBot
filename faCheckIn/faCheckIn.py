@@ -20,7 +20,7 @@ class FaCheckIn(commands.Cog):
     @commands.command(aliases=["ci"])
     async def checkIn(self, ctx):
         user = ctx.message.author
-        match_day = self.match_cog._match_day(ctx)
+        match_day = await self.match_cog._match_day(ctx)
         tier = await self._find_tier_from_fa_role(ctx, user)
 
         await ctx.message.delete()
@@ -38,10 +38,10 @@ class FaCheckIn(commands.Cog):
     @commands.command(aliases=["co"])
     async def checkOut(self, ctx):
         user = ctx.message.author
-        match_day = self.match_cog._match_day(ctx)
+        match_day = await self.match_cog._match_day(ctx)
         tier = await self._find_tier_from_fa_role(ctx, user)
         if tier is None:
-            tier = self.team_manager_cog.get_current_tier_role(ctx, user)
+            tier = await self.team_manager_cog.get_current_tier_role(ctx, user)
 
         await ctx.message.delete()
 
@@ -58,8 +58,8 @@ class FaCheckIn(commands.Cog):
     @commands.command(aliases=["ca"])
     async def checkAvailability(self, ctx, tier_name: str, match_day: str = None):
         if match_day is None:
-            match_day = self.match_cog._match_day(ctx)
-        tier = self.team_manager_cog._match_tier_name(ctx, tier_name)
+            match_day = await self.match_cog._match_day(ctx)
+        tier = await self.team_manager_cog._match_tier_name(ctx, tier_name)
         if tier is None:
             await ctx.send("No tier with name: `{0}`".format(tier_name))
             return
@@ -83,7 +83,7 @@ class FaCheckIn(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAvailability(self, ctx, tier: str = None, match_day: str = None):
         if match_day is None:
-            match_day = self.match_cog._match_day(ctx)
+            match_day = await self.match_cog._match_day(ctx)
 
         if tier is None:
             await self._save_match_data(ctx, match_day, {})
