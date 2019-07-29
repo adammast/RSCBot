@@ -5,15 +5,15 @@ import random
 import time
 
 from queue import Queue
-from discord.ext import commands
-from cogs.utils import checks
+from redbot.core import Config
+from redbot.core import commands
+from redbot.core import checks
 
 TEAM_SIZE = 6
 
-class SixMans:
+class SixMans(commands.Cog):
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self):
         self.queue = PlayerQueue()
         self.games = []
         self.busy = False
@@ -289,6 +289,3 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
-
-def setup(bot):
-    bot.add_cog(SixMans(bot))
