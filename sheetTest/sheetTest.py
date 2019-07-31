@@ -3,6 +3,7 @@ import gspread
 import requests
 import csv
 import datetime
+import os
 
 from redbot.core import commands
 from redbot.core import checks
@@ -24,6 +25,7 @@ class SheetTest(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def testWrite(self, ctx):
-        open("~/FileTest.csv", 'w', newline='')
-        await ctx.send("Test File:", file=File("~/FileTest.csv"))
+        filepath = os.getcwd() + "/FileTest.csv"
+        open(filepath, 'w', newline='')
+        await ctx.send("Test File:", file=File(filepath))
         await ctx.send("Done")
