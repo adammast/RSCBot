@@ -10,7 +10,7 @@ class SheetTest(commands.Cog):
     """Test cog for accessing and editing a Google Sheet"""
 
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    credentials = ServiceAccountCredentials.from_json_keyfile_name('data/sheetTest/trackers-248415-645b0fa3512d.json', scope)
+    credentials = ServiceAccountCredentials.from_json_keyfile_name('../../data/sheetTest/trackers-248415-645b0fa3512d.json', scope)
     gc = gspread.authorize(credentials)
 
     @commands.guild_only()
