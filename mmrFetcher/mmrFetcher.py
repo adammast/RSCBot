@@ -55,6 +55,7 @@ class MMRFetcher(commands.Cog):
             for i in range(0, total):
                 try:
                     name,link = names[i], links[i]
+                    ctx.send("Name: {0}, Link {1}".format(name, link))
                     linksplit = link.split('profile/')
                     unpack = [ x for x in linksplit[1].split('/') if x]
                     if "mmr" in unpack:
