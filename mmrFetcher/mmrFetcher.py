@@ -55,15 +55,14 @@ class MMRFetcher(commands.Cog):
             for i in range(0, total):
                 try:
                     name,link = names[i], links[i]
-                    ctx.send("Name: {0}, Link {1}".format(name, link))
                     linksplit = link.split('profile/')
                     unpack = [ x for x in linksplit[1].split('/') if x]
                     if "mmr" in unpack:
                         mmr,platform,gamertag = unpack
                     else:
                         platform,gamertag = unpack
-                    data = rlscrape(gamertag,platform)
-                    newrow = dicttolist(data)
+                    data = self.rlscrape(gamertag,platform)
+                    newrow = self.dicttolist(data)
                     newrow.insert(0, name.encode("ascii", "replace"))
                     newrow[0] = newrow[0].decode("ascii")
                     newrow.insert(1, link)
