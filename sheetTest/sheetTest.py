@@ -8,16 +8,16 @@ from redbot.core import commands
 from redbot.core import checks
 from oauth2client.service_account import ServiceAccountCredentials
 
+now = datetime.datetime.now()
+readibletime =  now.strftime("%Y-%m-%d_%H-%M-%S")
+Outputcsv = "Scrapes/%s.csv" % (readibletime)
+
 class SheetTest(commands.Cog):
     """Test cog for accessing and editing a Google Sheet"""
 
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     #credentials = ServiceAccountCredentials.from_json_keyfile_name('trackers-248415-645b0fa3512d.json', scope)
     #gc = gspread.authorize(credentials)
-
-    now = datetime.datetime.now()
-    readibletime =  now.strftime("%Y-%m-%d_%H-%M-%S")
-    Outputcsv = "Scrapes/%s.csv" % (readibletime)
 
     @commands.guild_only()
     @commands.command()
