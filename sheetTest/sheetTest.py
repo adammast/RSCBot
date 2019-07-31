@@ -23,7 +23,8 @@ class SheetTest(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def testWrite(self, ctx):
-        open(Outputcsv, 'w', newline='')
+        open("FileTest.csv", 'w', newline='')
+        await ctx.send("Done")
 
     # @commands.guild_only()
     # @commands.command()
