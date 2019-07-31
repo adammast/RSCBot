@@ -24,6 +24,7 @@ class SheetTest(commands.Cog):
     @checks.is_owner()
     async def testWrite(self, ctx):
         open("FileTest.csv", 'w', newline='')
+        await ctx.send(file="FileTest.csv")
         await ctx.send("Done")
 
     # @commands.guild_only()
@@ -36,14 +37,3 @@ class SheetTest(commands.Cog):
     #         await ctx.send(wks.cell(rowIndex, columnIndex).value)
     #     else:
     #         await ctx.send(wks.get_all_records())
-
-    # @commands.guild_only()
-    # @commands.command()
-    # @checks.is_owner()
-    # async def write(self, ctx, message, rowIndex: int = None, columnIndex: int = None):
-    #     """Writes data to the spreadsheet at the specified row and column, or at the bottom of the sheet if no row or column are specified."""
-    #     wks = self.gc.open('Test').sheet1
-    #     if(rowIndex and columnIndex):
-    #         wks.update_cell(rowIndex, columnIndex, message)
-    #     else:
-    #         wks.append_row([message])
