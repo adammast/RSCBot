@@ -71,9 +71,9 @@ class MMRFetcher(commands.Cog):
                     i += 1
                     if i % tenPercent == 0:
                         await ctx.send("Fetch Progress: {}0% Complete".format(i // tenPercent))
-                except:
+                except Exception as e:
                     i += 1
-                    await ctx.send("Error on line {0}".format(i))
+                    await ctx.send("Error on line {0}: {1}".format(i, e))
 
     def rlscrape(self, gamertag, platform):
         '''Python BeautifulSoup4 Webscraper to https://rocketleague.tracker.network/ and grab Season 9 and 10'''
