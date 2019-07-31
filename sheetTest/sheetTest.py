@@ -24,6 +24,6 @@ class SheetTest(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def testWrite(self, ctx):
-        open("FileTest.csv", 'w', newline='')
-        await ctx.send("Test File:", file=File("FileTest.csv"))
+        open("~/FileTest.csv", 'w', newline='')
+        await ctx.send("Test File:", file=File("~/FileTest.csv"))
         await ctx.send("Done")
