@@ -10,7 +10,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 now = datetime.datetime.now()
 readibletime =  now.strftime("%Y-%m-%d_%H-%M-%S")
-Outputcsv = "Scrapes/%s.csv" % (readibletime)
+Outputcsv = "%s.csv" % (readibletime)
 
 class SheetTest(commands.Cog):
     """Test cog for accessing and editing a Google Sheet"""
