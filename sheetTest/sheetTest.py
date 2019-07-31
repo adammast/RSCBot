@@ -23,17 +23,6 @@ class SheetTest(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def testWrite(self, ctx):
-        open("FileTest.csv", 'w', newline='')
-        await ctx.send(file="FileTest.csv")
+        csvFile = open("FileTest.csv", 'w', newline='')
+        await ctx.send(file=csvFile)
         await ctx.send("Done")
-
-    # @commands.guild_only()
-    # @commands.command()
-    # @checks.is_owner()
-    # async def read(self, ctx, rowIndex: int = None, columnIndex: int = None):
-    #     """Reads data from the spreadsheet at the specified row and column, or reads all data if no row or column are specified."""
-    #     wks = self.gc.open('Public Tracker List (Test)').sheet1
-    #     if(rowIndex and columnIndex):
-    #         await ctx.send(wks.cell(rowIndex, columnIndex).value)
-    #     else:
-    #         await ctx.send(wks.get_all_records())
