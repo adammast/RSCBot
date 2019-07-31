@@ -7,6 +7,7 @@ import datetime
 from redbot.core import commands
 from redbot.core import checks
 from oauth2client.service_account import ServiceAccountCredentials
+from discord import File
 
 now = datetime.datetime.now()
 readibletime =  now.strftime("%Y-%m-%d_%H-%M-%S")
@@ -23,6 +24,6 @@ class SheetTest(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def testWrite(self, ctx):
-        csvFile = open("FileTest.csv", 'w', newline='')
-        await ctx.send(file=csvFile)
+        open("FileTest.csv", 'w', newline='')
+        await ctx.send("Test File:", file=File("FileTest.csv"))
         await ctx.send("Done")
