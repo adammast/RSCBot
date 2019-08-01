@@ -28,7 +28,35 @@ class MMRFetcher(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def fetch(self, ctx):
-        await self._csvdostuff(ctx)
+        w = self._createcsv(ctx)
+
+        names, links = self._readTrackerList()
+        total = len(names)
+        tenPercent = total // 10
+        i = 0 #count of each row in the Tracker Links
+
+        for i in range(0, total):
+            try:
+                name,link = names[i], links[i]
+                linksplit = link.split('profile/')
+                unpack = [ x for x in linksplit[1].split('/') if x]
+                if "mmr" in unpack:
+                    mmr,platform,gamertag = unpack
+                else:
+                    platform,gamertag = unpack
+                data = self._rlscrape(gamertag,platform)
+                newrow = self._dicttolist(data)
+                newrow.insert(0, name.encode("ascii", "replace"))
+                newrow[0] = newrow[0].decode("ascii")
+                newrow.insert(1, link)
+                w.writerow(newrow)
+                i += 1
+                if i % tenPercent == 0:
+                    await ctx.send("Fetch Progress: {}0% Complete".format(i // tenPercent))
+            except Exception as e:
+                i += 1
+                await ctx.send("Error on line {0}: {1}".format(i, e))
+                
         await ctx.send("Done", file=File(Outputcsv))
 
     def _readTrackerList(self):
@@ -37,42 +65,17 @@ class MMRFetcher(commands.Cog):
         links = wks.col_values(2)
         return names, links
 
-    async def _csvdostuff(self, ctx):
-        '''I/O for CSV'''
+    def _createcsv(self, ctx):
+        '''Create CSV output file'''
         header = ["Name","Tracker"]
-        for season in Seasons:
-            if GamesPlayed == True:
-                header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR", "1s_GP", "2s_GP", "Solo_3s_GP", "3s_GP"])
-            else:
-                header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR"])
-        names, links = self._readTrackerList()
+        if GamesPlayed == True:
+            header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR", "1s_GP", "2s_GP", "Solo_3s_GP", "3s_GP"])
+        else:
+            header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR"])
         with open(Outputcsv, 'w', newline='') as csvwrite:
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
-            i = 0 #count of each row in the Tracker Links
-            total = len(names)
-            tenPercent = total // 10
-            for i in range(0, total):
-                try:
-                    name,link = names[i], links[i]
-                    linksplit = link.split('profile/')
-                    unpack = [ x for x in linksplit[1].split('/') if x]
-                    if "mmr" in unpack:
-                        mmr,platform,gamertag = unpack
-                    else:
-                        platform,gamertag = unpack
-                    data = self._rlscrape(gamertag,platform)
-                    newrow = self._dicttolist(data)
-                    newrow.insert(0, name.encode("ascii", "replace"))
-                    newrow[0] = newrow[0].decode("ascii")
-                    newrow.insert(1, link)
-                    w.writerow(newrow)
-                    i += 1
-                    if i % tenPercent == 0:
-                        await ctx.send("Fetch Progress: {}0% Complete".format(i // tenPercent))
-                except Exception as e:
-                    i += 1
-                    await ctx.send("Error on line {0}: {1}".format(i, e))
+            return w
 
     def _rlscrape(self, gamertag, platform):
         '''Python BeautifulSoup4 Webscraper to https://rocketleague.tracker.network/ and grab Season 9 and 10'''
