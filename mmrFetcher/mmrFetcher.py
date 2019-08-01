@@ -54,7 +54,7 @@ class MMRFetcher(commands.Cog):
             except Exception as e:
                 i += 1
                 await ctx.send("Error on line {0}: {1}".format(i, e))
-            await asyncio.sleep(1)
+            await asyncio.sleep(.001)
                 
         await ctx.send("Done", file=File(Outputcsv))
 
