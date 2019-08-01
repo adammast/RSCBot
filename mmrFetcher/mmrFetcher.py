@@ -73,10 +73,10 @@ class MMRFetcher(commands.Cog):
             header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR", "1s_GP", "2s_GP", "Solo_3s_GP", "3s_GP"])
         else:
             header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR"])
-        with open(Outputcsv, 'w', newline='') as csvwrite:
-            w = csv.writer(csvwrite, delimiter=',')
-            w.writerow(header)
-            return w
+        csvwrite = open(Outputcsv, 'w', newline='')
+        w = csv.writer(csvwrite, delimiter=',')
+        w.writerow(header)
+        return w
 
     def _rlscrape(self, gamertag, platform):
         '''Python BeautifulSoup4 Webscraper to https://rocketleague.tracker.network/ and grab Season 9 and 10'''
