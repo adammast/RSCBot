@@ -3,6 +3,7 @@ import gspread
 import requests
 import csv
 import datetime
+import asyncio
 
 from redbot.core import commands
 from redbot.core import checks
@@ -29,7 +30,7 @@ class MMRFetcher(commands.Cog):
     @checks.is_owner()
     async def fetch(self, ctx):
         await ctx.send("Fetching MMR data...")
-        w = self._createcsv(ctx)
+        w = self._createcsv()
 
         names, links = self._readTrackerList()
         total = len(names)
@@ -46,17 +47,14 @@ class MMRFetcher(commands.Cog):
                 else:
                     platform,gamertag = unpack
                 data = self._rlscrape(gamertag,platform)
-                newrow = self._dicttolist(data)
-                newrow.insert(0, name.encode("ascii", "replace"))
-                newrow[0] = newrow[0].decode("ascii")
-                newrow.insert(1, link)
-                w.writerow(newrow)
+                self._writefetch(w, data, name, link)
                 i += 1
                 if i % tenPercent == 0:
                     await ctx.send("Fetch Progress: {}0% Complete".format(i // tenPercent))
             except Exception as e:
                 i += 1
                 await ctx.send("Error on line {0}: {1}".format(i, e))
+            await asyncio.sleep(1)
                 
         await ctx.send("Done", file=File(Outputcsv))
 
@@ -66,7 +64,7 @@ class MMRFetcher(commands.Cog):
         links = wks.col_values(2)
         return names, links
 
-    def _createcsv(self, ctx):
+    def _createcsv(self):
         '''Create CSV output file'''
         header = ["Name","Tracker"]
         if GamesPlayed == True:
@@ -77,6 +75,13 @@ class MMRFetcher(commands.Cog):
         w = csv.writer(csvwrite, delimiter=',')
         w.writerow(header)
         return w
+
+    def _writefetch(self, writer, data, name, link):
+        newrow = self._dicttolist(data)
+        newrow.insert(0, name.encode("ascii", "replace"))
+        newrow[0] = newrow[0].decode("ascii")
+        newrow.insert(1, link)
+        writer.writerow(newrow)
 
     def _rlscrape(self, gamertag, platform):
         '''Python BeautifulSoup4 Webscraper to https://rocketleague.tracker.network/ and grab Season 9 and 10'''
