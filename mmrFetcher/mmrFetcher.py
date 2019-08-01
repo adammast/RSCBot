@@ -28,13 +28,14 @@ class MMRFetcher(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def fetch(self, ctx):
+        await ctx.send("Fetching MMR data...")
         w = self._createcsv(ctx)
 
         names, links = self._readTrackerList()
         total = len(names)
         tenPercent = total // 10
-        i = 0 #count of each row in the Tracker Links
 
+        i = 0 #count of each row in the Tracker Links
         for i in range(0, total):
             try:
                 name,link = names[i], links[i]
