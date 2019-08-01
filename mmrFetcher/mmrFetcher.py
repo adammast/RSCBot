@@ -4,6 +4,7 @@ import requests
 import csv
 import datetime
 import asyncio
+import os
 
 from redbot.core import commands
 from redbot.core import checks
@@ -19,8 +20,8 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name('Trackers-10a10d9
 gc = gspread.authorize(credentials)
 
 Outputcsv = "%s.csv" % (readibletime)
-LatestSeason = 10
-Seasons = [10]
+CurrentSeason = 11
+Seasons = [11]
 GamesPlayed = True
 
 class MMRFetcher(commands.Cog):
@@ -57,6 +58,7 @@ class MMRFetcher(commands.Cog):
             await asyncio.sleep(.001)
                 
         await ctx.send("Done", file=File(Outputcsv))
+        os.remove(Outputcsv)
 
     def _readTrackerList(self):
         wks = gc.open('Tracker Links').sheet1
@@ -94,7 +96,7 @@ class MMRFetcher(commands.Cog):
         for season in Seasons:
             playerdata[gamertag][season] = {} #define the season dict
             seasonid = "season-%s" % (season)
-            if LatestSeason == season:
+            if CurrentSeason == season:
                 tracker = "%s/%s/%s/%s" % (webpath,'profile/mmr',platform,gamertag)
                 page = requests.get(tracker)
                 if page.status_code == 200:
