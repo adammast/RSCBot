@@ -28,16 +28,16 @@ class MMRFetcher(commands.Cog):
     @commands.command()
     @checks.is_owner()
     async def fetch(self, ctx):
-        await self.csvdostuff(ctx)
+        await self._csvdostuff(ctx)
         await ctx.send("Done", file=File(Outputcsv))
 
-    def readTrackerList(self):
+    def _readTrackerList(self):
         wks = gc.open('Tracker Links').sheet1
         names = wks.col_values(1)
         links = wks.col_values(2)
         return names, links
 
-    async def csvdostuff(self, ctx):
+    async def _csvdostuff(self, ctx):
         '''I/O for CSV'''
         header = ["Name","Tracker"]
         for season in Seasons:
@@ -45,7 +45,7 @@ class MMRFetcher(commands.Cog):
                 header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR", "1s_GP", "2s_GP", "Solo_3s_GP", "3s_GP"])
             else:
                 header.extend(["1s_MMR", "_2s_MMR", "Solo_3s_MMR", "3s_MMR"])
-        names, links = self.readTrackerList()
+        names, links = self._readTrackerList()
         with open(Outputcsv, 'w', newline='') as csvwrite:
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
@@ -61,8 +61,8 @@ class MMRFetcher(commands.Cog):
                         mmr,platform,gamertag = unpack
                     else:
                         platform,gamertag = unpack
-                    data = self.rlscrape(gamertag,platform)
-                    newrow = self.dicttolist(data)
+                    data = self._rlscrape(gamertag,platform)
+                    newrow = self._dicttolist(data)
                     newrow.insert(0, name.encode("ascii", "replace"))
                     newrow[0] = newrow[0].decode("ascii")
                     newrow.insert(1, link)
@@ -74,7 +74,7 @@ class MMRFetcher(commands.Cog):
                     i += 1
                     await ctx.send("Error on line {0}: {1}".format(i, e))
 
-    def rlscrape(self, gamertag, platform):
+    def _rlscrape(self, gamertag, platform):
         '''Python BeautifulSoup4 Webscraper to https://rocketleague.tracker.network/ and grab Season 9 and 10'''
         #clienterrors = [400,401,402,403,404] #future proof
         #servererrors = [500,501,502,503,504,505,506,507,508,510,511] #future proof
@@ -135,7 +135,7 @@ class MMRFetcher(commands.Cog):
                                 i += 1	
         return playerdata
 
-    def dicttolist(self, data):
+    def _dicttolist(self, data):
         newdict = {}
         for gamertag,gdata in data.items():
             for season,sdata in gdata.items():
