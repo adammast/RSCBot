@@ -1,28 +1,28 @@
-import discord
 import re
 import ast
 
-from discord.ext import commands
-from cogs.utils import checks
+from redbot.core import Config
+from redbot.core import commands
+from redbot.core import checks
 
-class PrefixManager:
+defaults = {"Prefixes": {}}
+
+class PrefixManager(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
-    DATASET = "PrefixData"
-    PREFIXES_KEY = "Prefixes"
+    def __init__(self):
+        self.config = Config.get_conf(self, identifier=1234567891, force_registration=True)
+        self.config.register_guild(**defaults)
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.data_cog = self.bot.get_cog("RscData")
-
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def addPrefixes(self, ctx, *prefixes_to_add):
         """Add the prefixes and corresponding GM name.
 
         Arguments:
 
-        prefixes_to_add -- One or more teams in the following format:
+        prefixes_to_add -- One or more prefixes in the following format:
 
         \t"['<gm_name>','<prefix>']"
 
@@ -30,93 +30,98 @@ class PrefixManager:
 
         Examples:
 
-        \t[p]addPrefixes "['Shamu','STM']"
-        \t[p]addPrefixes "['Shamu','STM']" "['Adammast','OCE']"
+        \t[p]addPrefixes "['Adammast','OCE']"
+        \t[p]addPrefixes "['Adammast','OCE']" "['Shamu','STM']"
 
         """
         addedCount = 0
         try:
             for prefixStr in prefixes_to_add:
                 prefix = ast.literal_eval(prefixStr)
-                await self.bot.say("Adding prefix: {0}".format(repr(prefix)))
+                await ctx.send("Adding prefix: {0}".format(repr(prefix)))
                 prefixAdded = await self._add_prefix(ctx, *prefix)
                 if prefixAdded:
                     addedCount += 1
         finally:
-            await self.bot.say("Added {0} prefixes(s).".format(addedCount))
-        await self.bot.say("Done.")
+            await ctx.send("Added {0} prefixes(s).".format(addedCount))
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
+        """Add a single prefix and corresponding GM name."""
         prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
-            await self.bot.say("Done.")
+            await ctx.send("Done.")
         else:
-            await self.bot.say("Error adding prefix: {0}".format(prefix))
+            await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.command()
+    @commands.guild_only()
     async def getPrefixes(self, ctx):
-        """Used to get all prefixes in the prefix dictionary"""
-        prefixes = self._prefixes(ctx)
+        """Get all prefixes in the prefix dictionary"""
+        prefixes = await self._prefixes(ctx)
 
         if(len(prefixes.items()) > 0):
             message = "```Prefixes:"
             for key, value in prefixes.items():
                 message += "\n\t{0} = {1}".format(key, value)
             message += "```"
-            await self.bot.say(message)
+            await ctx.send(message)
         else:
-            await self.bot.say(":x: No prefixes are set in the dictionary")
+            await ctx.send(":x: No prefixes are set in the dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
-        """Used to remove a single prefix"""
-        prefixes = self._prefixes(ctx)
+        """Remove a single prefix. The GM will no longer have a prefix in the dictionary"""
+        prefixes = await self._prefixes(ctx)
         try:
             del prefixes[gm_name]
         except ValueError:
-            await self.bot.say(
-                "{0} does not have a prefix.".format(gm_name))
+            await ctx.send("{0} does not have a prefix.".format(gm_name))
             return
-        self._save_prefixes(ctx, prefixes)
-        await self.bot.say("Done.")
+        await self._save_prefixes(ctx, prefixes)
+        await ctx.send("Done.")
 
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def clearPrefixes(self, ctx):
-        """Used to clear the prefix dictionary"""
-        prefixes = self._prefixes(ctx)
+        """Clear the prefix dictionary"""
+        prefixes = await self._prefixes(ctx)
 
         try:
             prefixes.clear()
-            self._save_prefixes(ctx, prefixes)
-            await self.bot.say(":white_check_mark: All prefixes have been removed from dictionary")
+            await self._save_prefixes(ctx, prefixes)
+            await ctx.send(":white_check_mark: All prefixes have been removed from dictionary")
         except:
-            await self.bot.say(":x: Something went wrong when trying to clear the prefix dictionary")
+            await ctx.send(":x: Something went wrong when trying to clear the prefix dictionary")
 
-    @commands.command(pass_context=True, no_pm=True)
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.command()
+    @commands.guild_only()
     async def lookupPrefix(self, ctx, gmName: str):
-        prefixes = self._prefixes(ctx)
+        """Gets the prefix corresponding to the GM's franchise"""
+        prefixes = await self._prefixes(ctx)
 
         try:
             prefix = prefixes[gmName]
-            await self.bot.say("Prefix for {0} = {1}".format(gmName, prefix))
+            await ctx.send("Prefix for {0} = {1}".format(gmName, prefix))
         except KeyError:
-            await self.bot.say(":x: Prefix not found for {0}".format(gmName))
+            await ctx.send(":x: Prefix not found for {0}".format(gmName))
 
     def _find_role(self, ctx, role_id):
-        server = ctx.message.server
-        roles = server.roles
+        guild = ctx.message.guild
+        roles = guild.roles
         for role in roles:
             if role.id == role_id:
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
     async def _add_prefix(self, ctx, gm_name: str, prefix: str):
-        prefixes = self._prefixes(ctx)
+        prefixes = await self._prefixes(ctx)
 
         proper_gm_name = self._get_proper_gm_name(ctx, gm_name)
 
@@ -129,7 +134,7 @@ class PrefixManager:
         if not prefix:
             errors.append("Prefix not found from input for GM {0}.".format(gm_name))
         if errors:
-            await self.bot.say(":x: Errors with input:\n\n  "
+            await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 
@@ -137,12 +142,12 @@ class PrefixManager:
             prefixes[proper_gm_name] = prefix
         except:
             return False
-        self._save_prefixes(ctx, prefixes)
+        await self._save_prefixes(ctx, prefixes)
         return True
 
     def _get_proper_gm_name(self, ctx, gm_name):
-        server = ctx.message.server
-        roles = server.roles
+        guild = ctx.message.guild
+        roles = guild.roles
         for role in roles:
             try:
                 gmNameFromRole = re.findall(r'(?<=\().*(?=\))', role.name)[0]
@@ -151,18 +156,16 @@ class PrefixManager:
             except:
                 continue
 
-    def _all_data(self, ctx):
-        return self.data_cog.load(ctx, self.DATASET)
+    async def _get_franchise_prefix(self, ctx, franchise_role):
+        prefixes = await self._prefixes(ctx)
+        try:
+            gm_name = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
+            return prefixes[gm_name]
+        except:
+            raise LookupError('GM name not found from role {0}'.format(franchise_role.name))
 
-    def _prefixes(self, ctx):
-        all_data = self._all_data(ctx)
-        prefixes = all_data.setdefault(self.PREFIXES_KEY, {})
-        return prefixes
+    async def _prefixes(self, ctx):
+        return await self.config.guild(ctx.guild).Prefixes()
 
-    def _save_prefixes(self, ctx, prefixes):
-        all_data = self._all_data(ctx)
-        all_data[self.PREFIXES_KEY] = prefixes
-        self.data_cog.save(ctx, self.DATASET, all_data)
-
-def setup(bot):
-    bot.add_cog(PrefixManager(bot))
+    async def _save_prefixes(self, ctx, prefixes):
+        await self.config.guild(ctx.guild).Prefixes.set(prefixes)

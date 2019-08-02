@@ -5,89 +5,124 @@ import random
 import time
 
 from queue import Queue
-from discord.ext import commands
-from cogs.utils import checks
+from redbot.core import Config
+from redbot.core import commands
+from redbot.core import checks
 
 TEAM_SIZE = 6
+defaults = {"CategoryChannel": None}
 
-class SixMans:
+class SixMans(commands.Cog):
 
-    def __init__(self, bot):
-        self.bot = bot
+    def __init__(self):
+        self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
+        self.config.register_guild(**defaults)
         self.queue = PlayerQueue()
         self.games = []
         self.busy = False
         self.channel_index = 1
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["tc"])
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.guild_only()
+    @commands.command(aliases=["tc"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def test_channel(self, ctx):
         await self.create_channel(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["qa"])
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.guild_only()
+    @commands.command(aliases=["qa"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
             if member in self.queue:
-                await self.bot.say("{} is already in queue.".format(member.display_name))
+                await ctx.send("{} is already in queue.".format(member.display_name))
                 break
             self.queue.put(member)
-            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are being created.")
+            await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["dqa"])
-    @checks.admin_or_permissions(manage_server=True)
+    @commands.guild_only()
+    @commands.command(aliases=["dqa"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def dequeue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
         for member in members:
             self.queue.put(member)
-            await self.bot.say("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["queue"])
+    @commands.guild_only()
+    @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
         player = ctx.message.author
 
         if player in self.queue:
-            await self.bot.say("{} is already in queue.".format(player.display_name))
+            await ctx.send("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
             if player in game:
-                await self.bot.say("{} is already in a game.".format(player.display_name))
+                await ctx.send("{} is already in a game.".format(player.display_name))
                 return
 
         self.queue.put(player)
 
-        await self.bot.say("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         if self.queue_full():
-            await self.bot.say("Queue is full! Teams are being created.")
+            await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx)
 
-    @commands.command(pass_context=True, no_pm=True, aliases=["dq"])
+    @commands.guild_only()
+    @commands.command(aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
         player = ctx.message.author
 
         if player in self.queue:
             self.queue.remove(player)
-            await self.bot.say(
+            await ctx.send(
                 "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         else:
-            await self.bot.say("{} is not in queue.".format(player.display_name))
+            await ctx.send("{} is not in queue.".format(player.display_name))
 
-    @commands.command(no_pm=True, aliases=["kq"])
-    @checks.admin_or_permissions(manage_server=True)
-    async def kick_queue(self, player: discord.Member):
+    @commands.guild_only()
+    @commands.command(aliases=["kq"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def kick_queue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
         if player in self.queue:
             self.queue.remove(player)
-            await self.bot.say(
+            await ctx.send(
                 "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
         else:
-            await self.bot.say("{} is not in queue.".format(player.display_name))
+            await ctx.send("{} is not in queue.".format(player.display_name))
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setCategory(self, ctx, category_channel: discord.CategoryChannel):
+        """Sets the six mans category channel where all six mans channels will be created under"""
+        await self._save_category(ctx, category_channel.id)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getCategory(self, ctx):
+        """Gets the channel currently assigned as the transaction channel"""
+        try:
+            await ctx.send("Six mans category channel set to: {0}".format((await self._category(ctx)).mention))
+        except:
+            await ctx.send(":x: Six mans category channel not set")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unsetCategory(self, ctx):
+        """Unsets the six mans category channel. Six mans channels will not be created if this is not set"""
+        await self._save_category(ctx, None)
+        await ctx.send("Done")
 
     def queue_full(self):
         return self.queue.qsize() >= TEAM_SIZE
@@ -114,24 +149,35 @@ class SixMans:
         self.busy = False
 
     async def display_game_info(self, game):
-        await self.bot.send_message(game.channel, "{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="6 Mans Game Info", colour=discord.Colour.blue())
+        await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        embed = discord.Embed(title="6 Mans Game Info", color=discord.Colour.blue())
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
-        await self.bot.send_message(game.channel, embed=embed)
+        await game.channel.send(embed=embed)
 
     async def create_game(self, ctx):
         players = [self.queue.get() for _ in range(TEAM_SIZE)]
         channel = await self.create_channel(ctx)
+        for player in players:
+            await channel.set_permissions(player, read_messages=True)
         return Game(players, channel)
 
     async def create_channel(self, ctx):
-        server = ctx.message.server
-        channel = await self.bot.create_channel(server, '6mans-channel-{}'.format(self.channel_index), type=discord.ChannelType.text)
-        channel.position = 10
+        guild = ctx.message.guild
+        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), 
+            overwrites= {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False)
+            },
+            category= await self._category(ctx))
         self.channel_index += 1
         return channel
+
+    async def _category(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
+
+    async def _save_category(self, ctx, category):
+        await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
 class Game:
     def __init__(self, players, channel):
@@ -284,6 +330,3 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
-
-def setup(bot):
-    bot.add_cog(SixMans(bot))
