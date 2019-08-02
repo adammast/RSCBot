@@ -30,9 +30,7 @@ class BulkRoleManager(commands.Cog):
             if message is not "":
                 messages.append(message)
             for msg in messages:
-                await ctx.send("{0}{1}{0}".format("```", msg))
-            await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
-
+              
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
@@ -50,7 +48,7 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions(manage_roles=True)
     async def addRole(self, ctx, role : discord.Role, *userList):
         """Adds the role to every member that can be found from the userList"""
         empty = True
@@ -139,7 +137,7 @@ class BulkRoleManager(commands.Cog):
         if added > 0:
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
-
+    
     @commands.command()
     @commands.guild_only()
     async def getId(self, ctx, *userList):
