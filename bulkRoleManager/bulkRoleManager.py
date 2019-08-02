@@ -30,7 +30,9 @@ class BulkRoleManager(commands.Cog):
             if message is not "":
                 messages.append(message)
             for msg in messages:
-              
+                await ctx.send("{0}{1}{0}".format("```", msg))
+            await ctx.send(":white_check_mark: {0} player(s) have the {1} role".format(count, role.name))
+
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
