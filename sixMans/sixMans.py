@@ -230,11 +230,11 @@ class SixMans(commands.Cog):
 
     def _format_queue_info(self, ctx, queue):
         embed = discord.Embed(title="{0} Info".format(queue.name), color=discord.Colour.blue())
-        embed.add_field(name="Channels", value="{}".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
-        embed.add_field(name="Games Played", value="{}".format(queue.gamesPlayed), inline=True)
-        embed.add_field(name="All-Time Unique Players", value="{}".format(len(queue.players)), inline=False)
-        embed.add_field(name="Points Per Series Played", value="{}".format(queue.points[pp_play_key]), inline=True)
-        embed.add_field(name="Points Per Series Won", value="{}".format(queue.points[pp_win_key]), inline=True)
+        embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
+        embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
+        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
+            .format(queue.points[pp_play_key], queue.points[pp_win_key]), inline=False)
         return embed
 
     async def _load_queues(self, ctx):
