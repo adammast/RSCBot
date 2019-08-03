@@ -350,8 +350,8 @@ class PlayerQueue(Queue):
         with self.mutex:
             return item in self.queue
 
-class SixMansQueue():
-    def _init(self, name, channels, points, players, gamesPlayed):
+class SixMansQueue:
+    def __init__(self, name, channels, points, players, gamesPlayed):
         self.name = name
         self.queue = PlayerQueue()
         self.channels = channels
