@@ -62,7 +62,7 @@ class SixMans(commands.Cog):
                 break
             six_mans_queue.queue.put(member)
             await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, six_mans_queue.queue.qsize(), team_size))
-        if six_mans_queue.queue_full():
+        if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx, six_mans_queue)
 
@@ -84,7 +84,7 @@ class SixMans(commands.Cog):
         six_mans_queue.queue.put(player)
 
         await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
-        if six_mans_queue.queue_full():
+        if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self.randomize_teams(ctx, six_mans_queue)
 
