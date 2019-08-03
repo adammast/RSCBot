@@ -9,56 +9,71 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-TEAM_SIZE = 6
-defaults = {"CategoryChannel": None}
+team_size = 6
+pp_play_key = "Play"
+pp_win_key = "Win"
+player_points_key = "Points"
+player_gp_key = "GamesPlayed"
+player_wins_key = "Wins"
+
+defaults = {"CategoryChannel": None, "QueueNames": [], "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
     def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
         self.config.register_guild(**defaults)
-        self.queue = PlayerQueue()
+        self.queues = []
         self.games = []
+        self.players = {}
+        self.scores = []
         self.busy = False
-        self.channel_index = 1
 
     @commands.guild_only()
-    @commands.command(aliases=["tc"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def test_channel(self, ctx):
-        await self.create_channel(ctx)
+    async def addNewQueue(self, ctx, name, points_per_play: int, points_per_win: int, *channels):
+        queue_channels = []
+        for channel in channels:
+            queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
+        points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
+        six_mans_queue = SixMansQueue(name, queue_channels, points, {}, 0)
+        self.queues.append(six_mans_queue)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getQueueNames(self, ctx):
+        queue_names = ""
+        for queue in self.queues:
+            queue_names += queue.name
+        await ctx.send("Queues set up in server:\n```{0}```".format(queue_names))
 
     @commands.guild_only()
     @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queue_all(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
+        six_mans_queue = self._get_queue(ctx)
         for member in members:
-            if member in self.queue:
+            if member in six_mans_queue.queue:
                 await ctx.send("{} is already in queue.".format(member.display_name))
                 break
-            self.queue.put(member)
-            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
-        if self.queue_full():
+            six_mans_queue.queue.put(member)
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, six_mans_queue.queue.qsize(), team_size))
+        if six_mans_queue.queue_full():
             await ctx.send("Queue is full! Teams are being created.")
-            await self.randomize_teams(ctx)
-
-    @commands.guild_only()
-    @commands.command(aliases=["dqa"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def dequeue_all(self, ctx, *members: discord.Member):
-        """Mass queueing for testing purposes"""
-        for member in members:
-            self.queue.put(member)
-            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await self.randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
+        six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
-        if player in self.queue:
+        if player in six_mans_queue.queue:
             await ctx.send("{} is already in queue.".format(player.display_name))
             return
         for game in self.games:
@@ -66,23 +81,24 @@ class SixMans(commands.Cog):
                 await ctx.send("{} is already in a game.".format(player.display_name))
                 return
 
-        self.queue.put(player)
+        six_mans_queue.queue.put(player)
 
-        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
-        if self.queue_full():
+        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
+        if six_mans_queue.queue_full():
             await ctx.send("Queue is full! Teams are being created.")
-            await self.randomize_teams(ctx)
+            await self.randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
+        six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
-        if player in self.queue:
-            self.queue.remove(player)
+        if player in six_mans_queue.queue:
+            six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+                "{} removed from queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
@@ -91,10 +107,11 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def kick_queue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
-        if player in self.queue:
-            self.queue.remove(player)
+        six_mans_queue = self._get_queue(ctx)
+        if player in six_mans_queue.queue:
+            six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+                "{} removed from queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
@@ -124,12 +141,9 @@ class SixMans(commands.Cog):
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
-    def queue_full(self):
-        return self.queue.qsize() >= TEAM_SIZE
-
-    async def randomize_teams(self, ctx):
+    async def randomize_teams(self, ctx, six_mans_queue):
         self.busy = True
-        game = await self.create_game(ctx)
+        game = await self.create_game(ctx, six_mans_queue)
 
         orange = random.sample(game.players, 3)
         for player in orange:
@@ -156,22 +170,27 @@ class SixMans(commands.Cog):
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         await game.channel.send(embed=embed)
 
-    async def create_game(self, ctx):
-        players = [self.queue.get() for _ in range(TEAM_SIZE)]
-        channel = await self.create_channel(ctx)
+    async def create_game(self, ctx, six_mans_queue):
+        players = [six_mans_queue.queue.get() for _ in range(team_size)]
+        channel = await self.create_channel(ctx, six_mans_queue)
         for player in players:
             await channel.set_permissions(player, read_messages=True)
         return Game(players, channel)
 
-    async def create_channel(self, ctx):
+    async def create_channel(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), 
+        channel = await guild.create_text_channel(six_mans_queue.name, 
             overwrites= {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
             },
             category= await self._category(ctx))
-        self.channel_index += 1
         return channel
+
+    def _get_queue(self, ctx):
+        for six_mans_queue in self.queues:
+            for channel in six_mans_queue.channels:
+                if channel == ctx.channel:
+                    return six_mans_queue
 
     async def _category(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
@@ -330,3 +349,41 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
+
+class SixMansQueue():
+    def _init(self, name, channels, points, players, gamesPlayed):
+        self.name = name
+        self.queue = PlayerQueue()
+        self.channels = channels
+        self.points = points
+        self.players = players
+        self.gamesPlayed = gamesPlayed
+
+    def _givePoints(self, winningPlayers, losingPlayers):
+        for player in winningPlayers:
+            if player.id in self.players:
+                player_dict = self.players[player.id]
+                player_dict[player_points_key] += (self.points[pp_play_key] + self.points[pp_win_key])
+                player_dict[player_gp_key] += 1
+                player_dict[player_wins_key] +=1
+            else:
+                self.players[player.id] = {
+                    player_points_key: self.points[pp_play_key] + self.points[pp_win_key],
+                    player_gp_key: 1,
+                    player_wins_key: 1
+                }
+
+        for player in losingPlayers:
+            if player.id in self.players:
+                player_dict = self.players[player.id]
+                player_dict[player_points_key] += self.points[pp_play_key]
+                player_dict[player_gp_key] += 1
+            else:
+                self.players[player.id] = {
+                    player_points_key: self.points[pp_play_key],
+                    player_gp_key: 1,
+                    player_wins_key: 0
+                }
+
+    def _queue_full(self):
+        return self.queue.qsize() >= team_size
