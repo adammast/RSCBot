@@ -1,37 +1,37 @@
 {
     "guildId": {
-        "queueNames": ["queue1", "queue2"],
-
-        "queue1": {
-            "channels": ["channel1Id", "channel2Id"],
-            "points": {
-                "play": 1,
-                "win": 2
+        "queues": {
+            "queue1": {
+                "channels": ["channel1Id", "channel2Id"],
+                "points": {
+                    "play": 1,
+                    "win": 2
+                },
+                "players": {
+                    "playerId": {
+                        "points": 3,
+                        "gamesPlayed": 1,
+                        "wins": 1
+                    }
+                },
+                "gamesPlayed": 1
             },
-            "players": {
-                "playerId": {
-                    "points": 3,
-                    "gamesPlayed": 1,
-                    "wins": 1
-                }
-            },
-            "gamesPlayed": 1
-        },
-
-        "queue2": {
-            "channels": ["channel3Id", "channel4Id"],
-            "points": {
-                "play": 2,
-                "win": 4
-            },
-            "players": {
-                "playerId": {
-                    "points": 6,
-                    "gamesPlayed": 1,
-                    "wins": 1
-                }
-            },
-            "gamesPlayed": 1
+    
+            "queue2": {
+                "channels": ["channel3Id", "channel4Id"],
+                "points": {
+                    "play": 2,
+                    "win": 4
+                },
+                "players": {
+                    "playerId": {
+                        "points": 6,
+                        "gamesPlayed": 1,
+                        "wins": 1
+                    }
+                },
+                "gamesPlayed": 1
+            }
         },
 
         "CategoryChannel": "categoryId",
