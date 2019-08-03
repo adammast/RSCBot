@@ -64,14 +64,15 @@ class SixMans(commands.Cog):
         queue_names = ""
         for queue in self.queues:
             queue_names += queue.name
-        await ctx.send("Queues set up in server:\n```{0}```".format(queue_names))
+        await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
 
     @commands.guild_only()
     @commands.command()
-    async def getQueueInfo(self, ctx, name):
+    async def getQueueInfo(self, ctx, *, name):
         for queue in self.queues:
             if queue.name == name:
                 await ctx.send(embed=self._format_queue_info(ctx, queue))
+                return
         await ctx.send(":x: No queue set up with name: {0}".format(name))
 
     @commands.guild_only()
@@ -232,7 +233,7 @@ class SixMans(commands.Cog):
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players", value="{}\n".format(len(queue.players)), inline=False)
-        embed.add_field(name="Points Earned", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
+        embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
             .format(queue.points[pp_play_key], queue.points[pp_win_key]), inline=False)
         return embed
 

@@ -19,7 +19,7 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
-    async def genericAnnounce(self, ctx, message):
+    async def genericAnnounce(self, ctx, *, message):
         """Posts the message to the transaction log channel"""
         try:
             _trans_channel = await self._trans_channel(ctx)
