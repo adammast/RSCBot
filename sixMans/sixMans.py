@@ -239,7 +239,7 @@ class SixMans(commands.Cog):
 
     async def _load_queues(self, ctx):
         queues = await self._queues(ctx)
-        for key, value in queues:
+        for key, value in queues.items():
             queue_channels = []
             for channel in value["Channels"]:
                 queue_channels.append(ctx.guild.get_channel(channel))
