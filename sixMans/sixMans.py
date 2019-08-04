@@ -63,7 +63,7 @@ class SixMans(commands.Cog):
         await ctx.send("Done")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["qn"])
     async def getQueueNames(self, ctx):
         await self._pre_load_queues(ctx)
         queue_names = ""
@@ -120,7 +120,7 @@ class SixMans(commands.Cog):
         player = ctx.message.author
 
         if player in six_mans_queue.queue:
-            await ctx.send(":x: You are already in a queue")
+            await ctx.send(":x: You are already in the queue")
             return
         for game in self.games:
             if player in game:
@@ -129,7 +129,8 @@ class SixMans(commands.Cog):
 
         six_mans_queue.queue.put(player)
 
-        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
+        await ctx.send("{0} added to queue. ({1}/{2})\nPlayers in the queue:{3}".format(player.display_name, 
+            six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue])))
         if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -295,6 +296,8 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
     async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
+        """Get the top ten players in points for the specific queue. If no queue name is given the list will be the top ten players across all queues.
+        If you're not in the top ten your name and rank will be shown at the bottom of the list."""
         await self._pre_load_queues(ctx)
         players = None
         if queue_name is not None:
@@ -397,6 +400,10 @@ class SixMans(commands.Cog):
     async def _randomize_teams(self, ctx, six_mans_queue):
         self.busy = True
         game = await self._create_game(ctx, six_mans_queue)
+        for player in game.players:
+            for queue in self.queues:
+                if player in queue.queue:
+                    queue.queue.remove(player)
 
         orange = random.sample(game.players, 3)
         for player in orange:
