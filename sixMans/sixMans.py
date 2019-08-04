@@ -224,7 +224,7 @@ class SixMans(commands.Cog):
             return
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
-        await ctx.send(embed=self._format_leaderboard(ctx, sorted_players, queue_name))
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name))
 
     @commands.guild_only()
     @commands.command()
@@ -285,7 +285,7 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
-    def _format_leaderboard(self, ctx, sorted_players, queue_name):
+    async def _format_leaderboard(self, ctx, sorted_players, queue_name):
         if queue_name is None:
             queue_name = ctx.guild.name
         embed = discord.Embed(title="{0} Leaderboard".format(queue_name), color=discord.Colour.blue())
