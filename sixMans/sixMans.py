@@ -184,7 +184,7 @@ class SixMans(commands.Cog):
         _scores = await self._scores(ctx)
         _players = await self._players(ctx)
         _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now()
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, player, 1, date_time)
             self._give_points(six_mans_queue.players, score, six_mans_queue.name)
