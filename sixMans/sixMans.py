@@ -43,6 +43,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def addNewQueue(self, ctx, name, points_per_play: int, points_per_win: int, *channels):
+        await self._pre_load_queues(ctx)
         queue_channels = []
         for channel in channels:
             queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
@@ -64,6 +65,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command()
     async def getQueueNames(self, ctx):
+        await self._pre_load_queues(ctx)
         queue_names = ""
         for queue in self.queues:
             queue_names += "{0}\n".format(queue.name)
@@ -72,6 +74,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["qi"])
     async def getQueueInfo(self, ctx, *, name):
+        await self._pre_load_queues(ctx)
         for queue in self.queues:
             if queue.name.lower() == name.lower():
                 await ctx.send(embed=self._format_queue_info(ctx, queue))
@@ -82,6 +85,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeQueue(self, ctx, *, queue_name):
+        await self._pre_load_queues(ctx)
         for queue in self.queues:
             if queue.name == queue_name:
                 self.queues.remove(queue)
@@ -95,6 +99,7 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def queueAll(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
+        await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         for member in members:
             if member in six_mans_queue.queue:
@@ -110,6 +115,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
+        await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
@@ -132,6 +138,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
+        await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
@@ -147,6 +154,7 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def kickQueue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
+        await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         if player in six_mans_queue.queue:
             six_mans_queue.queue.remove(player)
@@ -156,14 +164,56 @@ class SixMans(commands.Cog):
             await ctx.send("{} is not in queue.".format(player.display_name))
 
     @commands.guild_only()
+    @commands.command(aliases=["cg"])
+    async def cancelGame(self, ctx):
+        """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
+        The game will end with no points given to any of the players. The players with then be allowed to queue again."""
+        await self._pre_load_queues(ctx)
+        game = self._get_game(ctx)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == game.queueName:
+                six_mans_queue = queue
+
+        if six_mans_queue is None:
+            await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
+            return
+
+        opposing_captain = None
+        if ctx.author in game.blue:
+            opposing_captain = game.captains[1] #Orange team captain
+        elif ctx.author in game.orange:
+            opposing_captain = game.captains[0] #Blue team captain
+
+        if opposing_captain is None:
+            await ctx.send(":x: Only players on one of the two teams can cancel the game.")
+            return
+
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game.".format(opposing_captain.mention))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        await ctx.bot.wait_for("reaction_add", check=pred)
+        if pred.result is True:
+        # User responded with tick
+            self.games.remove(game)
+            await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+            await asyncio.sleep(30)
+            await ctx.channel.delete()
+        else:
+        # User responded with cross
+            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
+
+    @commands.guild_only()
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series.
         `winning_team` must be either `Blue` or `Orange`"""
+        await self._pre_load_queues(ctx)
         game_time = ctx.message.created_at - ctx.channel.created_at
         if game_time.seconds < minimum_game_time:
             await ctx.send(":x: You can't report a game outcome until at least **15 minutes** have passed since the game has started."
-                "\nCurrent time that's passed = **{0} minutes**".format(game_time.seconds // 60))
+                "\nCurrent time that's passed = **{0} minute(s)**".format(game_time.seconds // 60))
             return
 
         if winning_team.lower() != "blue" and winning_team.lower() != "orange":
@@ -177,7 +227,7 @@ class SixMans(commands.Cog):
                 six_mans_queue = queue
 
         if six_mans_queue is None:
-            await ctx.send(":x: Queue not found for this channel, please message an Admin")
+            await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
         opposing_captain = None
@@ -190,10 +240,10 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
 
-        msg = await ctx.send("{0} Please verify that the {1} team won the series".format(opposing_captain.mention, winning_team))
+        msg = await ctx.send("{0} Please verify that the **{1}** team won the series".format(opposing_captain.mention, winning_team))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
-        pred = ReactionPredicate.yes_or_no(msg, ctx.author)
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
         await ctx.bot.wait_for("reaction_add", check=pred)
         if pred.result is True:
         # User responded with tick
@@ -236,13 +286,14 @@ class SixMans(commands.Cog):
         await self._save_games_played(ctx, _games_played)
 
         self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**Channel will be deleted in 30 seconds**")
+        await ctx.send("Done. Thanks for playing!\n**This channel will be deleted in 30 seconds**")
         await asyncio.sleep(30)
         await ctx.channel.delete()
 
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
     async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
+        await self._pre_load_queues(ctx)
         players = None
         if queue_name is not None:
             for queue in self.queues:
@@ -413,6 +464,10 @@ class SixMans(commands.Cog):
         embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
             .format(queue.points[pp_play_key], queue.points[pp_win_key]), inline=False)
         return embed
+
+    async def _pre_load_queues(self, ctx):
+        if self.queues is None or self.queues == []:
+            await self._load_queues(ctx)
 
     async def _load_queues(self, ctx):
         queues = await self._queues(ctx)
