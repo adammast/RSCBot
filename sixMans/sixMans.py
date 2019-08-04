@@ -302,11 +302,14 @@ class SixMans(commands.Cog):
                 break
         
         author = ctx.author
-        author_index = [y[0] for y in sorted_players].index("".format(author.id))
-        if index is not None and index > 10:
-            author_info = sorted_players[author_index][1]
-            message += "`{0}` {1}\t\tPoints:{2}\t\tWins{3}\t\tGames Played{4}\n".format(author_index + 1, author.mention, author_info[player_points_key], 
-                author_info[player_wins_key], author_info[player_gp_key])
+        try:
+            author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
+            if index is not None and index > 10:
+                author_info = sorted_players[author_index][1]
+                message += "`{0}` {1}\t\tPoints:{2}\t\tWins{3}\t\tGames Played{4}\n".format(author_index + 1, author.mention, author_info[player_points_key], 
+                    author_info[player_wins_key], author_info[player_gp_key])
+        except Exception:
+            pass
 
         embed.add_field(name="Most Points in {0}".format(queue_name), value=message, inline=False)
         return embed
