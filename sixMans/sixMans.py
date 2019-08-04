@@ -120,7 +120,7 @@ class SixMans(commands.Cog):
         player = ctx.message.author
 
         if player in six_mans_queue.queue.queue:
-            await ctx.send(":x: You are already in the queue")
+            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
             return
         for game in self.games:
             if player in game:
