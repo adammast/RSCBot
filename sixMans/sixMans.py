@@ -129,8 +129,8 @@ class SixMans(commands.Cog):
 
         six_mans_queue.queue.put(player)
 
-        await ctx.send("{0} added to {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
+        await ctx.send("{0} added to {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size))
         if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -146,8 +146,8 @@ class SixMans(commands.Cog):
         if player in six_mans_queue.queue:
             six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{0} removed from the {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
-                    six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
+                "{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
+                    six_mans_queue.queue.qsize(), team_size))
         else:
             await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
 
@@ -308,8 +308,8 @@ class SixMans(commands.Cog):
         else:
             players = await self._players(ctx)
 
-        if players is None:
-            await ctx.send(":x: Queue not found with name: {0}".format(queue_name))
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for queue with name: {0}".format(queue_name))
             return
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
