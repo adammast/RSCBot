@@ -187,13 +187,13 @@ class SixMans(commands.Cog):
         date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, player, 1, date_time)
-            self._give_points(six_mans_queue.players, score, six_mans_queue.name)
-            self._give_points(_players, score, six_mans_queue.name)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
             _scores.insert(0, score)
         for player in losing_players:
             score = self._create_player_score(six_mans_queue, player, 0, date_time)
-            self._give_points(six_mans_queue.players, score, six_mans_queue.name)
-            self._give_points(_players, score, six_mans_queue.name)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
             _scores.insert(0, score)
 
         _games_played += 1
@@ -253,24 +253,15 @@ class SixMans(commands.Cog):
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
-    def _give_points(self, players_dict, score, queue_name):
+    def _give_points(self, players_dict, score):
         player_id = score["Player"]
         points_earned = score["Points"]
         win = score["Win"]
-        if player_id in players_dict:
-            player_dict = players_dict[player_id]
-            player_dict[player_points_key] += points_earned
-            player_dict[player_gp_key] += 1
-            player_dict[player_wins_key] += win
-            if queue_name not in player_dict[queues_key]:
-                player_dict[queues_key].append(queue_name)
-        else:
-            players_dict[player_id] = {
-                player_points_key: points_earned,
-                player_gp_key: 1,
-                player_wins_key: win,
-                queues_key: queue_name
-            }
+
+        player_dict = players_dict.setdefault("{0}".format(player_id), {})
+        player_dict[player_points_key] = player_dict.get(player_points_key, 0) + points_earned
+        player_dict[player_gp_key] = player_dict.get(player_gp_key, 0) + 1
+        player_dict[player_wins_key] = player_dict.get(player_wins_key, 0) + win
 
     def _create_player_score(self, six_mans_queue, player, win, date_time):
         points_dict = six_mans_queue.points
@@ -343,8 +334,8 @@ class SixMans(commands.Cog):
     async def _display_game_info(self, game, six_mans_queue):
         await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
