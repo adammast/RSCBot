@@ -63,7 +63,7 @@ class SixMans(commands.Cog):
     async def getQueueNames(self, ctx):
         queue_names = ""
         for queue in self.queues:
-            queue_names += queue.name
+            queue_names += "{0}\n".format(queue.name)
         await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
 
     @commands.guild_only()
@@ -82,6 +82,7 @@ class SixMans(commands.Cog):
         for queue in self.queues:
             if queue.name == name:
                 self.queues.remove(queue)
+                await self._save_queues(ctx, self.queues)
                 await ctx.send("Done")
                 return
         await ctx.send(":x: No queue set up with name: {0}".format(name))

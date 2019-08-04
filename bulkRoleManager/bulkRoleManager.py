@@ -60,7 +60,7 @@ class BulkRoleManager(commands.Cog):
         message = ""
         for user in userList:
             try:
-                member = commands.MemberConverter(ctx, user).convert()
+                member = await commands.MemberConverter().convert(ctx, user)
                 if member in ctx.guild.members:
                     if role not in member.roles:
                         await member.add_roles(role)
