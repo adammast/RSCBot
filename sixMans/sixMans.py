@@ -2,101 +2,318 @@ import discord
 import collections
 import operator
 import random
-import time
+import datetime
+import asyncio
 
 from queue import Queue
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
-TEAM_SIZE = 6
-defaults = {"CategoryChannel": None}
+team_size = 6
+minimum_game_time = 900 #Seconds (15 Minutes)
+pp_play_key = "Play"
+pp_win_key = "Win"
+player_points_key = "Points"
+player_gp_key = "GamesPlayed"
+player_wins_key = "Wins"
+queues_key = "Queues"
+
+defaults = {"CategoryChannel": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
     def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
         self.config.register_guild(**defaults)
-        self.queue = PlayerQueue()
+        self.queues = []
         self.games = []
         self.busy = False
-        self.channel_index = 1
 
     @commands.guild_only()
-    @commands.command(aliases=["tc"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def test_channel(self, ctx):
-        await self.create_channel(ctx)
+    async def loadQueues(self, ctx):
+        await self._load_queues(ctx)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addNewQueue(self, ctx, name, points_per_play: int, points_per_win: int, *channels):
+        await self._pre_load_queues(ctx)
+        queue_channels = []
+        for channel in channels:
+            queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
+        for queue in self.queues:
+            if queue.name == name:
+                await ctx.send(":x: There is already a queue set up with the name: {0}".format(name))
+                return
+            for channel in queue_channels:
+                if channel in queue.channels:
+                    await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                    return
+
+        points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
+        six_mans_queue = SixMansQueue(name, queue_channels, points, {}, 0)
+        self.queues.append(six_mans_queue)
+        await self._save_queues(ctx, self.queues)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["qn"])
+    async def getQueueNames(self, ctx):
+        await self._pre_load_queues(ctx)
+        queue_names = ""
+        for queue in self.queues:
+            queue_names += "{0}\n".format(queue.name)
+        await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
+
+    @commands.guild_only()
+    @commands.command(aliases=["qi"])
+    async def getQueueInfo(self, ctx, *, name):
+        await self._pre_load_queues(ctx)
+        for queue in self.queues:
+            if queue.name.lower() == name.lower():
+                await ctx.send(embed=self._format_queue_info(ctx, queue))
+                return
+        await ctx.send(":x: No queue set up with name: {0}".format(name))
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeQueue(self, ctx, *, queue_name):
+        await self._pre_load_queues(ctx)
+        for queue in self.queues:
+            if queue.name == queue_name:
+                self.queues.remove(queue)
+                await self._save_queues(ctx, self.queues)
+                await ctx.send("Done")
+                return
+        await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
 
     @commands.guild_only()
     @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def queue_all(self, ctx, *members: discord.Member):
+    async def queueAll(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
+        await self._pre_load_queues(ctx)
+        six_mans_queue = self._get_queue(ctx)
         for member in members:
-            if member in self.queue:
+            if member in six_mans_queue.queue.queue:
                 await ctx.send("{} is already in queue.".format(member.display_name))
                 break
-            self.queue.put(member)
-            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
-        if self.queue_full():
+            six_mans_queue.queue.put(member)
+            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, six_mans_queue.queue.qsize(), team_size))
+        if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
-            await self.randomize_teams(ctx)
-
-    @commands.guild_only()
-    @commands.command(aliases=["dqa"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def dequeue_all(self, ctx, *members: discord.Member):
-        """Mass queueing for testing purposes"""
-        for member in members:
-            self.queue.put(member)
-            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, self.queue.qsize(), TEAM_SIZE))
+            await self._randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
+        await self._pre_load_queues(ctx)
+        six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
-        if player in self.queue:
-            await ctx.send("{} is already in queue.".format(player.display_name))
+        if player in six_mans_queue.queue.queue:
+            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
             return
         for game in self.games:
             if player in game:
-                await ctx.send("{} is already in a game.".format(player.display_name))
+                await ctx.send(":x: You are already in a game")
                 return
 
-        self.queue.put(player)
+        six_mans_queue.queue.put(player)
 
-        await ctx.send("{} added to queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
-        if self.queue_full():
+        await ctx.send("{0} added to {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
+        if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
-            await self.randomize_teams(ctx)
+            await self._randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["dq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
+        await self._pre_load_queues(ctx)
+        six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
-        if player in self.queue:
-            self.queue.remove(player)
+        if player in six_mans_queue.queue:
+            six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+                "{0} removed from the {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
+                    six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
         else:
-            await ctx.send("{} is not in queue.".format(player.display_name))
+            await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
 
     @commands.guild_only()
     @commands.command(aliases=["kq"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def kick_queue(self, ctx, player: discord.Member):
+    async def kickQueue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
-        if player in self.queue:
-            self.queue.remove(player)
+        await self._pre_load_queues(ctx)
+        six_mans_queue = self._get_queue(ctx)
+        if player in six_mans_queue.queue:
+            six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, self.queue.qsize(), TEAM_SIZE))
+                "{} removed from queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
+
+    @commands.guild_only()
+    @commands.command(aliases=["cg"])
+    async def cancelGame(self, ctx):
+        """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
+        The game will end with no points given to any of the players. The players with then be allowed to queue again."""
+        await self._pre_load_queues(ctx)
+        game = self._get_game(ctx)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == game.queueName:
+                six_mans_queue = queue
+
+        if six_mans_queue is None:
+            await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
+            return
+
+        opposing_captain = None
+        if ctx.author in game.blue:
+            opposing_captain = game.captains[1] #Orange team captain
+        elif ctx.author in game.orange:
+            opposing_captain = game.captains[0] #Blue team captain
+
+        if opposing_captain is None:
+            await ctx.send(":x: Only players on one of the two teams can cancel the game.")
+            return
+
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game.".format(opposing_captain.mention))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        await ctx.bot.wait_for("reaction_add", check=pred)
+        if pred.result is True:
+        # User responded with tick
+            self.games.remove(game)
+            await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+            await asyncio.sleep(30)
+            await ctx.channel.delete()
+        else:
+        # User responded with cross
+            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
+
+    @commands.guild_only()
+    @commands.command(aliases=["sr"])
+    async def scoreReport(self, ctx, winning_team):
+        """Report which team won the series. Can only be used in a 6Mans game channel.
+        Only valid after 15 minutes have passed since the game started. Both teams will need to verify the results.
+
+        `winning_team` must be either `Blue` or `Orange`"""
+        await self._pre_load_queues(ctx)
+        game_time = ctx.message.created_at - ctx.channel.created_at
+        if game_time.seconds < minimum_game_time:
+            await ctx.send(":x: You can't report a game outcome until at least **15 minutes** have passed since the game has started."
+                "\nCurrent time that's passed = **{0} minute(s)**".format(game_time.seconds // 60))
+            return
+
+        if winning_team.lower() != "blue" and winning_team.lower() != "orange":
+            await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
+            return
+
+        game = self._get_game(ctx)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == game.queueName:
+                six_mans_queue = queue
+
+        if six_mans_queue is None:
+            await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
+            return
+
+        opposing_captain = None
+        if ctx.author in game.blue:
+            opposing_captain = game.captains[1] #Orange team captain
+        elif ctx.author in game.orange:
+            opposing_captain = game.captains[0] #Blue team captain
+
+        if opposing_captain is None:
+            await ctx.send(":x: Only players on one of the two teams can report the score")
+            return
+
+        msg = await ctx.send("{0} Please verify that the **{1}** team won the series".format(opposing_captain.mention, winning_team))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        await ctx.bot.wait_for("reaction_add", check=pred)
+        if pred.result is True:
+        # User responded with tick
+            pass
+        else:
+        # User responded with cross
+            await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
+            return
+
+        winning_players = []
+        losing_players = []
+        if winning_team.lower() == "blue":
+            winning_players = game.blue
+            losing_players = game.orange
+        else:
+            winning_players = game.orange
+            losing_players = game.blue
+
+        _scores = await self._scores(ctx)
+        _players = await self._players(ctx)
+        _games_played = await self._games_played(ctx)
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        for player in winning_players:
+            score = self._create_player_score(six_mans_queue, player, 1, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+        for player in losing_players:
+            score = self._create_player_score(six_mans_queue, player, 0, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+
+        _games_played += 1
+        six_mans_queue.gamesPlayed += 1
+
+        await self._save_scores(ctx, _scores)
+        await self._save_queues(ctx, self.queues)
+        await self._save_players(ctx, _players)
+        await self._save_games_played(ctx, _games_played)
+
+        self.games.remove(game)
+        await ctx.send("Done. Thanks for playing!\n**This channel will be deleted in 30 seconds**")
+        await asyncio.sleep(30)
+        await ctx.channel.delete()
+
+    @commands.guild_only()
+    @commands.command(aliases=["qlb"])
+    async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
+        """Get the top ten players in points for the specific queue. If no queue name is given the list will be the top ten players across all queues.
+        If you're not in the top ten your name and rank will be shown at the bottom of the list."""
+        await self._pre_load_queues(ctx)
+        players = None
+        if queue_name is not None:
+            for queue in self.queues:
+                if queue.name.lower() == queue_name.lower():
+                    players = queue.players
+        else:
+            players = await self._players(ctx)
+
+        if players is None:
+            await ctx.send(":x: Queue not found with name: {0}".format(queue_name))
+            return
+
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name))
 
     @commands.guild_only()
     @commands.command()
@@ -124,12 +341,70 @@ class SixMans(commands.Cog):
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
-    def queue_full(self):
-        return self.queue.qsize() >= TEAM_SIZE
+    def _give_points(self, players_dict, score):
+        player_id = score["Player"]
+        points_earned = score["Points"]
+        win = score["Win"]
 
-    async def randomize_teams(self, ctx):
+        player_dict = players_dict.setdefault("{0}".format(player_id), {})
+        player_dict[player_points_key] = player_dict.get(player_points_key, 0) + points_earned
+        player_dict[player_gp_key] = player_dict.get(player_gp_key, 0) + 1
+        player_dict[player_wins_key] = player_dict.get(player_wins_key, 0) + win
+
+    def _create_player_score(self, six_mans_queue, player, win, date_time):
+        points_dict = six_mans_queue.points
+        if win:
+            points_earned = points_dict[pp_play_key] + points_dict[pp_win_key]
+        else:
+            points_earned = points_dict[pp_play_key]
+        return {
+            "Queue": six_mans_queue.name,
+            "Player": player.id,
+            "Win": win,
+            "Points": points_earned,
+            "DateTime": date_time
+        }
+
+    async def _format_leaderboard(self, ctx, sorted_players, queue_name):
+        if queue_name is None:
+            queue_name = ctx.guild.name
+        embed = discord.Embed(title="{0} Leaderboard".format(queue_name), color=discord.Colour.blue())
+        
+        index = 1
+        message = ""
+        for player in sorted_players:
+            try:
+                member = await commands.MemberConverter().convert(ctx, player[0])
+            except:
+                await ctx.send(":x: Can't find player with id: {}".format(player[0]))
+                return
+            player_info = player[1]
+            message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}\n".format(index, member.mention, player_info[player_points_key], 
+                player_info[player_wins_key], player_info[player_gp_key])
+            index += 1
+            if index > 10:
+                break
+        
+        author = ctx.author
+        try:
+            author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
+            if index is not None and index > 10:
+                author_info = sorted_players[author_index][1]
+                message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}".format(author_index + 1, author.mention, author_info[player_points_key], 
+                    author_info[player_wins_key], author_info[player_gp_key])
+        except Exception:
+            pass
+
+        embed.add_field(name="Most Points in {0}".format(queue_name), value=message, inline=False)
+        return embed
+
+    async def _randomize_teams(self, ctx, six_mans_queue):
         self.busy = True
-        game = await self.create_game(ctx)
+        game = await self._create_game(ctx, six_mans_queue)
+        for player in game.players:
+            for queue in self.queues:
+                if player in queue.queue:
+                    queue.queue.remove(player)
 
         orange = random.sample(game.players, 3)
         for player in orange:
@@ -142,36 +417,113 @@ class SixMans(commands.Cog):
         game.reset_players()
         game.get_new_captains_from_teams()
 
-        await self.display_game_info(game)
+        await self._display_game_info(game, six_mans_queue)
 
         self.games.append(game)
 
         self.busy = False
 
-    async def display_game_info(self, game):
+    async def _display_game_info(self, game, six_mans_queue):
         await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="6 Mans Game Info", color=discord.Colour.blue())
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        embed = discord.Embed(title="{0} Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
+        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+            "When you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where "
+            "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+            "the game and allow players to queue again you can use the `cg` command. Both teams will need to verify that they wish to cancel the game.", inline=False)
+        embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
         await game.channel.send(embed=embed)
 
-    async def create_game(self, ctx):
-        players = [self.queue.get() for _ in range(TEAM_SIZE)]
-        channel = await self.create_channel(ctx)
+    async def _create_game(self, ctx, six_mans_queue):
+        players = [six_mans_queue.queue.get() for _ in range(team_size)]
+        channel = await self._create_channel(ctx, six_mans_queue)
         for player in players:
             await channel.set_permissions(player, read_messages=True)
-        return Game(players, channel)
+        return Game(players, channel, six_mans_queue.name)
 
-    async def create_channel(self, ctx):
+    async def _create_channel(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        channel = await guild.create_text_channel('6mans-channel-{}'.format(self.channel_index), 
+        channel = await guild.create_text_channel(six_mans_queue.name, 
             overwrites= {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
             },
             category= await self._category(ctx))
-        self.channel_index += 1
         return channel
+
+    def _get_game(self, ctx):
+        for game in self.games:
+            if game.channel == ctx.channel:
+                return game
+
+    def _get_queue(self, ctx):
+        for six_mans_queue in self.queues:
+            for channel in six_mans_queue.channels:
+                if channel == ctx.channel:
+                    return six_mans_queue
+
+    def _format_queue_info(self, ctx, queue):
+        embed = discord.Embed(title="{0} Info".format(queue.name), color=discord.Colour.blue())
+        embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
+        embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
+        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
+            .format(queue.points[pp_play_key], queue.points[pp_win_key]), inline=False)
+        return embed
+
+    async def _pre_load_queues(self, ctx):
+        if self.queues is None or self.queues == []:
+            await self._load_queues(ctx)
+
+    async def _load_queues(self, ctx):
+        queues = await self._queues(ctx)
+        self.queues = []
+        for key, value in queues.items():
+            queue_channels = []
+            for channel in value["Channels"]:
+                queue_channels.append(ctx.guild.get_channel(channel))
+            for queue in self.queues:
+                if queue.name == key:
+                    await ctx.send(":x: There is already a queue set up with the name: {0}".format(queue.name))
+                    return
+                for channel in queue_channels:
+                    if channel in queue.channels:
+                        await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                        return
+
+            self.queues.append(SixMansQueue(key, queue_channels, value["Points"], value["Players"], value["GamesPlayed"]))
+
+    async def _queues(self, ctx):
+        return await self.config.guild(ctx.guild).Queues()
+
+    async  def _save_queues(self, ctx, queues):
+        queue_dict = {}
+        for queue in queues:
+            queue_dict[queue.name] = queue._to_dict()
+        await self.config.guild(ctx.guild).Queues.set(queue_dict)
+
+    async def _scores(self, ctx):
+        return await self.config.guild(ctx.guild).Scores()
+
+    async def _save_scores(self, ctx, scores):
+        await self.config.guild(ctx.guild).Scores.set(scores)
+
+    async def _games_played(self, ctx):
+        return await self.config.guild(ctx.guild).GamesPlayed()
+
+    async def _save_games_played(self, ctx, games_played):
+        await self.config.guild(ctx.guild).GamesPlayed.set(games_played)
+
+    async def _players(self, ctx):
+        return await self.config.guild(ctx.guild).Players()
+
+    async def _save_players(self, ctx, players):
+        await self.config.guild(ctx.guild).Players.set(players)
 
     async def _category(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
@@ -180,7 +532,7 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
 class Game:
-    def __init__(self, players, channel):
+    def __init__(self, players, channel, queue_name):
         self.players = set(players)
         self.captains = list(random.sample(self.players, 2))
         self.orange = set()
@@ -188,6 +540,7 @@ class Game:
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
         self.channel = channel
+        self.queueName = queue_name
 
     def add_to_blue(self, player):
         self.players.remove(player)
@@ -202,8 +555,9 @@ class Game:
         self.players.update(self.blue)
 
     def get_new_captains_from_teams(self):
-        self.captains.append(list(self.orange)[0])
+        self.captains = []
         self.captains.append(list(self.blue)[0])
+        self.captains.append(list(self.orange)[0])
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
@@ -330,3 +684,26 @@ class PlayerQueue(Queue):
     def __contains__(self, item):
         with self.mutex:
             return item in self.queue
+
+class SixMansQueue:
+    def __init__(self, name, channels, points, players, gamesPlayed):
+        self.name = name
+        self.queue = PlayerQueue()
+        self.channels = channels
+        self.points = points
+        self.players = players
+        self.gamesPlayed = gamesPlayed
+
+    def _queue_full(self):
+        return self.queue.qsize() >= team_size
+
+    def _to_dict(self):
+        channel_ids = []
+        for channel in self.channels:
+            channel_ids.append(channel.id)
+        return {
+            "Channels": channel_ids,
+            "Points": self.points,
+            "Players": self.players,
+            "GamesPlayed": self.gamesPlayed
+        }
