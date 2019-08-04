@@ -207,7 +207,9 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx, winning_team):
-        """Report which team won the series.
+        """Report which team won the series. Can only be used in a 6Mans game channel.
+        Only valid after 15 minutes have passed since the game started. Both teams will need to verify the results.
+
         `winning_team` must be either `Blue` or `Orange`"""
         await self._pre_load_queues(ctx)
         game_time = ctx.message.created_at - ctx.channel.created_at
@@ -422,9 +424,10 @@ class SixMans(commands.Cog):
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
-        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other. "
+        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
             "When you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where "
-            "the `winning_team` parameter is either `Blue` or `Orange`.", inline=False)
+            "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+            "the game and allow players to queue again you can use the `cg` command. Both teams will need to verify that they wish to cancel the game.", inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
             "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
         await game.channel.send(embed=embed)
