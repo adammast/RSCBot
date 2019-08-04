@@ -78,14 +78,14 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def removeQueue(self, ctx, name):
+    async def removeQueue(self, ctx, *, queue_name):
         for queue in self.queues:
-            if queue.name == name:
+            if queue.name == queue_name:
                 self.queues.remove(queue)
                 await self._save_queues(ctx, self.queues)
                 await ctx.send("Done")
                 return
-        await ctx.send(":x: No queue set up with name: {0}".format(name))
+        await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
 
     @commands.guild_only()
     @commands.command(aliases=["qa"])
@@ -393,13 +393,14 @@ class SixMans(commands.Cog):
 
     async def _load_queues(self, ctx):
         queues = await self._queues(ctx)
+        self.queues = {}
         for key, value in queues.items():
             queue_channels = []
             for channel in value["Channels"]:
                 queue_channels.append(ctx.guild.get_channel(channel))
             for queue in self.queues:
                 if queue.name == key:
-                    await ctx.send(":x: There is already a queue set up with the name: {0}".format(queue))
+                    await ctx.send(":x: There is already a queue set up with the name: {0}".format(queue.name))
                     return
                 for channel in queue_channels:
                     if channel in queue.channels:
