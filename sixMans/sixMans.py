@@ -11,7 +11,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 team_size = 6
-minimum_game_time = 15
+minimum_game_time = 900 #Seconds (15 Minutes)
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -161,7 +161,7 @@ class SixMans(commands.Cog):
         date_time = datetime.datetime.now()
         channel_creation = ctx.channel.created_at
         game_time = date_time - channel_creation
-        if game_time.minutes < minimum_game_time:
+        if game_time.seconds < minimum_game_time:
             await ctx.send(":x: You can't report a game outcome until at least 15 minutes have passed since the game has started. "
                 "Current time that's passed = {0} minutes".format(game_time))
             return
