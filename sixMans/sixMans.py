@@ -295,7 +295,7 @@ class SixMans(commands.Cog):
         for player in sorted_players:
             member = await commands.MemberConverter().convert(ctx, player[0])
             player_info = player[1]
-            message += "`{0}` {1} `Points: {2}\tWins: {3}\tGames Played: {4}`\n".format(index, member.mention, player_info[player_points_key], 
+            message += "`{0}` {1} **Points:**{2} **Wins:**{3} **Games Played:**{4}\n".format(index, member.mention, player_info[player_points_key], 
                 player_info[player_wins_key], player_info[player_gp_key])
             index += 1
             if index > 10:
@@ -306,7 +306,7 @@ class SixMans(commands.Cog):
             author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
             if index is not None and index > 10:
                 author_info = sorted_players[author_index][1]
-                message += "`{0}` {1} `Points: {2}\tWins: {3}\tGames Played: {4}`\n".format(author_index + 1, author.mention, author_info[player_points_key], 
+                message += "`{0}` {1} **Points:**{2} **Wins:**{3} **Games Played:**{4}".format(author_index + 1, author.mention, author_info[player_points_key], 
                     author_info[player_wins_key], author_info[player_gp_key])
         except Exception:
             pass
