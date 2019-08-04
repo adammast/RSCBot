@@ -129,8 +129,8 @@ class SixMans(commands.Cog):
 
         six_mans_queue.queue.put(player)
 
-        await ctx.send("{0} added to queue. ({1}/{2})\nPlayers in the queue:{3}".format(player.display_name, 
-            six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue.queue])))
+        await ctx.send("{0} added to {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
         if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -146,10 +146,10 @@ class SixMans(commands.Cog):
         if player in six_mans_queue.queue:
             six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{0} removed from queue. ({1}/{2})\nPlayers in the queue:{3}".format(player.display_name, 
-                    six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue.queue])))
+                "{0} removed from the {1} queue. ({2}/{3})\nPlayers in the queue: {4}".format(player.display_name, six_mans_queue.name,
+                    six_mans_queue.queue.qsize(), team_size, ", ".join([player.nick for player in six_mans_queue.queue.queue])))
         else:
-            await ctx.send("{} is not in queue.".format(player.display_name))
+            await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
 
     @commands.guild_only()
     @commands.command(aliases=["kq"])
