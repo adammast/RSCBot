@@ -11,6 +11,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 team_size = 6
+minimum_game_time = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -70,7 +71,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["qi"])
     async def getQueueInfo(self, ctx, *, name):
         for queue in self.queues:
-            if queue.name == name:
+            if queue.name.lower() == name.lower():
                 await ctx.send(embed=self._format_queue_info(ctx, queue))
                 return
         await ctx.send(":x: No queue set up with name: {0}".format(name))
@@ -157,7 +158,15 @@ class SixMans(commands.Cog):
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series.
         'winning_team' must be either 'Blue' or 'Orange'"""
-        if winning_team != "Blue" and winning_team != "Orange":
+        date_time = datetime.datetime.now()
+        channel_creation = ctx.channel.created_at()
+        game_time = date_time - channel_creation
+        if game_time.minutes < minimum_game_time:
+            await ctx.send(":x: You can't report a game outcome until at least 15 minutes have passed since the game has started. "
+                "Current time that's passed = {0} minutes".format(game_time))
+            return
+
+        if winning_team.lower() != "blue" and winning_team.lower() != "orange":
             await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
             return
 
@@ -174,7 +183,7 @@ class SixMans(commands.Cog):
         #TODO: Validate report with other team
         winning_players = []
         losing_players = []
-        if winning_team == "Blue":
+        if winning_team.lower() == "blue":
             winning_players = game.blue
             losing_players = game.orange
         else:
@@ -215,7 +224,7 @@ class SixMans(commands.Cog):
         players = None
         if queue_name is not None:
             for queue in self.queues:
-                if queue.name == queue_name:
+                if queue.name.lower() == queue_name.lower():
                     players = queue.players
         else:
             players = await self._players(ctx)
