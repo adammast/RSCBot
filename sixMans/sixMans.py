@@ -158,13 +158,13 @@ class SixMans(commands.Cog):
         """Report which team won the series.
         'winning_team' must be either 'Blue' or 'Orange'"""
         if winning_team != "Blue" and winning_team != "Orange":
-            await ctx.send(":x: {0} is an invalid input for 'winning_team'. Must be either 'Blue' or 'Orange'".format(winning_team))
+            await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
             return
 
         game = self._get_game(ctx)
         six_mans_queue = None
         for queue in self.queues:
-            if queue.name == game.queue:
+            if queue.name == game.queueName:
                 six_mans_queue = queue
 
         if six_mans_queue is None:
@@ -195,7 +195,7 @@ class SixMans(commands.Cog):
             self._give_points(six_mans_queue.players, score, six_mans_queue.name)
             self._give_points(_players, score, six_mans_queue.name)
             _scores.insert(0, score)
-            
+
         _games_played += 1
         six_mans_queue.gamesPlayed += 1
 
