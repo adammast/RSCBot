@@ -293,7 +293,11 @@ class SixMans(commands.Cog):
         index = 1
         message = ""
         for player in sorted_players:
-            member = await commands.MemberConverter().convert(ctx, player[0])
+            try:
+                member = await commands.MemberConverter().convert(ctx, player[0])
+            except:
+                await ctx.send(":x: Can't find player with id: player[0]")
+                return
             player_info = player[1]
             message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}\n".format(index, member.mention, player_info[player_points_key], 
                 player_info[player_wins_key], player_info[player_gp_key])
