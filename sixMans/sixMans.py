@@ -67,7 +67,7 @@ class SixMans(commands.Cog):
         await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["qi"])
     async def getQueueInfo(self, ctx, *, name):
         for queue in self.queues:
             if queue.name == name:
@@ -153,7 +153,6 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["sr"])
-    @checks.admin_or_permissions(manage_guild=True)
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series.
         'winning_team' must be either 'Blue' or 'Orange'"""
@@ -205,9 +204,28 @@ class SixMans(commands.Cog):
         await self._save_games_played(ctx, _games_played)
 
         self.games.remove(game)
-        await ctx.send("Done. Channel will be deleted in 30 seconds")
+        await ctx.send("Done. Thanks for playing!\n**Channel will be deleted in 30 seconds**")
         await asyncio.sleep(30)
         await ctx.channel.delete()
+
+    @commands.guild_only()
+    @commands.command(aliases=["qlb"])
+    async def queueLeaderBoard(self, ctx, queue_name: str = None):
+        players = None
+        if queue_name is not None:
+            for queue in self.queues:
+                if queue.name == queue_name:
+                    players = queue.players
+        else:
+            players = await self._players(ctx)
+
+        if players is None:
+            await ctx.send(":x: Queue not found with name: {0}".format(queue_name))
+            return
+
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
+        for key, value in sorted_players:
+            await ctx.send("{0}, {1}".format(key, value))
 
     @commands.guild_only()
     @commands.command()
@@ -295,6 +313,13 @@ class SixMans(commands.Cog):
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
+        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other."
+            "\nWhen you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where"
+            "\nthe `winning_team` parameter is either `Blue` or `Orange`.", inline=False)
+        embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin."
+            "\nIf you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
         await game.channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
