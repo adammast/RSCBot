@@ -13,7 +13,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
-minimum_game_time = 900 #Seconds (15 Minutes)
+minimum_game_time = 600 #Seconds (10 Minutes)
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -210,13 +210,13 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series. Can only be used in a 6Mans game channel.
-        Only valid after 15 minutes have passed since the game started. Both teams will need to verify the results.
+        Only valid after 10 minutes have passed since the game started. Both teams will need to verify the results.
 
         `winning_team` must be either `Blue` or `Orange`"""
         await self._pre_load_queues(ctx)
         game_time = ctx.message.created_at - ctx.channel.created_at
         if game_time.seconds < minimum_game_time:
-            await ctx.send(":x: You can't report a game outcome until at least **15 minutes** have passed since the game has started."
+            await ctx.send(":x: You can't report a game outcome until at least **10 minutes** have passed since the game has started."
                 "\nCurrent time that's passed = **{0} minute(s)**".format(game_time.seconds // 60))
             return
 
