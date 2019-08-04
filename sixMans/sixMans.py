@@ -181,9 +181,9 @@ class SixMans(commands.Cog):
             winning_players = game.orange
             losing_players = game.blue
 
-        _scores = self._scores(ctx)
-        _players = self._players(ctx)
-        _games_played = self._games_played(ctx)
+        _scores = await self._scores(ctx)
+        _players = await self._players(ctx)
+        _games_played = await self._games_played(ctx)
         date_time = datetime.datetime.now()
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, player, 1, date_time)
