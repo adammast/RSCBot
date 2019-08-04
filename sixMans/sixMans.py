@@ -102,7 +102,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         for member in members:
-            if member in six_mans_queue.queue:
+            if member in six_mans_queue.queue.queue:
                 await ctx.send("{} is already in queue.".format(member.display_name))
                 break
             six_mans_queue.queue.put(member)
@@ -119,7 +119,7 @@ class SixMans(commands.Cog):
         six_mans_queue = self._get_queue(ctx)
         player = ctx.message.author
 
-        if player in six_mans_queue.queue:
+        if player in six_mans_queue.queue.queue:
             await ctx.send(":x: You are already in the queue")
             return
         for game in self.games:
@@ -130,7 +130,7 @@ class SixMans(commands.Cog):
         six_mans_queue.queue.put(player)
 
         await ctx.send("{0} added to queue. ({1}/{2})\nPlayers in the queue:{3}".format(player.display_name, 
-            six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue])))
+            six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue.queue])))
         if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -146,7 +146,8 @@ class SixMans(commands.Cog):
         if player in six_mans_queue.queue:
             six_mans_queue.queue.remove(player)
             await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
+                "{0} removed from queue. ({1}/{2})\nPlayers in the queue:{3}".format(player.display_name, 
+                    six_mans_queue.queue.qsize(), team_size, ", ".join([player.name for player in six_mans_queue.queue.queue])))
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
