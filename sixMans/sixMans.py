@@ -157,9 +157,9 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series.
-        'winning_team' must be either 'Blue' or 'Orange'"""
+        `winning_team` must be either `Blue` or `Orange`"""
         date_time = datetime.datetime.now()
-        channel_creation = ctx.channel.created_at()
+        channel_creation = ctx.channel.created_at
         game_time = date_time - channel_creation
         if game_time.minutes < minimum_game_time:
             await ctx.send(":x: You can't report a game outcome until at least 15 minutes have passed since the game has started. "
