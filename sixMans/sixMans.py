@@ -296,7 +296,7 @@ class SixMans(commands.Cog):
             try:
                 member = await commands.MemberConverter().convert(ctx, player[0])
             except:
-                await ctx.send(":x: Can't find player with id: player[0]")
+                await ctx.send(":x: Can't find player with id: {}".format(player[0]))
                 return
             player_info = player[1]
             message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}\n".format(index, member.mention, player_info[player_points_key], 
@@ -351,7 +351,7 @@ class SixMans(commands.Cog):
             "When you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where "
             "the `winning_team` parameter is either `Blue` or `Orange`.", inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
-            "If you think the bot isn't working correctly or have suggestions to improve it, please contact @adammast#0190", inline=False)
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
         await game.channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
