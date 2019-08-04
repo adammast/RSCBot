@@ -393,7 +393,7 @@ class SixMans(commands.Cog):
 
     async def _load_queues(self, ctx):
         queues = await self._queues(ctx)
-        self.queues = {}
+        self.queues = []
         for key, value in queues.items():
             queue_channels = []
             for channel in value["Channels"]:
