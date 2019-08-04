@@ -210,7 +210,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
-    async def queueLeaderBoard(self, ctx, queue_name: str = None):
+    async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
         players = None
         if queue_name is not None:
             for queue in self.queues:
@@ -224,8 +224,7 @@ class SixMans(commands.Cog):
             return
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
-        for key, value in sorted_players:
-            await ctx.send("{0}, {1}".format(key, value))
+        await ctx.send(embed=self._format_leaderboard(ctx, sorted_players, queue_name))
 
     @commands.guild_only()
     @commands.command()
@@ -286,6 +285,32 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
+    def _format_leaderboard(self, ctx, sorted_players, queue_name):
+        if queue_name is None:
+            queue_name = ctx.guild.name
+        embed = discord.Embed(title="{0} Leaderboard".format(queue_name), color=discord.Colour.blue())
+        
+        index = 1
+        message = ""
+        for player in sorted_players:
+            member = await commands.MemberConverter().convert(ctx, player[0])
+            player_info = player[1]
+            message += "`{0}` {1}\t\tPoints:{2}\t\tWins{3}\t\tGames Played{4}\n".format(index, member.mention, player_info[player_points_key], 
+                player_info[player_wins_key], player_info[player_gp_key])
+            index += 1
+            if index > 10:
+                break
+        
+        author = ctx.author
+        author_index = [y[0] for y in sorted_players].index(author.id)
+        if index is not None and index > 10:
+            author_info = sorted_players[author_index][1]
+            message += "`{0}` {1}\t\tPoints:{2}\t\tWins{3}\t\tGames Played{4}\n".format(author_index + 1, author.mention, author_info[player_points_key], 
+                author_info[player_wins_key], author_info[player_gp_key])
+
+        embed.add_field(name="Most Points in {0}".format(queue_name), value=message, inline=False)
+        return embed
+
     async def _randomize_teams(self, ctx, six_mans_queue):
         self.busy = True
         game = await self._create_game(ctx, six_mans_queue)
@@ -315,11 +340,11 @@ class SixMans(commands.Cog):
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
-        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other."
-            "\nWhen you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where"
-            "\nthe `winning_team` parameter is either `Blue` or `Orange`.", inline=False)
-        embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin."
-            "\nIf you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
+        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other. "
+            "When you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where "
+            "the `winning_team` parameter is either `Blue` or `Orange`.", inline=False)
+        embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact @adammast#0190", inline=False)
         await game.channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
