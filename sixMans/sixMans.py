@@ -9,6 +9,8 @@ from queue import Queue
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 900 #Seconds (15 Minutes)
@@ -160,8 +162,8 @@ class SixMans(commands.Cog):
         `winning_team` must be either `Blue` or `Orange`"""
         game_time = ctx.message.created_at - ctx.channel.created_at
         if game_time.seconds < minimum_game_time:
-            await ctx.send(":x: You can't report a game outcome until at least 15 minutes have passed since the game has started. "
-                "Current time that's passed = {0} minutes".format(game_time.seconds // 60))
+            await ctx.send(":x: You can't report a game outcome until at least **15 minutes** have passed since the game has started."
+                "\nCurrent time that's passed = **{0} minutes**".format(game_time.seconds // 60))
             return
 
         if winning_team.lower() != "blue" and winning_team.lower() != "orange":
@@ -178,7 +180,29 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue not found for this channel, please message an Admin")
             return
 
-        #TODO: Validate report with other team
+        opposing_captain = None
+        if ctx.author in game.blue:
+            opposing_captain = game.captains[1] #Orange team captain
+        elif ctx.author in game.orange:
+            opposing_captain = game.captains[0] #Blue team captain
+
+        if opposing_captain is None:
+            await ctx.send(":x: Only players on one of the two teams can report the score")
+            return
+
+        msg = await ctx.send("{0} Please verify that the {1} team won the series".format(opposing_captain.mention, winning_team))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        pred = ReactionPredicate.yes_or_no(msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=pred)
+        if pred.result is True:
+        # User responded with tick
+            pass
+        else:
+        # User responded with cross
+            await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
+            return
+
         winning_players = []
         losing_players = []
         if winning_team.lower() == "blue":
@@ -343,6 +367,7 @@ class SixMans(commands.Cog):
         embed = discord.Embed(title="{0} Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
         embed.add_field(name="Lobby Info", value="**Username:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
@@ -464,8 +489,9 @@ class Game:
         self.players.update(self.blue)
 
     def get_new_captains_from_teams(self):
-        self.captains.append(list(self.orange)[0])
+        self.captains = []
         self.captains.append(list(self.blue)[0])
+        self.captains.append(list(self.orange)[0])
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
