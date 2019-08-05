@@ -225,6 +225,10 @@ class SixMans(commands.Cog):
             return
 
         game = self._get_game(ctx)
+        if game.scoreReported == True:
+            await ctx.send(":x: Someone has already reported the results or is waiting for verification")
+            return
+
         six_mans_queue = None
         for queue in self.queues:
             if queue.name == game.queueName:
@@ -247,6 +251,7 @@ class SixMans(commands.Cog):
         msg = await ctx.send("{0} Please verify that the **{1}** team won the series".format(opposing_captain.mention, winning_team))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
+        game.scoreReported = True
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
         await ctx.bot.wait_for("reaction_add", check=pred)
         if pred.result is True:
@@ -254,6 +259,7 @@ class SixMans(commands.Cog):
             pass
         else:
         # User responded with cross
+            game.scoreReported = False
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
             return
 
@@ -542,6 +548,7 @@ class Game:
         self.roomPass = self._generate_name_pass()
         self.channel = channel
         self.queueName = queue_name
+        self.scoreReported = False
 
     def add_to_blue(self, player):
         self.players.remove(player)
