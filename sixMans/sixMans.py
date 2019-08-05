@@ -96,6 +96,19 @@ class SixMans(commands.Cog):
         await ctx.send("Done")
 
     @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeQueue(self, ctx, *, queue_name):
+        await self._pre_load_queues(ctx)
+        for queue in self.queues:
+            if queue.name == queue_name:
+                self.queues.remove(queue)
+                await self._save_queues(ctx, self.queues)
+                await ctx.send("Done")
+                return
+        await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
+
+    @commands.guild_only()
     @commands.command(aliases=["qn"])
     async def getQueueNames(self, ctx):
         await self._pre_load_queues(ctx)
@@ -113,19 +126,6 @@ class SixMans(commands.Cog):
                 await ctx.send(embed=self._format_queue_info(ctx, queue))
                 return
         await ctx.send(":x: No queue set up with name: {0}".format(name))
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def removeQueue(self, ctx, *, queue_name):
-        await self._pre_load_queues(ctx)
-        for queue in self.queues:
-            if queue.name == queue_name:
-                self.queues.remove(queue)
-                await self._save_queues(ctx, self.queues)
-                await ctx.send("Done")
-                return
-        await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
 
     @commands.guild_only()
     @commands.command(aliases=["qa"])
@@ -340,9 +340,11 @@ class SixMans(commands.Cog):
         If you're not in the top ten your name and rank will be shown at the bottom of the list."""
         await self._pre_load_queues(ctx)
         players = None
+        six_mans_queue = None
         if queue_name is not None:
             for queue in self.queues:
                 if queue.name.lower() == queue_name.lower():
+                    six_mans_queue = queue
                     players = queue.players
         else:
             players = await self._players(ctx)
@@ -351,8 +353,9 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue leaderboard not available for queue with name: {0}".format(queue_name))
             return
 
-        sorted_players = sorted(players.items(), key=lambda x: x[1][player_points_key], reverse=True)
-        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name))
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
+        sorted_players = sorted(sorted_players.items(), key=lambda x: x[1][player_points_key], reverse=True)
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, six_mans_queue))
 
     @commands.guild_only()
     @commands.command()
@@ -404,10 +407,14 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
-    async def _format_leaderboard(self, ctx, sorted_players, queue_name):
-        if queue_name is None:
+    async def _format_leaderboard(self, ctx, sorted_players, six_mans_queue):
+        if six_mans_queue is None:
             queue_name = ctx.guild.name
+        else:
+            queue_name = six_mans_queue.name
         embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
+        embed.add_field(name="Games Played", value="{}\n".format(six_mans_queue.gamesPlayed), inline=True)
+        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(six_mans_queue.players)), inline=True)
         
         index = 1
         message = ""
@@ -427,9 +434,9 @@ class SixMans(commands.Cog):
         author = ctx.author
         try:
             author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
-            if index is not None and index > 10:
+            if author_index is not None and author_index > 10:
                 author_info = sorted_players[author_index][1]
-                message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}".format(author_index + 1, author.mention, author_info[player_points_key], 
+                message += "\n\n`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}".format(author_index + 1, author.mention, author_info[player_points_key], 
                     author_info[player_wins_key], author_info[player_gp_key])
         except Exception:
             pass
