@@ -410,11 +410,14 @@ class SixMans(commands.Cog):
     async def _format_leaderboard(self, ctx, sorted_players, six_mans_queue):
         if six_mans_queue is None:
             queue_name = ctx.guild.name
+            games_played = await self._games_played(ctx)
         else:
             queue_name = six_mans_queue.name
+            games_played = six_mans_queue.gamesPlayed
+        
         embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
-        embed.add_field(name="Games Played", value="{}\n".format(six_mans_queue.gamesPlayed), inline=True)
-        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(six_mans_queue.players)), inline=True)
+        embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
+        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(sorted_players), inline=True)
         
         index = 1
         message = ""
