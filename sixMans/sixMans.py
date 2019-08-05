@@ -81,10 +81,11 @@ class SixMans(commands.Cog):
         for channel in channels:
             queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
         for queue in self.queues:
-            if queue.name == new_name:
-                await ctx.send(":x: There is already a queue set up with the name: {0}".format(new_name))
-                return
             if queue.name != current_name:
+                if queue.name == new_name:
+                    await ctx.send(":x: There is already a queue set up with the name: {0}".format(new_name))
+                    return
+                
                 for channel in queue_channels:
                     if channel in queue.channels:
                         await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
@@ -450,7 +451,7 @@ class SixMans(commands.Cog):
         author = ctx.author
         try:
             author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
-            if author_index is not None and author_index > 10:
+            if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
                 message += "\n\n`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}".format(author_index + 1, author.mention, author_info[player_points_key], 
                     author_info[player_wins_key], author_info[player_gp_key])
