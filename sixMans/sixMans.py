@@ -129,6 +129,17 @@ class SixMans(commands.Cog):
         await ctx.send(":x: No queue set up with name: {0}".format(name))
 
     @commands.guild_only()
+    @commands.command(aliases=["cq"])
+    async def checkQueue(self, ctx, *, name):
+        await self._pre_load_queues(ctx)
+        six_mans_queue = self._get_queue(ctx)
+        if six_mans_queue is None:
+            await ctx.send(":x: No queue set up in this channel")
+            return
+        
+        await ctx.send(embed=self._format_queue(ctx, six_mans_queue))
+
+    @commands.guild_only()
     @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueAll(self, ctx, *members: discord.Member):
@@ -179,8 +190,7 @@ class SixMans(commands.Cog):
 
         if player in six_mans_queue.queue:
             six_mans_queue.queue.remove(player)
-            await ctx.send(
-                "{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
+            await ctx.send("{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
                     six_mans_queue.queue.qsize(), team_size))
         else:
             await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
@@ -457,6 +467,9 @@ class SixMans(commands.Cog):
             for queue in self.queues:
                 if player in queue.queue:
                     queue.queue.remove(player)
+                    for channel in queue.channels:
+                        await channel.send("{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, queue.name,
+                            queue.queue.qsize(), team_size))
 
         orange = random.sample(game.players, 3)
         for player in orange:
@@ -535,12 +548,17 @@ class SixMans(commands.Cog):
                     return six_mans_queue
 
     def _format_queue_info(self, ctx, queue):
-        embed = discord.Embed(title="{0} Info".format(queue.name), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} 6 Mans Info".format(queue.name), color=discord.Colour.blue())
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
         embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
             .format(queue.points[pp_play_key], queue.points[pp_win_key]), inline=False)
+        return embed
+
+    def _format_queue(self, ctx, queue):
+        embed = discord.Embed(title="{0} 6 Mans Queue".format(queue.name), color=discord.Colour.blue())
+        embed.add_field(name="Players in Queue", value="{}\n".format(", ".join([player.mention for player in queue.queue])), inline=False)
         return embed
 
     async def _pre_load_queues(self, ctx):
