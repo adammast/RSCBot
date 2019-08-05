@@ -518,7 +518,7 @@ class SixMans(commands.Cog):
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        text_channel = await guild.create_text_channel(six_mans_queue.name, 
+        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), 
             overwrites= {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
             },
