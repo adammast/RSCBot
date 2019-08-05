@@ -477,7 +477,7 @@ class SixMans(commands.Cog):
         self.busy = False
 
     async def _display_game_info(self, ctx, game, six_mans_queue):
-        await game.text_channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
@@ -492,7 +492,7 @@ class SixMans(commands.Cog):
             "cancel the game.".format(ctx.prefix), inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
             "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
-        await game.text_channel.send(embed=embed)
+        await game.textChannel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
         players = [six_mans_queue.queue.get() for _ in range(team_size)]
@@ -509,12 +509,12 @@ class SixMans(commands.Cog):
             },
             category= await self._category(ctx))
         voice_channels = [
-            await guild.create_voice_channel("{0} 6 Mans Blue Team".format(six_mans_queue.name), 
+            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), 
                 overwrites= {
                     guild.default_role: discord.PermissionOverwrite(connect=False)
                 },
                 category= await self._category(ctx)),
-            await guild.create_voice_channel("{0} 6 Mans Orange Team".format(six_mans_queue.name), 
+            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), 
                 overwrites= {
                     guild.default_role: discord.PermissionOverwrite(connect=False)
                 },
@@ -524,7 +524,7 @@ class SixMans(commands.Cog):
 
     def _get_game(self, ctx):
         for game in self.games:
-            if game.text_channel == ctx.channel:
+            if game.textChannel == ctx.channel:
                 return game
 
     def _get_queue(self, ctx):
