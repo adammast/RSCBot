@@ -557,7 +557,7 @@ class SixMans(commands.Cog):
         return embed
 
     def _format_queue(self, ctx, queue):
-        player_list = "".format(", ".join([player.mention for player in queue.queue.queue]))
+        player_list = "{}".format(", ".join([player.mention for player in queue.queue.queue]))
         if player_list == "":
             player_list = "No players currently in the queue"
 
