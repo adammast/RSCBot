@@ -329,9 +329,11 @@ class SixMans(commands.Cog):
         await self._save_games_played(ctx, _games_played)
 
         self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel will be deleted in 30 seconds**")
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await asyncio.sleep(30)
         await ctx.channel.delete()
+        for vc in game.voiceChannels:
+            await vc.delete()
 
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
@@ -458,10 +460,12 @@ class SixMans(commands.Cog):
         orange = random.sample(game.players, 3)
         for player in orange:
             game.add_to_orange(player)
+            await game.voiceChannels[1].set_permissions(player, connect=True)
         
         blue = list(game.players)
         for player in blue:
             game.add_to_blue(player)
+            await game.voiceChannels[0].set_permissions(player, connect=True)
 
         game.reset_players()
         game.get_new_captains_from_teams()
@@ -473,7 +477,7 @@ class SixMans(commands.Cog):
         self.busy = False
 
     async def _display_game_info(self, ctx, game, six_mans_queue):
-        await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        await game.text_channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
@@ -488,27 +492,39 @@ class SixMans(commands.Cog):
             "cancel the game.".format(ctx.prefix), inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
             "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
-        await game.channel.send(embed=embed)
+        await game.text_channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
         players = [six_mans_queue.queue.get() for _ in range(team_size)]
-        channel = await self._create_channel(ctx, six_mans_queue)
+        text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
         for player in players:
-            await channel.set_permissions(player, read_messages=True)
-        return Game(players, channel, six_mans_queue.name)
+            await text_channel.set_permissions(player, read_messages=True)
+        return Game(players, text_channel, voice_channels, six_mans_queue.name)
 
-    async def _create_channel(self, ctx, six_mans_queue):
+    async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        channel = await guild.create_text_channel(six_mans_queue.name, 
+        text_channel = await guild.create_text_channel(six_mans_queue.name, 
             overwrites= {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
             },
             category= await self._category(ctx))
-        return channel
+        voice_channels = [
+            await guild.create_voice_channel("{0} 6 Mans Blue Team".format(six_mans_queue.name), 
+                overwrites= {
+                    guild.default_role: discord.PermissionOverwrite(connect=False)
+                },
+                category= await self._category(ctx)),
+            await guild.create_voice_channel("{0} 6 Mans Orange Team".format(six_mans_queue.name), 
+                overwrites= {
+                    guild.default_role: discord.PermissionOverwrite(connect=False)
+                },
+                category= await self._category(ctx))
+        ]
+        return text_channel, voice_channels
 
     def _get_game(self, ctx):
         for game in self.games:
-            if game.channel == ctx.channel:
+            if game.text_channel == ctx.channel:
                 return game
 
     def _get_queue(self, ctx):
@@ -582,14 +598,15 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
 class Game:
-    def __init__(self, players, channel, queue_name):
+    def __init__(self, players, text_channel, voice_channels, queue_name):
         self.players = set(players)
         self.captains = list(random.sample(self.players, 2))
         self.orange = set()
         self.blue = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.channel = channel
+        self.textChannel = text_channel
+        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
         self.queueName = queue_name
         self.scoreReported = False
 
