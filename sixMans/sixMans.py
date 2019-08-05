@@ -558,7 +558,7 @@ class SixMans(commands.Cog):
 
     def _format_queue(self, ctx, queue):
         embed = discord.Embed(title="{0} 6 Mans Queue".format(queue.name), color=discord.Colour.blue())
-        embed.add_field(name="Players in Queue", value="{}\n".format(", ".join([player.mention for player in queue.queue])), inline=False)
+        embed.add_field(name="Players in Queue", value="{}\n".format(", ".join([player.mention for player in queue.queue.queue])), inline=False)
         return embed
 
     async def _pre_load_queues(self, ctx):
