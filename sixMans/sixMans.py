@@ -354,7 +354,7 @@ class SixMans(commands.Cog):
             return
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
-        sorted_players = sorted(sorted_players.items(), key=lambda x: x[1][player_points_key], reverse=True)
+        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, six_mans_queue))
 
     @commands.guild_only()
