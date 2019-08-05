@@ -368,7 +368,7 @@ class SixMans(commands.Cog):
     async def _format_leaderboard(self, ctx, sorted_players, queue_name):
         if queue_name is None:
             queue_name = ctx.guild.name
-        embed = discord.Embed(title="{0} Leaderboard".format(queue_name), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
         
         index = 1
         message = ""
@@ -417,15 +417,15 @@ class SixMans(commands.Cog):
         game.reset_players()
         game.get_new_captains_from_teams()
 
-        await self._display_game_info(game, six_mans_queue)
+        await self._display_game_info(ctx, game, six_mans_queue)
 
         self.games.append(game)
 
         self.busy = False
 
-    async def _display_game_info(self, game, six_mans_queue):
+    async def _display_game_info(self, ctx, game, six_mans_queue):
         await game.channel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="{0} Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
@@ -433,11 +433,11 @@ class SixMans(commands.Cog):
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
         embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-            "When you are done playing with the current teams please report the winning team using the command `sr [winning_team]` where "
+            "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
             "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-            "the game and allow players to queue again you can use the `cg` command. Both teams will need to verify that they wish to cancel the game.", inline=False)
+            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to cancel the game.", inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
-            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.".format(ctx.prefix), inline=False)
         await game.channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
