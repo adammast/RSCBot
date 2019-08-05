@@ -63,6 +63,39 @@ class SixMans(commands.Cog):
         await ctx.send("Done")
 
     @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def editQueue(self, ctx, current_name, new_name, points_per_play: int, points_per_win: int, *channels):
+        await self._pre_load_queues(ctx)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == current_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            await ctx.send(":x: No queue found with name: {0}".format(current_name))
+            return
+
+        queue_channels = []
+        for channel in channels:
+            queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
+        for queue in self.queues:
+            if queue.name == new_name:
+                await ctx.send(":x: There is already a queue set up with the name: {0}".format(new_name))
+                return
+            for channel in queue_channels:
+                if channel in queue.channels:
+                    await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                    return
+
+        six_mans_queue.name = new_name
+        six_mans_queue.points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
+        six_mans_queue.channels = queue_channels
+        await self._save_queues(ctx, self.queues)
+        await ctx.send("Done")
+
+    @commands.guild_only()
     @commands.command(aliases=["qn"])
     async def getQueueNames(self, ctx):
         await self._pre_load_queues(ctx)
@@ -132,7 +165,7 @@ class SixMans(commands.Cog):
         await ctx.send("{0} added to {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
             six_mans_queue.queue.qsize(), team_size))
         if six_mans_queue._queue_full():
-            await ctx.send("Queue is full! Teams are being created.")
+            await ctx.send("**Queue is full! Teams are being created.**")
             await self._randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
