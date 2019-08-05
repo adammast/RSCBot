@@ -84,10 +84,11 @@ class SixMans(commands.Cog):
             if queue.name == new_name:
                 await ctx.send(":x: There is already a queue set up with the name: {0}".format(new_name))
                 return
-            for channel in queue_channels:
-                if channel in queue.channels:
-                    await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
-                    return
+            if queue.name != current_name:
+                for channel in queue_channels:
+                    if channel in queue.channels:
+                        await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                        return
 
         six_mans_queue.name = new_name
         six_mans_queue.points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
