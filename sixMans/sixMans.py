@@ -435,9 +435,10 @@ class SixMans(commands.Cog):
         embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
             "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
             "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to cancel the game.", inline=False)
+            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+            "cancel the game.".format(ctx.prefix), inline=False)
         embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
-            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.".format(ctx.prefix), inline=False)
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
         await game.channel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
