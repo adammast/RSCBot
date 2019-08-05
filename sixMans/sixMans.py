@@ -417,7 +417,7 @@ class SixMans(commands.Cog):
         
         embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
-        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(sorted_players), inline=True)
+        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(sorted_players)), inline=True)
         
         index = 1
         message = ""
