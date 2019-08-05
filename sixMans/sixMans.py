@@ -130,7 +130,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["cq"])
-    async def checkQueue(self, ctx, *, name):
+    async def checkQueue(self, ctx):
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         if six_mans_queue is None:
