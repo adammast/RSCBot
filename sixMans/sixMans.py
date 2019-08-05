@@ -216,7 +216,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         game_time = ctx.message.created_at - ctx.channel.created_at
         if game_time.seconds < minimum_game_time:
-            await ctx.send(":x: You can't report a game outcome until at least **10 minutes** have passed since the game has started."
+            await ctx.send(":x: You can't report a game outcome until at least **10 minutes** have passed since the game was created."
                 "\nCurrent time that's passed = **{0} minute(s)**".format(game_time.seconds // 60))
             return
 
