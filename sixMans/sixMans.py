@@ -191,7 +191,7 @@ class SixMans(commands.Cog):
             await self._randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
-    @commands.command(aliases=["dq", "leave"])
+    @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
         await self._pre_load_queues(ctx)
