@@ -121,13 +121,22 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["qi"])
-    async def getQueueInfo(self, ctx, *, name):
+    async def getQueueInfo(self, ctx, *, queue_name=None):
         await self._pre_load_queues(ctx)
-        for queue in self.queues:
-            if queue.name.lower() == name.lower():
-                await ctx.send(embed=self._format_queue_info(ctx, queue))
-                return
-        await ctx.send(":x: No queue set up with name: {0}".format(name))
+        if queue_name is not None:
+            for queue in self.queues:
+                if queue.name.lower() == queue_name.lower():
+                    await ctx.send(embed=self._format_queue_info(ctx, queue))
+                    return
+            await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
+            return
+
+        six_mans_queue = self._get_queue(ctx)
+        if six_mans_queue is None:
+            await ctx.send(":x: No queue set up in this channel")
+            return
+        
+        await ctx.send(embed=self._format_queue_info(ctx, six_mans_queue))
 
     @commands.guild_only()
     @commands.command(aliases=["cq"])
