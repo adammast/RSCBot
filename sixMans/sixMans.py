@@ -256,6 +256,8 @@ class SixMans(commands.Cog):
             await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
             await asyncio.sleep(30)
             await ctx.channel.delete()
+            for vc in game.voiceChannels:
+                await vc.delete()
         else:
         # User responded with cross
             await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
