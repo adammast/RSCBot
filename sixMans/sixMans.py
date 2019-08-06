@@ -263,6 +263,64 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
 
     @commands.guild_only()
+    @commands.command(aliases=["fr"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def forceResult(self, ctx, winning_team):
+        await self._pre_load_queues(ctx)
+        if winning_team.lower() != "blue" and winning_team.lower() != "orange":
+            await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
+            return
+
+        game = self._get_game(ctx)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == game.queueName:
+                six_mans_queue = queue
+
+        if six_mans_queue is None:
+            await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
+            return
+
+        winning_players = []
+        losing_players = []
+        if winning_team.lower() == "blue":
+            winning_players = game.blue
+            losing_players = game.orange
+        else:
+            winning_players = game.orange
+            losing_players = game.blue
+
+        _scores = await self._scores(ctx)
+        _players = await self._players(ctx)
+        _games_played = await self._games_played(ctx)
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        for player in winning_players:
+            score = self._create_player_score(six_mans_queue, player, 1, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+        for player in losing_players:
+            score = self._create_player_score(six_mans_queue, player, 0, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+
+        _games_played += 1
+        six_mans_queue.gamesPlayed += 1
+
+        await self._save_scores(ctx, _scores)
+        await self._save_queues(ctx, self.queues)
+        await self._save_players(ctx, _players)
+        await self._save_games_played(ctx, _games_played)
+
+        self.games.remove(game)
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
+        await asyncio.sleep(30)
+        await ctx.channel.delete()
+        for vc in game.voiceChannels:
+            await vc.delete()
+
+    @commands.guild_only()
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx, winning_team):
         """Report which team won the series. Can only be used in a 6Mans game channel.
