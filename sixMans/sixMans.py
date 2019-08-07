@@ -358,7 +358,7 @@ class SixMans(commands.Cog):
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
-    @commands.command(aliases=["qlb"])
+    @commands.group(aliases=["qlb"])
     async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
         """Get the top ten players in points for the specific queue. If no queue name is given the list will be the top ten players across all queues.
         If you're not in the top ten your name and rank will be shown at the bottom of the list."""
@@ -382,6 +382,11 @@ class SixMans(commands.Cog):
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
         sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played))
+
+    @commands.guild_only()
+    @queueLeaderBoard.command(aliases=["month"])
+    async def monthly(self, ctx, *, queue_name: str = None):
+        await ctx.send("Test passed")
 
     @commands.guild_only()
     @commands.command()
