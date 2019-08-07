@@ -2,7 +2,6 @@ import discord
 import collections
 import operator
 import random
-import datetime
 import asyncio
 
 from queue import Queue
@@ -11,6 +10,7 @@ from redbot.core import commands
 from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
+from datetime import datetime
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
@@ -359,9 +359,13 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.group(aliases=["qlb"])
-    async def queueLeaderBoard(self, ctx, *, queue_name: str = None):
+    async def queueLeaderBoard(self, ctx):
         """Get the top ten players in points for the specific queue. If no queue name is given the list will be the top ten players across all queues.
         If you're not in the top ten your name and rank will be shown at the bottom of the list."""
+
+    @commands.guild_only()
+    @queueLeaderBoard.command(aliases=["all-time", "alltime"])
+    async def overall(self, ctx, *, queue_name: str = None):
         await self._pre_load_queues(ctx)
         players = None
         six_mans_queue = None
@@ -384,9 +388,16 @@ class SixMans(commands.Cog):
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played))
 
     @commands.guild_only()
-    @queueLeaderBoard.command(aliases=["month"])
-    async def monthly(self, ctx, *, queue_name: str = None):
-        await ctx.send("Test passed")
+    @queueLeaderBoard.command(aliases=["day"])
+    async def daily(self, ctx, *, queue_name: str = None):
+        await self._pre_load_queues(ctx)
+        players = None
+        six_mans_queue = None
+        scores = self._scores(ctx)
+
+        now = datetime.now()
+        then = datetime.strftime(scores[0]["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)")
+        await ctx.send("{0}".format(then))
 
     @commands.guild_only()
     @commands.command()
@@ -477,7 +488,7 @@ class SixMans(commands.Cog):
         _scores = await self._scores(ctx)
         _players = await self._players(ctx)
         _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        date_time = datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, player, 1, date_time)
             self._give_points(six_mans_queue.players, score)
