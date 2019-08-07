@@ -281,44 +281,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
-        winning_players = []
-        losing_players = []
-        if winning_team.lower() == "blue":
-            winning_players = game.blue
-            losing_players = game.orange
-        else:
-            winning_players = game.orange
-            losing_players = game.blue
-
-        _scores = await self._scores(ctx)
-        _players = await self._players(ctx)
-        _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
-        for player in winning_players:
-            score = self._create_player_score(six_mans_queue, player, 1, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-        for player in losing_players:
-            score = self._create_player_score(six_mans_queue, player, 0, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-
-        _games_played += 1
-        six_mans_queue.gamesPlayed += 1
-
-        await self._save_scores(ctx, _scores)
-        await self._save_queues(ctx, self.queues)
-        await self._save_players(ctx, _players)
-        await self._save_games_played(ctx, _games_played)
-
-        self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
-        await asyncio.sleep(30)
-        await ctx.channel.delete()
-        for vc in game.voiceChannels:
-            await vc.delete()
+        await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
     @commands.command(aliases=["sr"])
@@ -366,7 +329,7 @@ class SixMans(commands.Cog):
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         game.scoreReported = True
-        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        pred = ReactionPredicate.yes_or_no(msg, game.blue)
         await ctx.bot.wait_for("reaction_add", check=pred)
         if pred.result is True:
         # User responded with tick
@@ -377,44 +340,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
             return
 
-        winning_players = []
-        losing_players = []
-        if winning_team.lower() == "blue":
-            winning_players = game.blue
-            losing_players = game.orange
-        else:
-            winning_players = game.orange
-            losing_players = game.blue
-
-        _scores = await self._scores(ctx)
-        _players = await self._players(ctx)
-        _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
-        for player in winning_players:
-            score = self._create_player_score(six_mans_queue, player, 1, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-        for player in losing_players:
-            score = self._create_player_score(six_mans_queue, player, 0, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-
-        _games_played += 1
-        six_mans_queue.gamesPlayed += 1
-
-        await self._save_scores(ctx, _scores)
-        await self._save_queues(ctx, self.queues)
-        await self._save_players(ctx, _players)
-        await self._save_games_played(ctx, _games_played)
-
-        self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
-        await asyncio.sleep(30)
-        await ctx.channel.delete()
-        for vc in game.voiceChannels:
-            await vc.delete()
+        await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
@@ -465,6 +391,46 @@ class SixMans(commands.Cog):
         """Unsets the six mans category channel. Six mans channels will not be created if this is not set"""
         await self._save_category(ctx, None)
         await ctx.send("Done")
+
+    async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
+        winning_players = []
+        losing_players = []
+        if winning_team.lower() == "blue":
+            winning_players = game.blue
+            losing_players = game.orange
+        else:
+            winning_players = game.orange
+            losing_players = game.blue
+
+        _scores = await self._scores(ctx)
+        _players = await self._players(ctx)
+        _games_played = await self._games_played(ctx)
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        for player in winning_players:
+            score = self._create_player_score(six_mans_queue, player, 1, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+        for player in losing_players:
+            score = self._create_player_score(six_mans_queue, player, 0, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+
+        _games_played += 1
+        six_mans_queue.gamesPlayed += 1
+
+        await self._save_scores(ctx, _scores)
+        await self._save_queues(ctx, self.queues)
+        await self._save_players(ctx, _players)
+        await self._save_games_played(ctx, _games_played)
+
+        self.games.remove(game)
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
+        await asyncio.sleep(30)
+        await ctx.channel.delete()
+        for vc in game.voiceChannels:
+            await vc.delete()
 
     def _give_points(self, players_dict, score):
         player_id = score["Player"]
