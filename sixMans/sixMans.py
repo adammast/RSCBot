@@ -364,8 +364,8 @@ class SixMans(commands.Cog):
         If you're not in the top ten your name and rank will be shown at the bottom of the list."""
 
     @commands.guild_only()
-    @queueLeaderBoard.command(aliases=["all-time", "alltime"])
-    async def overall(self, ctx, *, queue_name: str = None):
+    @queueLeaderBoard.command(aliases=["all-time", "overall"])
+    async def alltime(self, ctx, *, queue_name: str = None):
         """All-Time leader board"""
         await self._pre_load_queues(ctx)
         players = None
@@ -397,7 +397,7 @@ class SixMans(commands.Cog):
         six_mans_queue = None
         scores = await self._scores(ctx)
 
-        day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
+        day_ago = datetime.now() - datetime.timedelta(days=1)
         valid_scores = []
         for score in scores:
             if datetime.strptime(score["DateTime"]) > day_ago:
