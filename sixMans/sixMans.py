@@ -366,7 +366,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["all-time", "overall"])
     async def alltime(self, ctx, *, queue_name: str = None):
-        """All-Time leader board"""
+        """All-time leader board"""
         await self._pre_load_queues(ctx)
         players = None
         six_mans_queue = None
@@ -386,25 +386,37 @@ class SixMans(commands.Cog):
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
         sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
-        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played))
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["day"])
     async def daily(self, ctx, *, queue_name: str = None):
         """Daily leader board. All scores from the last 24 hours will count"""
         await self._pre_load_queues(ctx)
-        players = None
-        six_mans_queue = None
         scores = await self._scores(ctx)
 
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
-        valid_scores = []
+        players = {}
+        valid_scores = 0
         for score in scores:
-            if datetime.datetime.strptime(score["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)") > day_ago:
-                valid_scores.append(score)
+            if datetime.datetime.strptime(score["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)") > day_ago and (queue_name is None or score["Queue"].lower() == queue_name.lower()):
+                self._give_points(players, score)
+                valid_scores +=1
             else:
                 break
-        await ctx.send("{0}".format(len(valid_scores)))
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        if queue_name is None:
+            queue_name = ctx.guild.name
+
+        games_played = valid_scores // 6
+
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
+        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
 
     @commands.guild_only()
     @commands.command()
@@ -563,10 +575,10 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
-    async def _format_leaderboard(self, ctx, sorted_players, queue_name, games_played):
-        embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
+    async def _format_leaderboard(self, ctx, sorted_players, queue_name, games_played, lb_format):
+        embed = discord.Embed(title="{0} 6 Mans {1} Leaderboard".format(queue_name, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
-        embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(sorted_players)), inline=True)
+        embed.add_field(name="Unique Players", value="{}\n".format(len(sorted_players)), inline=True)
         
         index = 1
         message = ""
@@ -593,7 +605,7 @@ class SixMans(commands.Cog):
         except Exception:
             pass
 
-        embed.add_field(name="Most Points in {0}".format(queue_name), value=message, inline=False)
+        embed.add_field(name="Most Points", value=message, inline=False)
         return embed
 
     async def _randomize_teams(self, ctx, six_mans_queue):
