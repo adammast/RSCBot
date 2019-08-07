@@ -14,6 +14,7 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
+verify_timeout = 10
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -245,22 +246,26 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can cancel the game.")
             return
 
-        msg = await ctx.send("{0} Please verify that both teams want to cancel the game.".format(opposing_captain.mention))
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, verify_timeout))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
-        pred = ReactionPredicate.yes_or_no(msg, game.blue)
-        await ctx.bot.wait_for("reaction_add", check=pred)
-        if pred.result is True:
-        # User responded with tick
-            self.games.remove(game)
-            await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
-            await asyncio.sleep(30)
-            await ctx.channel.delete()
-            for vc in game.voiceChannels:
-                await vc.delete()
-        else:
-        # User responded with cross
-            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result is True:
+            # User responded with tick
+                self.games.remove(game)
+                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await asyncio.sleep(30)
+                await ctx.channel.delete()
+                for vc in game.voiceChannels:
+                    await vc.delete()
+            else:
+            # User responded with cross
+                await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again."
+                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
@@ -325,20 +330,25 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
 
-        msg = await ctx.send("{0} Please verify that the **{1}** team won the series".format(opposing_captain.mention, winning_team))
+        msg = await ctx.send("{0} Please verify that the **{1}** team won the series. You have {2} seconds to verify"
+            .format(opposing_captain.mention, winning_team, verify_timeout))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         game.scoreReported = True
-        pred = ReactionPredicate.yes_or_no(msg, game.blue)
-        await ctx.bot.wait_for("reaction_add", check=pred)
-        if pred.result is True:
-        # User responded with tick
-            pass
-        else:
-        # User responded with cross
-            game.scoreReported = False
-            await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
-            return
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result is True:
+            # User responded with tick
+                pass
+            else:
+            # User responded with cross
+                game.scoreReported = False
+                await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
+                return
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Score report not verified in time. To report the score you will need to use the `{0}sr` command again."
+                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
 
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
