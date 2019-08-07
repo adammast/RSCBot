@@ -366,6 +366,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["all-time", "alltime"])
     async def overall(self, ctx, *, queue_name: str = None):
+        """All-Time leader board"""
         await self._pre_load_queues(ctx)
         players = None
         six_mans_queue = None
@@ -390,10 +391,11 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["day"])
     async def daily(self, ctx, *, queue_name: str = None):
+        """Daily leader board. All scores from the last 24 hours will count"""
         await self._pre_load_queues(ctx)
         players = None
         six_mans_queue = None
-        scores = self._scores(ctx)
+        scores = await self._scores(ctx)
 
         now = datetime.now()
         then = datetime.strftime(scores[0]["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)")
