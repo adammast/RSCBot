@@ -248,7 +248,7 @@ class SixMans(commands.Cog):
         msg = await ctx.send("{0} Please verify that both teams want to cancel the game.".format(opposing_captain.mention))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
-        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        pred = ReactionPredicate.yes_or_no(msg, game.blue)
         await ctx.bot.wait_for("reaction_add", check=pred)
         if pred.result is True:
         # User responded with tick
