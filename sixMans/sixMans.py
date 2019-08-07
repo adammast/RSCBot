@@ -373,6 +373,7 @@ class SixMans(commands.Cog):
         if queue_name is not None:
             for queue in self.queues:
                 if queue.name.lower() == queue_name.lower():
+                    queue_name = queue.name
                     players = queue.players
                     games_played = six_mans_queue.gamesPlayed
         else:
@@ -411,6 +412,10 @@ class SixMans(commands.Cog):
 
         if queue_name is None:
             queue_name = ctx.guild.name
+        else:
+            for queue in self.queues:
+                if queue.name.lower() == queue_name.lower():
+                    queue_name = queue.name
 
         games_played = valid_scores // 6
 
