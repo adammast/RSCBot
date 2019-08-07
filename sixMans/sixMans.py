@@ -400,7 +400,7 @@ class SixMans(commands.Cog):
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
         valid_scores = []
         for score in scores:
-            if datetime.datetime.strptime(score["DateTime"]) > day_ago:
+            if datetime.datetime.strptime(score["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)") > day_ago:
                 valid_scores.append(score)
             else:
                 break
