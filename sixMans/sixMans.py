@@ -398,7 +398,7 @@ class SixMans(commands.Cog):
         scores = await self._scores(ctx)
 
         now = datetime.now()
-        then = datetime.strftime(scores[0]["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)")
+        then = datetime.strptime(scores[0]["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)")
         await ctx.send("{0}".format(then))
 
     @commands.guild_only()
