@@ -3,6 +3,7 @@ import collections
 import operator
 import random
 import asyncio
+import datetime
 
 from queue import Queue
 from redbot.core import Config
@@ -10,7 +11,6 @@ from redbot.core import commands
 from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
-from datetime import datetime
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
@@ -397,10 +397,10 @@ class SixMans(commands.Cog):
         six_mans_queue = None
         scores = await self._scores(ctx)
 
-        day_ago = datetime.now() - datetime.timedelta(days=1)
+        day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
         valid_scores = []
         for score in scores:
-            if datetime.strptime(score["DateTime"]) > day_ago:
+            if datetime.datetime.strptime(score["DateTime"]) > day_ago:
                 valid_scores.append(score)
             else:
                 break
@@ -495,7 +495,7 @@ class SixMans(commands.Cog):
         _scores = await self._scores(ctx)
         _players = await self._players(ctx)
         _games_played = await self._games_played(ctx)
-        date_time = datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, player, 1, date_time)
             self._give_points(six_mans_queue.players, score)
