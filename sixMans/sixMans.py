@@ -369,13 +369,12 @@ class SixMans(commands.Cog):
         """All-time leader board"""
         await self._pre_load_queues(ctx)
         players = None
-        six_mans_queue = None
         if queue_name is not None:
             for queue in self.queues:
                 if queue.name.lower() == queue_name.lower():
                     queue_name = queue.name
                     players = queue.players
-                    games_played = six_mans_queue.gamesPlayed
+                    games_played = queue.gamesPlayed
         else:
             players = await self._players(ctx)
             queue_name = ctx.guild.name
@@ -397,31 +396,57 @@ class SixMans(commands.Cog):
         scores = await self._scores(ctx)
 
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
-        players = {}
-        valid_scores = 0
-        for score in scores:
-            if datetime.datetime.strptime(score["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)") > day_ago and (queue_name is None or score["Queue"].lower() == queue_name.lower()):
-                self._give_points(players, score)
-                valid_scores +=1
-            else:
-                break
+        players, games_played = self._filter_scores(scores, day_ago, queue_name)
 
         if players is None or players == {}:
             await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
             return
 
-        if queue_name is None:
-            queue_name = ctx.guild.name
-        else:
-            for queue in self.queues:
-                if queue.name.lower() == queue_name.lower():
-                    queue_name = queue.name
-
-        games_played = valid_scores // 6
+        queue_name = self._get_queue_name(ctx, queue_name)
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
         sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
+
+    @commands.guild_only()
+    @queueLeaderBoard.command(aliases=["week"])
+    async def weekly(self, ctx, *, queue_name: str = None):
+        """Weekly leader board. All scores from the last 7 days will count"""
+        await self._pre_load_queues(ctx)
+        scores = await self._scores(ctx)
+
+        week_ago = datetime.datetime.now() - datetime.timedelta(days=7)
+        players, games_played = self._filter_scores(scores, week_ago, queue_name)
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        queue_name = self._get_queue_name(ctx, queue_name)
+
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
+        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Weekly"))
+
+    @commands.guild_only()
+    @queueLeaderBoard.command(aliases=["month"])
+    async def monthly(self, ctx, *, queue_name: str = None):
+        """Weekly leader board. All scores from the last month will count"""
+        await self._pre_load_queues(ctx)
+        scores = await self._scores(ctx)
+
+        month_ago = datetime.datetime.now() - datetime.timedelta(months=1)
+        players, games_played = self._filter_scores(scores, month_ago, queue_name)
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        queue_name = self._get_queue_name(ctx, queue_name)
+
+        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
+        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Monthly"))
 
     @commands.guild_only()
     @commands.command()
@@ -580,6 +605,17 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
+    def _filter_scores(self, scores, start_date, queue_name):
+        players = {}
+        valid_scores = 0
+        for score in scores:
+            if datetime.datetime.strptime(score["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)") > start_date and (queue_name is None or score["Queue"].lower() == queue_name.lower()):
+                self._give_points(players, score)
+                valid_scores +=1
+            else:
+                break
+        return players, (valid_scores // 6)
+
     async def _format_leaderboard(self, ctx, sorted_players, queue_name, games_played, lb_format):
         embed = discord.Embed(title="{0} 6 Mans {1} Leaderboard".format(queue_name, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
@@ -704,6 +740,14 @@ class SixMans(commands.Cog):
             for channel in six_mans_queue.channels:
                 if channel == ctx.channel:
                     return six_mans_queue
+
+    def _get_queue_name(self, ctx, queue_name):
+        if queue_name is None:
+            return ctx.guild.name
+        else:
+            for queue in self.queues:
+                if queue.name.lower() == queue_name.lower():
+                    return queue.name
 
     def _format_queue_info(self, ctx, queue):
         embed = discord.Embed(title="{0} 6 Mans Info".format(queue.name), color=discord.Colour.blue())
