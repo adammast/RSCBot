@@ -415,7 +415,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
-        week_ago = datetime.datetime.now() - datetime.timedelta(days=7)
+        week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
         players, games_played = self._filter_scores(scores, week_ago, queue_name)
 
         if players is None or players == {}:
@@ -435,7 +435,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
-        month_ago = datetime.datetime.now() - datetime.timedelta(months=1)
+        month_ago = datetime.datetime.now() - datetime.timedelta(days=30.4)
         players, games_played = self._filter_scores(scores, month_ago, queue_name)
 
         if players is None or players == {}:
