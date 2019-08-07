@@ -14,6 +14,7 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
+verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -21,7 +22,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -226,6 +227,10 @@ class SixMans(commands.Cog):
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         await self._pre_load_queues(ctx)
         game = self._get_game(ctx)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a 6 mans game channel.")
+            return
+
         six_mans_queue = None
         for queue in self.queues:
             if queue.name == game.queueName:
@@ -245,22 +250,24 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can cancel the game.")
             return
 
-        msg = await ctx.send("{0} Please verify that both teams want to cancel the game.".format(opposing_captain.mention))
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, verify_timeout))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
-        await ctx.bot.wait_for("reaction_add", check=pred)
-        if pred.result is True:
-        # User responded with tick
-            self.games.remove(game)
-            await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
-            await asyncio.sleep(30)
-            await ctx.channel.delete()
-            for vc in game.voiceChannels:
-                await vc.delete()
-        else:
-        # User responded with cross
-            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `cg` command again.")
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result is True:
+                self.games.remove(game)
+                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await asyncio.sleep(30)
+                await ctx.channel.delete()
+                for vc in game.voiceChannels:
+                    await vc.delete()
+            else:
+                await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
+        except asyncio.TimeoutError:
+            await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again."
+                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
@@ -272,6 +279,10 @@ class SixMans(commands.Cog):
             return
 
         game = self._get_game(ctx)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a 6 mans game channel.")
+            return
+
         six_mans_queue = None
         for queue in self.queues:
             if queue.name == game.queueName:
@@ -281,44 +292,20 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
-        winning_players = []
-        losing_players = []
-        if winning_team.lower() == "blue":
-            winning_players = game.blue
-            losing_players = game.orange
+        msg = await ctx.send("{0} Please verify that the **{1}** team won the series.".format(ctx.author.mention, winning_team))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        game.scoreReported = True
+        pred = ReactionPredicate.yes_or_no(msg, ctx.author)
+        await ctx.bot.wait_for("reaction_add", check=pred)
+        if pred.result is True:
+            pass
         else:
-            winning_players = game.orange
-            losing_players = game.blue
+            game.scoreReported = False
+            await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
+            return
 
-        _scores = await self._scores(ctx)
-        _players = await self._players(ctx)
-        _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
-        for player in winning_players:
-            score = self._create_player_score(six_mans_queue, player, 1, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-        for player in losing_players:
-            score = self._create_player_score(six_mans_queue, player, 0, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-
-        _games_played += 1
-        six_mans_queue.gamesPlayed += 1
-
-        await self._save_scores(ctx, _scores)
-        await self._save_queues(ctx, self.queues)
-        await self._save_players(ctx, _players)
-        await self._save_games_played(ctx, _games_played)
-
-        self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
-        await asyncio.sleep(30)
-        await ctx.channel.delete()
-        for vc in game.voiceChannels:
-            await vc.delete()
+        await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
     @commands.command(aliases=["sr"])
@@ -339,6 +326,10 @@ class SixMans(commands.Cog):
             return
 
         game = self._get_game(ctx)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a 6 mans game channel.")
+            return
+
         if game.scoreReported == True:
             await ctx.send(":x: Someone has already reported the results or is waiting for verification")
             return
@@ -362,59 +353,27 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
 
-        msg = await ctx.send("{0} Please verify that the **{1}** team won the series".format(opposing_captain.mention, winning_team))
+        msg = await ctx.send("{0} Please verify that the **{1}** team won the series. You have {2} seconds to verify"
+            .format(opposing_captain.mention, winning_team, verify_timeout))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         game.scoreReported = True
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
-        await ctx.bot.wait_for("reaction_add", check=pred)
-        if pred.result is True:
-        # User responded with tick
-            pass
-        else:
-        # User responded with cross
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result is True:
+                pass
+            else:
+                game.scoreReported = False
+                await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
+                return
+        except asyncio.TimeoutError:
             game.scoreReported = False
-            await ctx.send(":x: Score report not verified. To report the score you will need to use the `sr` command again.")
+            await ctx.send(":x: Score report not verified in time. To report the score you will need to use the `{0}sr` command again."
+                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
-        winning_players = []
-        losing_players = []
-        if winning_team.lower() == "blue":
-            winning_players = game.blue
-            losing_players = game.orange
-        else:
-            winning_players = game.orange
-            losing_players = game.blue
-
-        _scores = await self._scores(ctx)
-        _players = await self._players(ctx)
-        _games_played = await self._games_played(ctx)
-        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
-        for player in winning_players:
-            score = self._create_player_score(six_mans_queue, player, 1, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-        for player in losing_players:
-            score = self._create_player_score(six_mans_queue, player, 0, date_time)
-            self._give_points(six_mans_queue.players, score)
-            self._give_points(_players, score)
-            _scores.insert(0, score)
-
-        _games_played += 1
-        six_mans_queue.gamesPlayed += 1
-
-        await self._save_scores(ctx, _scores)
-        await self._save_queues(ctx, self.queues)
-        await self._save_players(ctx, _players)
-        await self._save_games_played(ctx, _games_played)
-
-        self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
-        await asyncio.sleep(30)
-        await ctx.channel.delete()
-        for vc in game.voiceChannels:
-            await vc.delete()
+        await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
     @commands.command(aliases=["qlb"])
@@ -465,6 +424,72 @@ class SixMans(commands.Cog):
         """Unsets the six mans category channel. Six mans channels will not be created if this is not set"""
         await self._save_category(ctx, None)
         await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setHelperRole(self, ctx, helper_role: discord.Role):
+        """Sets the six mans helper role. Anyone with this role will be able to see all the game channels that are created"""
+        await self._save_helper_role(ctx, helper_role.id)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getHelperRole(self, ctx):
+        """Gets the channel currently assigned as the transaction channel"""
+        try:
+            await ctx.send("Six mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
+        except:
+            await ctx.send(":x: Six mans helper role not set")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unsetHelperRole(self, ctx):
+        """Unsets the six mans helper role."""
+        await self._save_helper_role(ctx, None)
+        await ctx.send("Done")
+
+    async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
+        winning_players = []
+        losing_players = []
+        if winning_team.lower() == "blue":
+            winning_players = game.blue
+            losing_players = game.orange
+        else:
+            winning_players = game.orange
+            losing_players = game.blue
+
+        _scores = await self._scores(ctx)
+        _players = await self._players(ctx)
+        _games_played = await self._games_played(ctx)
+        date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        for player in winning_players:
+            score = self._create_player_score(six_mans_queue, player, 1, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+        for player in losing_players:
+            score = self._create_player_score(six_mans_queue, player, 0, date_time)
+            self._give_points(six_mans_queue.players, score)
+            self._give_points(_players, score)
+            _scores.insert(0, score)
+
+        _games_played += 1
+        six_mans_queue.gamesPlayed += 1
+
+        await self._save_scores(ctx, _scores)
+        await self._save_queues(ctx, self.queues)
+        await self._save_players(ctx, _players)
+        await self._save_games_played(ctx, _games_played)
+
+        self.games.remove(game)
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
+        await asyncio.sleep(30)
+        await ctx.channel.delete()
+        for vc in game.voiceChannels:
+            await vc.delete()
 
     def _give_points(self, players_dict, score):
         player_id = score["Player"]
@@ -587,10 +612,18 @@ class SixMans(commands.Cog):
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), 
-            overwrites= {
+        helper_role = await self._helper_role(ctx)
+        if helper_role:
+            text_overwrites = {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                helper_role: discord.PermissionOverwrite(read_messages=True)
+            }
+        else:
+            text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
-            },
+            }
+        
+        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
             category= await self._category(ctx))
         voice_channels = [
             await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), 
@@ -689,6 +722,12 @@ class SixMans(commands.Cog):
 
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
+
+    async def _helper_role(self, ctx):
+        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
+
+    async def _save_helper_role(self, ctx, helper_role):
+        await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
 class Game:
     def __init__(self, players, text_channel, voice_channels, queue_name):
