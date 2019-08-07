@@ -368,18 +368,20 @@ class SixMans(commands.Cog):
         if queue_name is not None:
             for queue in self.queues:
                 if queue.name.lower() == queue_name.lower():
-                    six_mans_queue = queue
                     players = queue.players
+                    games_played = six_mans_queue.gamesPlayed
         else:
             players = await self._players(ctx)
+            queue_name = ctx.guild.name
+            games_played = await self._games_played(ctx)
 
         if players is None or players == {}:
-            await ctx.send(":x: Queue leaderboard not available for queue with name: {0}".format(queue_name))
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
             return
 
         sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
         sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
-        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, six_mans_queue))
+        await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played))
 
     @commands.guild_only()
     @commands.command()
@@ -435,7 +437,7 @@ class SixMans(commands.Cog):
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
-        player_list = "{}".format(", ".join([player.mention for player in six_mans_queue.queue.queue]))
+        player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
         embed.set_author(name="{0} added to the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
@@ -447,9 +449,7 @@ class SixMans(commands.Cog):
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
-        player_list = "{}".format(", ".join([player.mention for player in six_mans_queue.queue.queue]))
-        if player_list == "":
-            player_list = "No players currently in the queue"
+        player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.red())
         embed.set_author(name="{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
@@ -540,14 +540,7 @@ class SixMans(commands.Cog):
             "DateTime": date_time
         }
 
-    async def _format_leaderboard(self, ctx, sorted_players, six_mans_queue):
-        if six_mans_queue is None:
-            queue_name = ctx.guild.name
-            games_played = await self._games_played(ctx)
-        else:
-            queue_name = six_mans_queue.name
-            games_played = six_mans_queue.gamesPlayed
-        
+    async def _format_leaderboard(self, ctx, sorted_players, queue_name, games_played):
         embed = discord.Embed(title="{0} 6 Mans Leaderboard".format(queue_name), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(sorted_players)), inline=True)
@@ -682,13 +675,16 @@ class SixMans(commands.Cog):
         return embed
 
     def _format_queue(self, ctx, queue):
-        player_list = "{}".format(", ".join([player.mention for player in queue.queue.queue]))
-        if player_list == "":
-            player_list = "No players currently in the queue"
-
+        player_list = self._format_player_list(queue)
         embed = discord.Embed(title="{0} 6 Mans Queue".format(queue.name), color=discord.Colour.blue())
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
+
+    def _format_player_list(self, queue):
+        player_list = "{}".format(", ".join([player.mention for player in queue.queue.queue]))
+        if player_list == "":
+            player_list = "No players currently in the queue"
+        return player_list
 
     async def _pre_load_queues(self, ctx):
         if self.queues is None or self.queues == []:
