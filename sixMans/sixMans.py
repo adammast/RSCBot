@@ -161,8 +161,7 @@ class SixMans(commands.Cog):
             if member in six_mans_queue.queue.queue:
                 await ctx.send("{} is already in queue.".format(member.display_name))
                 break
-            six_mans_queue.queue.put(member)
-            await ctx.send("{} added to queue. ({:d}/{:d})".format(member.display_name, six_mans_queue.queue.qsize(), team_size))
+            await self._add_to_queue(member, six_mans_queue)
         if six_mans_queue._queue_full():
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -183,10 +182,7 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: You are already in a game")
                 return
 
-        six_mans_queue.queue.put(player)
-
-        await ctx.send("{0} added to {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), team_size))
+        await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
             await ctx.send("**Queue is full! Teams are being created.**")
             await self._randomize_teams(ctx, six_mans_queue)
@@ -200,9 +196,7 @@ class SixMans(commands.Cog):
         player = ctx.message.author
 
         if player in six_mans_queue.queue:
-            six_mans_queue.queue.remove(player)
-            await ctx.send("{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
-                    six_mans_queue.queue.qsize(), team_size))
+            await self._remove_from_queue(player, six_mans_queue)
         else:
             await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
 
@@ -214,9 +208,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         if player in six_mans_queue.queue:
-            six_mans_queue.queue.remove(player)
-            await ctx.send(
-                "{} removed from queue. ({:d}/{:d})".format(player.display_name, six_mans_queue.queue.qsize(), team_size))
+            await self._remove_from_queue(player, six_mans_queue)
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
@@ -240,12 +232,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
-        opposing_captain = None
-        if ctx.author in game.blue:
-            opposing_captain = game.captains[1] #Orange team captain
-        elif ctx.author in game.orange:
-            opposing_captain = game.captains[0] #Blue team captain
-
+        opposing_captain = self._get_opposing_captain(ctx, game)
         if opposing_captain is None:
             await ctx.send(":x: Only players on one of the two teams can cancel the game.")
             return
@@ -257,15 +244,12 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                self.games.remove(game)
                 await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
-                await asyncio.sleep(30)
-                await ctx.channel.delete()
-                for vc in game.voiceChannels:
-                    await vc.delete()
+                await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
+            self._swap_opposing_captain(game, opposing_captain)
             await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again."
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
 
@@ -305,6 +289,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
             return
 
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
@@ -343,12 +328,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
-        opposing_captain = None
-        if ctx.author in game.blue:
-            opposing_captain = game.captains[1] #Orange team captain
-        elif ctx.author in game.orange:
-            opposing_captain = game.captains[0] #Blue team captain
-
+        opposing_captain = self._get_opposing_captain(ctx, game)
         if opposing_captain is None:
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
@@ -369,10 +349,12 @@ class SixMans(commands.Cog):
                 return
         except asyncio.TimeoutError:
             game.scoreReported = False
+            self._swap_opposing_captain(game, opposing_captain)
             await ctx.send(":x: Score report not verified in time. To report the score you will need to use the `{0}sr` command again."
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
@@ -451,6 +433,32 @@ class SixMans(commands.Cog):
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
+    async def _add_to_queue(self, player, six_mans_queue):
+        six_mans_queue.queue.put(player)
+        player_list = "{}".format(", ".join([player.mention for player in six_mans_queue.queue.queue]))
+
+        embed = discord.Embed(title="{0} added to {1} queue. ({2}/{3})".format(player.mention, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size), color=discord.Colour.green())
+        embed.set_author(name="{}".format(player.display_name), icon_url="{}".format(player.avatar_url))
+        embed.add_field(name="Players in Queue", value=player_list, inline=False)
+
+        for channel in six_mans_queue.channels:
+            await channel.send(embed=embed)
+
+    async def _remove_from_queue(self, player, six_mans_queue):
+        six_mans_queue.queue.remove(player)
+        player_list = "{}".format(", ".join([player.mention for player in queue.queue.queue]))
+        if player_list == "":
+            player_list = "No players currently in the queue"
+
+        embed = discord.Embed(title="{0} removed from the {1} queue. ({2}/{3})".format(player.mention, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size), color=discord.Colour.red())
+        embed.set_author(name="{}".format(player.display_name), icon_url="{}".format(player.avatar_url))
+        embed.add_field(name="Players in Queue", value=player_list, inline=False)
+
+        for channel in six_mans_queue.channels:
+            await channel.send(embed=embed)
+
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
         losing_players = []
@@ -484,12 +492,29 @@ class SixMans(commands.Cog):
         await self._save_players(ctx, _players)
         await self._save_games_played(ctx, _games_played)
 
+        await self._remove_game(ctx, game)
+
+    async def _remove_game(self, ctx, game):
         self.games.remove(game)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await asyncio.sleep(30)
         await ctx.channel.delete()
         for vc in game.voiceChannels:
             await vc.delete()
+
+    def _get_opposing_captain(self, ctx, game):
+        opposing_captain = None
+        if ctx.author in game.blue:
+            opposing_captain = game.captains[1] #Orange team captain
+        elif ctx.author in game.orange:
+            opposing_captain = game.captains[0] #Blue team captain
+        return opposing_captain
+
+    def _swap_opposing_captain(self, game, opposing_captain):
+        if opposing_captain in game.blue:
+            game.captains[0] = game.blue[1] #Swap Blue team captain
+        elif opposing_captain in game.orange:
+            game.captains[1] = game.orange[1] #Swap Orange team captain
+
 
     def _give_points(self, players_dict, score):
         player_id = score["Player"]
@@ -561,10 +586,7 @@ class SixMans(commands.Cog):
         for player in game.players:
             for queue in self.queues:
                 if player in queue.queue:
-                    queue.queue.remove(player)
-                    for channel in queue.channels:
-                        await channel.send("{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, queue.name,
-                            queue.queue.qsize(), team_size))
+                    await self._remove_from_queue(player, queue)
 
         orange = random.sample(game.players, 3)
         for player in orange:
