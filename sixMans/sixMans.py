@@ -724,7 +724,7 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
     async def _helper_role(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).HelperRole())
+        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
 
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
