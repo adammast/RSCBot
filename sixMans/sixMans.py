@@ -397,9 +397,14 @@ class SixMans(commands.Cog):
         six_mans_queue = None
         scores = await self._scores(ctx)
 
-        now = datetime.now()
-        then = datetime.strptime(scores[0]["DateTime"], "%d-%b-%Y (%H:%M:%S.%f)")
-        await ctx.send("{0}".format(then))
+        day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
+        valid_scores = []
+        for score in scores:
+            if datetime.strptime(score["DateTime"]) > day_ago:
+                valid_scores.append(score)
+            else:
+                break
+        await ctx.send("{0}".format(len(valid_scores)))
 
     @commands.guild_only()
     @commands.command()
