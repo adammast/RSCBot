@@ -22,7 +22,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -425,6 +425,32 @@ class SixMans(commands.Cog):
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setHelperRole(self, ctx, helper_role: discord.Role):
+        """Sets the six mans helper role. Anyone with this role will be able to see all the game channels that are created"""
+        await self._save_helper_role(ctx, helper_role.id)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getHelperRole(self, ctx):
+        """Gets the channel currently assigned as the transaction channel"""
+        try:
+            await ctx.send("Six mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
+        except:
+            await ctx.send(":x: Six mans helper role not set")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unsetHelperRole(self, ctx):
+        """Unsets the six mans helper role."""
+        await self._save_helper_role(ctx, None)
+        await ctx.send("Done")
+
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
         losing_players = []
@@ -586,10 +612,18 @@ class SixMans(commands.Cog):
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
-        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), 
-            overwrites= {
+        helper_role = await self._helper_role(ctx)
+        if helper_role:
+            text_overwrites = {
+                guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                helper_role: discord.PermissionOverwrite(read_messages=True)
+            }
+        else:
+            text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
-            },
+            }
+        
+        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
             category= await self._category(ctx))
         voice_channels = [
             await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), 
@@ -688,6 +722,12 @@ class SixMans(commands.Cog):
 
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
+
+    async def _helper_role(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).HelperRole())
+
+    async def _save_helper_role(self, ctx, helper_role):
+        await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
 class Game:
     def __init__(self, players, text_channel, voice_channels, queue_name):
