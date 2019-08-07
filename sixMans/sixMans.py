@@ -447,7 +447,7 @@ class SixMans(commands.Cog):
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
-        player_list = "{}".format(", ".join([player.mention for player in queue.queue.queue]))
+        player_list = "{}".format(", ".join([player.mention for player in six_mans_queue.queue.queue]))
         if player_list == "":
             player_list = "No players currently in the queue"
 
