@@ -437,9 +437,9 @@ class SixMans(commands.Cog):
         six_mans_queue.queue.put(player)
         player_list = "{}".format(", ".join([player.mention for player in six_mans_queue.queue.queue]))
 
-        embed = discord.Embed(title="{0} added to {1} queue. ({2}/{3})".format(player.mention, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), team_size), color=discord.Colour.green())
-        embed.set_author(name="{}".format(player.display_name), icon_url="{}".format(player.avatar_url))
+        embed = discord.Embed(color=discord.Colour.green())
+        embed.set_author(name="{0} added to the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size), icon_url="{}".format(player.avatar_url))
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
 
         for channel in six_mans_queue.channels:
@@ -451,9 +451,9 @@ class SixMans(commands.Cog):
         if player_list == "":
             player_list = "No players currently in the queue"
 
-        embed = discord.Embed(title="{0} removed from the {1} queue. ({2}/{3})".format(player.mention, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), team_size), color=discord.Colour.red())
-        embed.set_author(name="{}".format(player.display_name), icon_url="{}".format(player.avatar_url))
+        embed = discord.Embed(color=discord.Colour.red())
+        embed.set_author(name="{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
+            six_mans_queue.queue.qsize(), team_size), icon_url="{}".format(player.avatar_url))
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
 
         for channel in six_mans_queue.channels:
