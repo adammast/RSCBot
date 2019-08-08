@@ -674,9 +674,9 @@ class SixMans(commands.Cog):
 
     def _swap_opposing_captain(self, game, opposing_captain):
         if opposing_captain in game.blue:
-            game.captains[0] = list(game.blue)[1] #Swap Blue team captain
+            game.captains[0] = random.sample(list(game.blue), 1)[0] #Swap Blue team captain
         elif opposing_captain in game.orange:
-            game.captains[1] = list(game.orange)[1] #Swap Orange team captain
+            game.captains[1] = random.sample(list(game.orange), 1)[0] #Swap Orange team captain
 
 
     def _give_points(self, players_dict, score):
