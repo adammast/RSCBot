@@ -397,7 +397,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["all-time", "overall"])
-    async def alltime(self, queue_name: str = None):
+    async def alltime(self, ctx, queue_name: str = None):
         """All-time leader board"""
         await self._pre_load_queues(ctx)
         players = None
@@ -421,7 +421,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["day"])
-    async def daily(self, queue_name: str = None):
+    async def daily(self, ctx, queue_name: str = None):
         """Daily leader board. All games from the last 24 hours will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
@@ -440,7 +440,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["week", "wk"])
-    async def weekly(self, queue_name: str = None):
+    async def weekly(self, ctx, queue_name: str = None):
         """Weekly leader board. All games from the last week will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
@@ -459,7 +459,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["month", "mnth"])
-    async def monthly(self, queue_name: str = None):
+    async def monthly(self, ctx, queue_name: str = None):
         """Monthly leader board. All games from the last 30 days will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
