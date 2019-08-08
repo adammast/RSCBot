@@ -54,7 +54,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSixMansData(self, ctx):
-        msg = await ctx.send("{0} Please verify that you wish to clear all of the 6 Mans data in the sever.".format(ctx.author.mention))
+        msg = await ctx.send("{0} Please verify that you wish to clear all of the 6 Mans data in the server.".format(ctx.author.mention))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, ctx.author)
