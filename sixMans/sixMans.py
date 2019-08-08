@@ -696,6 +696,7 @@ class SixMans(commands.Cog):
 
     def _format_rank(self, ctx, player, sorted_players, queue_name, rnk_format):
         try:
+            num_players = len(sorted_players)
             points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
             player_info = sorted_players[points_index][1]
             points, wins, games_played = player_info[player_points_key], player_info[player_wins_key], player_info[player_gp_key]
@@ -703,9 +704,9 @@ class SixMans(commands.Cog):
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
-            embed.add_field(name="Points:", value="**Rank:** {0}_ __ __ _**Total:** {1}".format(points_index, points), inline=True)
-            embed.add_field(name="Wins:", value="**Rank:** {0}_ __ __ _**Total:** {1}".format(wins_index, wins), inline=True)
-            embed.add_field(name="Games Played:", value="**Rank:** {0}_ __ __ _**Total:** {1}".format(games_played_index, games_played), inline=True)
+            embed.add_field(name="Points:", value="**Rank:** {0}/{1} **Total:** {2}".format(points_index, num_players, points), inline=True)
+            embed.add_field(name="Wins:", value="**Rank:** {0}/{1} **Total:** {2}".format(wins_index, num_players, wins), inline=True)
+            embed.add_field(name="Games Played:", value="**Rank:** {0}/{1} **Total:** {2}".format(games_played_index, num_players, games_played), inline=True)
         except:
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(),
                 description="No stats yet to rank {}".format(player.mention))
