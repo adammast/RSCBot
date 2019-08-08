@@ -802,7 +802,7 @@ class SixMans(commands.Cog):
             queues = await self._queues(ctx)
             self.queues = []
             for key, value in queues.items():
-                queue_channels = (ctx.guild.get_channel(x) for x in value["Channels"])
+                queue_channels = [ctx.guild.get_channel(x) for x in value["Channels"]]
                 for queue in self.queues:
                     if queue.name == value["Name"]:
                         await ctx.send(":x: There is already a queue set up with the name: {0}".format(queue.name))
@@ -819,15 +819,15 @@ class SixMans(commands.Cog):
             games = await self._games(ctx)
             game_list = []
             for key, value in games.items():
-                players = (ctx.guild.get_member(x) for x in value["Players"])
+                players = [ctx.guild.get_member(x) for x in value["Players"]]
                 text_channel = ctx.guild.get_channel(value["TextChannel"])
-                voice_channels = (ctx.guild.get_channel(x) for x in value["VoiceChannels"])
+                voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
                 queueId = value["QueueId"]
                 game = Game(players, text_channel, voice_channels, queueId)
                 game.id = key
-                game.captains = (ctx.guild.get_member(x) for x in value["Captains"])
-                game.blue = set((ctx.guild.get_member(x) for x in value["Blue"]))
-                game.orange = set((ctx.guild.get_member(x) for x in value["Orange"]))
+                game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
+                game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
+                game.orange = set([ctx.guild.get_member(x) for x in value["Orange"]])
                 game.roomName = value["RoomName"]
                 game.roomPass = value["RoomPass"]
                 game.scoreReported = value["ScoreReported"]
@@ -919,14 +919,14 @@ class Game:
 
     def _to_dict(self):
         return {
-            "Players": (x.id for x in self.players),
-            "Captains": (x.id for x in self.captains),
-            "Blue": (x.id for x in self.blue),
-            "Orange": (x.id for x in self.orange),
+            "Players": [x.id for x in self.players],
+            "Captains": [x.id for x in self.captains],
+            "Blue": [x.id for x in self.blue],
+            "Orange": [x.id for x in self.orange],
             "RoomName": self.roomName,
             "RoomPass": self.roomPass,
             "TextChannel": self.textChannel.id,
-            "VoiceChannels": (x.id for x in self.voiceChannels),
+            "VoiceChannels": [x.id for x in self.voiceChannels],
             "QueueId": self.queueId,
             "ScoreReported": self.scoreReported,
         }
@@ -1070,7 +1070,7 @@ class SixMansQueue:
     def _to_dict(self):
         return {
             "Name": self.name,
-            "Channels": (x.id for x in self.channels),
+            "Channels": [x.id for x in self.channels],
             "Points": self.points,
             "Players": self.players,
             "GamesPlayed": self.gamesPlayed
