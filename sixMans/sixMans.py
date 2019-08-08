@@ -916,10 +916,9 @@ class Game:
         self.players.update(self.blue)
 
     def get_new_captains_from_teams(self):
-        random.shuffle(self.blue)
-        random.shuffle(self.orange)
-        self.captains.append(list(self.blue)[0])
-        self.captains.append(list(self.orange)[0])
+        self.captains = []
+        self.captains.append(random.sample(list(self.blue), 1))
+        self.captains.append(random.sample(list(self.orange), 1))
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
