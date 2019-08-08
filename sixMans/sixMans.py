@@ -286,6 +286,8 @@ class SixMans(commands.Cog):
                 six_mans_queue = queue
 
         if six_mans_queue is None:
+            await ctx.send("{0}, {1}".format(queue.id, game.queueId))
+            await ctx.send(queue.id + game.queueId)
             await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
             return
 
