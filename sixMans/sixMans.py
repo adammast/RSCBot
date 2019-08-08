@@ -519,6 +519,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Daily"))
@@ -538,6 +539,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Weekly"))
@@ -557,6 +559,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Monthly"))
