@@ -406,7 +406,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["day"])
     async def daily(self, ctx, *, queue_name: str = None):
-        """Daily leader board. All scores from the last 24 hours will count"""
+        """Daily leader board. All games from the last 24 hours will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
@@ -423,9 +423,9 @@ class SixMans(commands.Cog):
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
 
     @commands.guild_only()
-    @queueLeaderBoard.command(aliases=["week"])
+    @queueLeaderBoard.command(aliases=["week", "wk"])
     async def weekly(self, ctx, *, queue_name: str = None):
-        """Weekly leader board. All scores from the last week will count"""
+        """Weekly leader board. All games from the last week will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
@@ -442,9 +442,9 @@ class SixMans(commands.Cog):
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Weekly"))
 
     @commands.guild_only()
-    @queueLeaderBoard.command(aliases=["month"])
+    @queueLeaderBoard.command(aliases=["month", "mnth"])
     async def monthly(self, ctx, *, queue_name: str = None):
-        """Monthly leader board. All scores from the last 30 days will count"""
+        """Monthly leader board. All games from the last 30 days will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
@@ -468,6 +468,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @rank.command(aliases=["all-time", "overall"])
     async def alltime(self, ctx, player: discord.Member = None, *, queue_name: str = None):
+        """All-time ranks"""
         await self._pre_load_queues(ctx)
         players = None
         if queue_name is not None:
@@ -486,6 +487,63 @@ class SixMans(commands.Cog):
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "All-time"))
+
+    @commands.guild_only()
+    @rank.command(aliases=["day"])
+    async def daily(self, ctx, player: discord.Member = None, *, queue_name: str = None):
+        """Daily ranks. All games from the last 24 hours will count"""
+        await self._pre_load_queues(ctx)
+        scores = await self._scores(ctx)
+
+        queue_id = self._get_queue_id_by_name(queue_name)
+        day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
+        players, games_played = self._filter_scores(scores, day_ago, queue_id)
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        sorted_players = self._sort_player_dict(players)
+        player = player if player else ctx.author
+        await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Daily"))
+
+    @commands.guild_only()
+    @rank.command(aliases=["week", "wk"])
+    async def weekly(self, ctx, player: discord.Member = None, *, queue_name: str = None):
+        """Weekly ranks. All games from the last week will count"""
+        await self._pre_load_queues(ctx)
+        scores = await self._scores(ctx)
+
+        queue_id = self._get_queue_id_by_name(queue_name)
+        week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
+        players, games_played = self._filter_scores(scores, week_ago, queue_id)
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        sorted_players = self._sort_player_dict(players)
+        player = player if player else ctx.author
+        await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Weekly"))
+
+    @commands.guild_only()
+    @rank.command(aliases=["month", "mnth"])
+    async def monthly(self, ctx, player: discord.Member = None, *, queue_name: str = None):
+        """Monthly ranks. All games from the last 30 days will count"""
+        await self._pre_load_queues(ctx)
+        scores = await self._scores(ctx)
+
+        queue_id = self._get_queue_id_by_name(queue_name)
+        month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
+        players, games_played = self._filter_scores(scores, month_ago, queue_id)
+
+        if players is None or players == {}:
+            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            return
+
+        sorted_players = self._sort_player_dict(players)
+        player = player if player else ctx.author
+        await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Monthly"))
 
     @commands.guild_only()
     @commands.command()
