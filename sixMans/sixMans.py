@@ -400,8 +400,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
             return
 
-        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
-        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
 
     @commands.guild_only()
@@ -420,15 +419,13 @@ class SixMans(commands.Cog):
             return
 
         queue_name = self._get_queue_name(ctx, queue_name)
-
-        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
-        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["week"])
     async def weekly(self, ctx, *, queue_name: str = None):
-        """Weekly leader board. All scores from the last 7 days will count"""
+        """Weekly leader board. All scores from the last week will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
@@ -441,20 +438,18 @@ class SixMans(commands.Cog):
             return
 
         queue_name = self._get_queue_name(ctx, queue_name)
-
-        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
-        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Weekly"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["month"])
     async def monthly(self, ctx, *, queue_name: str = None):
-        """Weekly leader board. All scores from the last month will count"""
+        """Monthly leader board. All scores from the last 30 days will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
 
         queue_id = self._get_queue_id_by_name(queue_name)
-        month_ago = datetime.datetime.now() - datetime.timedelta(days=30.4)
+        month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
         players, games_played = self._filter_scores(scores, month_ago, queue_id)
 
         if players is None or players == {}:
@@ -462,10 +457,35 @@ class SixMans(commands.Cog):
             return
 
         queue_name = self._get_queue_name(ctx, queue_name)
-
-        sorted_players = sorted(players.items(), key=lambda x: x[1][player_wins_key], reverse=True)
-        sorted_players = sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+        sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self._format_leaderboard(ctx, sorted_players, queue_name, games_played, "Monthly"))
+
+    @commands.guild_only()
+    @commands.group(aliases=["rnk"])
+    async def rank(self, ctx):
+        """Get your rank in points for the specific queue. If no queue name is given it will show your overall rank across all queues."""
+
+    @commands.guild_only()
+    @rank.command(aliases=["all-time", "overall"])
+    async def alltime(self, ctx, player: discord.Member = None, *, queue_name: str = None):
+        await self._pre_load_queues(ctx)
+        players = None
+        if queue_name is not None:
+            for queue in self.queues:
+                if queue.name.lower() == queue_name.lower():
+                    queue_name = queue.name
+                    players = queue.players
+        else:
+            players = await self._players(ctx)
+            queue_name = ctx.guild.name
+
+        if players is None or players == {}:
+            await ctx.send(":x: Player rank not available for {0}".format(queue_name))
+            return
+
+        sorted_players = self._sort_player_dict(players)
+        player = player if player else ctx.author
+        await ctx.send(embed=await self._format_rank(ctx, player, sorted_players, queue_name, "All-time"))
 
     @commands.guild_only()
     @commands.command()
@@ -637,6 +657,10 @@ class SixMans(commands.Cog):
                 break
         return players, (valid_scores // 6)
 
+    def _sort_player_dict(self, player_dict):
+        sorted_players = sorted(player_dict.items(), key=lambda x: x[1][player_wins_key], reverse=True)
+        return sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)
+
     async def _format_leaderboard(self, ctx, sorted_players, queue_name, games_played, lb_format):
         embed = discord.Embed(title="{0} 6 Mans {1} Leaderboard".format(queue_name, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
@@ -668,6 +692,22 @@ class SixMans(commands.Cog):
             pass
 
         embed.add_field(name="Most Points", value=message, inline=False)
+        return embed
+
+    def _format_rank(self, ctx, player, sorted_players, queue_name, rnk_format):
+        try:
+            points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
+            player_info = sorted_players[points_index][1]
+            points, wins, games_played = player_info[player_points_key], player_info[player_wins_key], player_info[player_gp_key]
+            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)].index("{0}".format(player.id))
+            games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
+            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue(), thumbnail=player.avatar_url)
+            embed.add_field(name="Points:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(points_index, points), inline=True)
+            embed.add_field(name="Wins:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(wins_index, wins), inline=True)
+            embed.add_field(name="Games Played:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(games_played_index, games_played), inline=True)
+        except:
+            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(), thumbnail=player.avatar_url,
+                description="No stats yet to rank you")
         return embed
 
     async def _randomize_teams(self, ctx, six_mans_queue):
@@ -830,7 +870,7 @@ class SixMans(commands.Cog):
                 voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
                 queueId = value["QueueId"]
                 game = Game(players, text_channel, voice_channels, queueId)
-                game.id = key
+                game.id = int(key)
                 game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
                 game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
                 game.orange = set([ctx.guild.get_member(x) for x in value["Orange"]])
