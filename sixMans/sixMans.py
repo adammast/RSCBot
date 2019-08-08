@@ -762,9 +762,9 @@ class SixMans(commands.Cog):
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
-            embed.add_field(name="Points:", value="**Value:** {2} **Rank:** {0}/{1}".format(points_index + 1, num_players, points), inline=True)
-            embed.add_field(name="Wins:", value="**Value:** {2} **Rank:** {0}/{1}".format(wins_index + 1, num_players, wins), inline=True)
-            embed.add_field(name="Games Played:", value="**Value:** {2} **Rank:** {0}/{1}".format(games_played_index + 1, num_players, games_played), inline=True)
+            embed.add_field(name="Points:", value="**Value:** {2} | **Rank:** {0}/{1}".format(points_index + 1, num_players, points), inline=True)
+            embed.add_field(name="Wins:", value="**Value:** {2} | **Rank:** {0}/{1}".format(wins_index + 1, num_players, wins), inline=True)
+            embed.add_field(name="Games Played:", value="**Value:** {2} | **Rank:** {0}/{1}".format(games_played_index + 1, num_players, games_played), inline=True)
         except:
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(),
                 description="No stats yet to rank {}".format(player.mention))
@@ -813,8 +813,9 @@ class SixMans(commands.Cog):
             "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
             "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
             "cancel the game.".format(ctx.prefix), inline=False)
-        embed.add_field(name="Help", value="If you need any help or have questions please contact an Admin. "
-            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.", inline=False)
+        embed.add_field(name="Help", value="If you need any help or have questions please contact someone with the {} role. "
+            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.".format((await self._helper_role(ctx)).mention),
+            inline=False)
         await game.textChannel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
