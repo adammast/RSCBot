@@ -396,8 +396,8 @@ class SixMans(commands.Cog):
         If you're not in the top ten your name and rank will be shown at the bottom of the list."""
 
     @commands.guild_only()
-    @queueLeaderBoard.command(aliases=["all-time", "overall"])
-    async def alltime(self, ctx, queue_name: str = None):
+    @queueLeaderBoard.command(aliases=["all-time", "alltime"])
+    async def overall(self, ctx, queue_name: str = None):
         """All-time leader board"""
         await self._pre_load_queues(ctx)
         players = None
