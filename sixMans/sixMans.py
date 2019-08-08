@@ -817,7 +817,7 @@ class SixMans(commands.Cog):
                             return
 
                 six_mans_queue = SixMansQueue(queue_name, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
-                six_mans_queue.id = key
+                six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 
     async def _pre_load_games(self, ctx, force_load):
