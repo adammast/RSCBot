@@ -777,7 +777,7 @@ class SixMans(commands.Cog):
             points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
             player_info = sorted_players[points_index][1]
             points, wins, games_played = player_info[player_points_key], player_info[player_wins_key], player_info[player_gp_key]
-            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)].index("{0}".format(player.id))
+            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_wins_key], reverse=True)].index("{0}".format(player.id))
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
