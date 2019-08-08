@@ -48,7 +48,7 @@ class SixMans(commands.Cog):
             await self._pre_load_games(ctx, True)
             await ctx.send("Done")
         else:
-            await ctx.send(":x: Games **not** reloaded.".format(ctx.prefix))
+            await ctx.send(":x: Games **not** reloaded.")
 
     @commands.guild_only()
     @commands.command()
@@ -63,7 +63,7 @@ class SixMans(commands.Cog):
             await self.config.clear_all_guilds()
             await ctx.send("Done")
         else:
-            await ctx.send(":x: Data **not** cleared.".format(ctx.prefix))
+            await ctx.send(":x: Data **not** cleared.")
 
     @commands.guild_only()
     @commands.command()
@@ -397,7 +397,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["all-time", "overall"])
-    async def alltime(self, ctx, *, queue_name: str = None):
+    async def alltime(self, ctx, queue_name: str = None):
         """All-time leader board"""
         await self._pre_load_queues(ctx)
         players = None
@@ -421,7 +421,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["day"])
-    async def daily(self, ctx, *, queue_name: str = None):
+    async def daily(self, ctx, queue_name: str = None):
         """Daily leader board. All games from the last 24 hours will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
@@ -440,7 +440,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["week", "wk"])
-    async def weekly(self, ctx, *, queue_name: str = None):
+    async def weekly(self, ctx, queue_name: str = None):
         """Weekly leader board. All games from the last week will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
@@ -459,7 +459,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["month", "mnth"])
-    async def monthly(self, ctx, *, queue_name: str = None):
+    async def monthly(self, ctx, queue_name: str = None):
         """Monthly leader board. All games from the last 30 days will count"""
         await self._pre_load_queues(ctx)
         scores = await self._scores(ctx)
@@ -497,7 +497,7 @@ class SixMans(commands.Cog):
             queue_name = ctx.guild.name
 
         if players is None or players == {}:
-            await ctx.send(":x: Player rank not available for {0}".format(queue_name))
+            await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
         sorted_players = self._sort_player_dict(players)
@@ -516,7 +516,7 @@ class SixMans(commands.Cog):
         players, games_played = self._filter_scores(scores, day_ago, queue_id)
 
         if players is None or players == {}:
-            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
         sorted_players = self._sort_player_dict(players)
@@ -535,7 +535,7 @@ class SixMans(commands.Cog):
         players, games_played = self._filter_scores(scores, week_ago, queue_id)
 
         if players is None or players == {}:
-            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
         sorted_players = self._sort_player_dict(players)
@@ -554,7 +554,7 @@ class SixMans(commands.Cog):
         players, games_played = self._filter_scores(scores, month_ago, queue_id)
 
         if players is None or players == {}:
-            await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
+            await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
         sorted_players = self._sort_player_dict(players)
