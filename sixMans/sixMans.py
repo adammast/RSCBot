@@ -23,7 +23,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -828,7 +828,7 @@ class SixMans(commands.Cog):
             self.games = game_list
 
     async def _games(self, ctx):
-        return await self.config.guild(ctx.guild).Queues()
+        return await self.config.guild(ctx.guild).Games()
 
     async  def _save_games(self, ctx, games):
         game_dict = {}
@@ -837,7 +837,7 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).Games.set(game_dict)
 
     async def _queues(self, ctx):
-        return await self.config.guild(ctx.guild).Games()
+        return await self.config.guild(ctx.guild).Queues()
 
     async  def _save_queues(self, ctx, queues):
         queue_dict = {}
