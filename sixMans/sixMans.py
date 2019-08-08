@@ -701,13 +701,15 @@ class SixMans(commands.Cog):
             points, wins, games_played = player_info[player_points_key], player_info[player_wins_key], player_info[player_gp_key]
             wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)].index("{0}".format(player.id))
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
-            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue(), thumbnail=player.avatar_url)
+            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
+            embed.add_thumbnail(url=player.avatar_url)
             embed.add_field(name="Points:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(points_index, points), inline=True)
             embed.add_field(name="Wins:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(wins_index, wins), inline=True)
             embed.add_field(name="Games Played:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(games_played_index, games_played), inline=True)
         except:
-            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(), thumbnail=player.avatar_url,
+            embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(),
                 description="No stats yet to rank you")
+            embed.add_thumbnail(url=player.avatar_url)
         return embed
 
     async def _randomize_teams(self, ctx, six_mans_queue):
