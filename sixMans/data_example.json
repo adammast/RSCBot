@@ -1,7 +1,23 @@
 {
     "guildId": {
+        "games": {
+            "gameId": {
+                "Players": [],
+                "Captains": [],
+                "Blue": [],
+                "Orange": [],
+                "RoomName": "",
+                "RoomPass": "",
+                "TextChannel": "",
+                "VoiceChannels": [],
+                "QueueId": "",
+                "ScoreReported": ""
+            }
+        },
+
         "queues": {
-            "queue1": {
+            "queue1Id": {
+                "name": "queue1",
                 "channels": ["channel1Id", "channel2Id"],
                 "points": {
                     "play": 1,
@@ -17,7 +33,8 @@
                 "gamesPlayed": 1
             },
     
-            "queue2": {
+            "queue2Id": {
+                "name": "queue2",
                 "channels": ["channel3Id", "channel4Id"],
                 "points": {
                     "play": 2,
