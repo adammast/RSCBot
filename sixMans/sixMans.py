@@ -39,6 +39,14 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def loadGames(self, ctx):
         await self._pre_load_games(ctx, True)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearSixMansData(self, ctx):
+        await self.config.clear_all_guilds()
+        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
