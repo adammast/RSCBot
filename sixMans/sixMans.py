@@ -596,9 +596,9 @@ class SixMans(commands.Cog):
 
     def _swap_opposing_captain(self, game, opposing_captain):
         if opposing_captain in game.blue:
-            game.captains[0] = game.blue[1] #Swap Blue team captain
+            game.captains[0] = list(game.blue)[1] #Swap Blue team captain
         elif opposing_captain in game.orange:
-            game.captains[1] = game.orange[1] #Swap Orange team captain
+            game.captains[1] = list(game.orange)[1] #Swap Orange team captain
 
 
     def _give_points(self, players_dict, score):
@@ -893,7 +893,7 @@ class Game:
     def __init__(self, players, text_channel, voice_channels, queue_id):
         self.id = uuid.uuid4().int
         self.players = set(players)
-        self.captains = list(random.sample(self.players, 2))
+        self.captains = []
         self.blue = set()
         self.orange = set()
         self.roomName = self._generate_name_pass()
@@ -916,9 +916,8 @@ class Game:
         self.players.update(self.blue)
 
     def get_new_captains_from_teams(self):
-        self.captains = []
-        self.captains.append(list(self.blue)[0])
-        self.captains.append(list(self.orange)[0])
+        self.captains.append(random.shuffle(list(self.blue))[0])
+        self.captains.append(random.shuffle(list(self.orange))[0])
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
