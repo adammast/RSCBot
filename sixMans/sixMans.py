@@ -485,7 +485,7 @@ class SixMans(commands.Cog):
 
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
-        await ctx.send(embed=await self._format_rank(ctx, player, sorted_players, queue_name, "All-time"))
+        await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "All-time"))
 
     @commands.guild_only()
     @commands.command()
