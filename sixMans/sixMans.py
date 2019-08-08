@@ -703,12 +703,12 @@ class SixMans(commands.Cog):
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
-            embed.add_field(name="Points:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(points_index, points), inline=True)
-            embed.add_field(name="Wins:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(wins_index, wins), inline=True)
-            embed.add_field(name="Games Played:", value="**Rank:** {0}\t\t\t**Total:** {1}".format(games_played_index, games_played), inline=True)
+            embed.add_field(name="Points:", value="**Rank:** {0}      **Total:** {1}".format(points_index, points), inline=True)
+            embed.add_field(name="Wins:", value="**Rank:** {0}      **Total:** {1}".format(wins_index, wins), inline=True)
+            embed.add_field(name="Games Played:", value="**Rank:** {0}      **Total:** {1}".format(games_played_index, games_played), inline=True)
         except:
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.red(),
-                description="No stats yet to rank you")
+                description="No stats yet to rank {}".format(player.mention))
             embed.set_thumbnail(url=player.avatar_url)
         return embed
 
