@@ -519,6 +519,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Daily"))
@@ -538,6 +539,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Weekly"))
@@ -557,6 +559,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
             return
 
+        queue_name = self._get_queue_name(ctx, queue_name)
         sorted_players = self._sort_player_dict(players)
         player = player if player else ctx.author
         await ctx.send(embed=self._format_rank(ctx, player, sorted_players, queue_name, "Monthly"))
@@ -774,7 +777,7 @@ class SixMans(commands.Cog):
             points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
             player_info = sorted_players[points_index][1]
             points, wins, games_played = player_info[player_points_key], player_info[player_wins_key], player_info[player_gp_key]
-            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_points_key], reverse=True)].index("{0}".format(player.id))
+            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_wins_key], reverse=True)].index("{0}".format(player.id))
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][player_gp_key], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} 6 Mans {2} Rank".format(player.display_name, queue_name, rnk_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
