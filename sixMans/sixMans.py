@@ -38,6 +38,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def loadGames(self, ctx):
+        await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, True)
         await ctx.send("Done")
 
@@ -803,8 +804,9 @@ class SixMans(commands.Cog):
             self.queues = []
             for key, value in queues.items():
                 queue_channels = [ctx.guild.get_channel(x) for x in value["Channels"]]
+                queue_name = value["Name"]
                 for queue in self.queues:
-                    if queue.name == value["Name"]:
+                    if queue.name == queue_name:
                         await ctx.send(":x: There is already a queue set up with the name: {0}".format(queue.name))
                         return
                     for channel in queue_channels:
@@ -812,7 +814,9 @@ class SixMans(commands.Cog):
                             await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
                             return
 
-                self.queues.append(SixMansQueue(key, queue_channels, value["Points"], value["Players"], value["GamesPlayed"]))
+                six_mans_queue = SixMansQueue(queue_name, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
+                six_mans_queue.id = key
+                self.queues.append(six_mans_queue)
 
     async def _pre_load_games(self, ctx, force_load):
         if self.games is None or self.games == [] or force_load:
