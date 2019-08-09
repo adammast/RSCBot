@@ -186,6 +186,9 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def queueAll(self, ctx, *members: discord.Member):
         """Mass queueing for testing purposes"""
+        if self.busy:
+            await ctx.send(self._spam())
+            return
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
         six_mans_queue = self._get_queue(ctx)
@@ -195,8 +198,10 @@ class SixMans(commands.Cog):
                 break
             await self._add_to_queue(member, six_mans_queue)
         if six_mans_queue._queue_full():
+            self.busy = True
             await ctx.send("Queue is full! Teams are being created.")
             await self._randomize_teams(ctx, six_mans_queue)
+            self.busy = False
 
     @commands.guild_only()
     @commands.command(aliases=["queue"])
