@@ -37,6 +37,12 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
+    async def stopSpam(self, ctx):
+        await ctx.send(self._spam())
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
     async def loadGames(self, ctx):
         await self._pre_load_queues(ctx)
         msg = await ctx.send("{0} Please verify that you wish to reload the games.".format(ctx.author.mention))
@@ -1010,6 +1016,9 @@ class SixMans(commands.Cog):
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
+    def _spam(self):
+        return spam[random.randrange(len(spam))]
+
 class Game:
     def __init__(self, players, text_channel, voice_channels, queue_id):
         self.id = uuid.uuid4().int
@@ -1059,52 +1068,7 @@ class Game:
         }
 
     def _generate_name_pass(self):
-        # TODO: Load from file?
-        set = [
-            'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-            'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-            'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-            'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-            'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-            'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-            'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-            'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-            'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-            'vulcan', 'zippy',
-
-            'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-            'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-            'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-            'dunkhouse', 'throwback', 'underpass', 'badlands',
-
-            '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-            'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-            'stormwatch', 'tora', 'trigon', 'wetpaint',
-
-            'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-            'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-            'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-            'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-            'voltaic', 'wonderment', 'zomba',
-
-            'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-            'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-            'platinum', 'diamond',
-
-            'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-            'doubles', 'standard', 'chaos',
-
-            'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-            'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-            'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-            'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-            'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-            'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-            'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-            'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-            'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-        ]
-        return set[random.randrange(len(set))]
+        return room_pass[random.randrange(len(room_pass))]
 
 class OrderedSet(collections.MutableSet):
     def __init__(self, iterable=None):
@@ -1202,3 +1166,72 @@ class SixMansQueue:
             "Players": self.players,
             "GamesPlayed": self.gamesPlayed
         }
+
+# TODO: Load from file?
+room_pass = [
+    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
+    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
+    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
+    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
+    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
+    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
+    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
+    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
+    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
+    'vulcan', 'zippy',
+
+    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
+    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
+    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
+    'dunkhouse', 'throwback', 'underpass', 'badlands',
+
+    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
+    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
+    'stormwatch', 'tora', 'trigon', 'wetpaint',
+
+    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
+    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
+    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
+    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
+    'voltaic', 'wonderment', 'zomba',
+
+    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
+    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
+    'platinum', 'diamond',
+
+    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
+    'doubles', 'standard', 'chaos',
+
+    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
+    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
+    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
+    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
+    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
+    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
+    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
+    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
+    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
+]
+
+spam = [
+    "THIS CHAT IS LITERALLY THE WORST THING EVER MADE. I MEAN INSTEAD OF HAVING A PRODUCTIVE CONVERSATION ON AWESOME THINGS LIKE "
+    "PHILOSOPHY AND OTHER AWESOME THINGS LIKE JAZZ YOU GUYS ARE JUST SPAMMING THE SAME THING OVER AND OVER AGAIN.",
+
+    "Guys can you please not spam the chat. My mom bought me this new laptop and it gets really hot when the chat is being spammed. "
+    "Now my leg is starting to hurt because it is getting so hot. Please, if you don't want me to get burned, then dont spam the chat.",
+
+    "STOP with your SPAM. You are destroying not ONLY my chat EXPERIENCE, but everyones chat EXPERIENCE. If you PLEBS don't stop IMMEDIATELY, "
+    "then I will have to call the CYBER police. Do NOT copy and paste this.",
+
+    "Guys please stop spamming. My dog, Bernard, looked at my chat and got so dizzy because of the spam that he fell down and hit his noggin "
+    "right on his food bowl! He couldn't talk for hours. Please stop spamming, for Bernard.",
+
+    "?q ... Is it working yet?",
+
+    "I HATE PPL SPAMMING COMMANDS. U THINK MY EYES CAN READ ALL OF THEM? INCONSIDERATE CHAT AS ALWAYS. IS THIS ESPORT? MORE LIKE KIDSPORTS",
+
+    "Guys plz stop spamming it's very inrespectful. People here try to have serious conversations and they can't because of the amount of spam.",
+
+    "You guys are ruining my chat experience. I come to the this chat to discuss important geopolitical events like the ukraine crisis and its "
+    "implications on the socioeconomics of Eastern Europe. Yet here you are ruining everything with your ?q and ?qlb.",
+]
