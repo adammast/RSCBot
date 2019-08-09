@@ -1239,6 +1239,6 @@ spam = [
 
     "Guys plz stop spamming it's very inrespectful. People here try to have serious conversations and they can't because of the amount of spam.",
 
-    "You guys are ruining my chat experience. I come to the this chat to discuss important geopolitical events like the ukraine crisis and its "
-    "implications on the socioeconomics of Eastern Europe. Yet here you are ruining everything with your ?q and ?qlb.",
+    "You guys are ruining my chat experience. I come to the this chat to discuss important geopolitical events like the Brexit and its "
+    "implications on the socioeconomics of Europe. Yet here you are ruining everything with your ?q and ?qlb.",
 ]
