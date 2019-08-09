@@ -202,6 +202,9 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["queue"])
     async def q(self, ctx):
         """Add yourself to the queue"""
+        if self.busy:
+            await ctx.send(self._spam())
+            return
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
         six_mans_queue = self._get_queue(ctx)
@@ -217,8 +220,10 @@ class SixMans(commands.Cog):
 
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
+            self.busy = True
             await ctx.send("**Queue is full! Teams are being created.**")
             await self._randomize_teams(ctx, six_mans_queue)
+            self.busy = False
 
     @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
@@ -797,7 +802,6 @@ class SixMans(commands.Cog):
         return embed
 
     async def _randomize_teams(self, ctx, six_mans_queue):
-        self.busy = True
         game = await self._create_game(ctx, six_mans_queue)
         for player in game.players:
             for queue in self.queues:
@@ -821,8 +825,6 @@ class SixMans(commands.Cog):
 
         self.games.append(game)
         await self._save_games(ctx, self.games)
-
-        self.busy = False
 
     async def _display_game_info(self, ctx, game, six_mans_queue):
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
