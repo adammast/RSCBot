@@ -145,18 +145,28 @@ class BulkRoleManager(commands.Cog):
     async def getId(self, ctx, *userList):
         """Gets the id for any user that can be found from the userList"""
         notFound = []
+        messages = []
+        message = ""
         for user in userList:
             try:
                 member = await commands.MemberConverter().convert(ctx, user)
                 if member in ctx.guild.members:
                     nickname = self.get_player_nickname(member)
-                    await ctx.send("{1}:{0.name}#{0.discriminator}:{0.id}".format(member, nickname))
+                    message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
             except:
                 notFound.append(user)
         if len(notFound) > 0:
-            await ctx.send(":x: Couldn't find:")
+            notFoundMessage = ":x: Couldn't find:\n"
             for user in notFound:
-                await ctx.send(user)
+                notFoundMessage += "{0}\n".format(user)
+            ctx.send(notFoundMessage)
+        if message is not "":
+            messages.append(message)
+        for msg in messages:
+            await ctx.send("{0}{1}{0}".format("```", msg))
 
     @commands.command()
     @commands.guild_only()
