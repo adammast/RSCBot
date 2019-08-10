@@ -162,7 +162,7 @@ class BulkRoleManager(commands.Cog):
             notFoundMessage = ":x: Couldn't find:\n"
             for user in notFound:
                 notFoundMessage += "{0}\n".format(user)
-            ctx.send(notFoundMessage)
+            await ctx.send(notFoundMessage)
         if message is not "":
             messages.append(message)
         for msg in messages:
