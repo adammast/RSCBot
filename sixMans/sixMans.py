@@ -1121,12 +1121,12 @@ class OrderedSet(collections.MutableSet):
             yield curr[0]
             curr = curr[1]
 
-    def pop(self, last=True):
-        if not self:
-            raise KeyError('set is empty')
-        key = self.end[1][0] if last else self.end[2][0]
-        self.discard(key)
-        return key
+    # def pop(self, last=True):
+    #     if not self:
+    #         raise KeyError('set is empty')
+    #     key = self.end[1][0] if last else self.end[2][0]
+    #     self.discard(key)
+    #     return key
 
     def __repr__(self):
         if not self:
