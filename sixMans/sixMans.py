@@ -511,7 +511,7 @@ class SixMans(commands.Cog):
 
         queue_id = self._get_queue_id_by_name(queue_name)
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
-        players, games_played = self._filter_scores(scores, day_ago, queue_id)
+        players = self._filter_scores(scores, day_ago, queue_id)[0]
 
         if players is None or players == {}:
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
@@ -531,7 +531,7 @@ class SixMans(commands.Cog):
 
         queue_id = self._get_queue_id_by_name(queue_name)
         week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
-        players, games_played = self._filter_scores(scores, week_ago, queue_id)
+        players = self._filter_scores(scores, week_ago, queue_id)[0]
 
         if players is None or players == {}:
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
@@ -551,7 +551,7 @@ class SixMans(commands.Cog):
 
         queue_id = self._get_queue_id_by_name(queue_name)
         month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
-        players, games_played = self._filter_scores(scores, month_ago, queue_id)
+        players = self._filter_scores(scores, month_ago, queue_id)[0]
 
         if players is None or players == {}:
             await ctx.send(":x: Player ranks not available for {0}".format(queue_name))
