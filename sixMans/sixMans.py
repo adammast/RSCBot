@@ -198,8 +198,7 @@ class SixMans(commands.Cog):
                 break
             await self._add_to_queue(member, six_mans_queue)
         if six_mans_queue._queue_full():
-            self.busy = True
-            await ctx.send("Queue is full! Teams are being created.")
+            #self.busy = True
             await self._randomize_teams(ctx, six_mans_queue)
             self.busy = False
 
@@ -225,8 +224,7 @@ class SixMans(commands.Cog):
 
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
-            self.busy = True
-            await ctx.send("**Queue is full! Teams are being created.**")
+            #self.busy = True
             await self._randomize_teams(ctx, six_mans_queue)
             self.busy = False
 
@@ -808,6 +806,8 @@ class SixMans(commands.Cog):
 
     async def _randomize_teams(self, ctx, six_mans_queue):
         game = await self._create_game(ctx, six_mans_queue)
+        if game is None:
+            return False
         for player in game.players:
             for queue in self.queues:
                 if player in queue.queue:
@@ -830,6 +830,7 @@ class SixMans(commands.Cog):
 
         self.games.append(game)
         await self._save_games(ctx, self.games)
+        return True
 
     async def _display_game_info(self, ctx, game, six_mans_queue):
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
@@ -851,7 +852,10 @@ class SixMans(commands.Cog):
         await game.textChannel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
+        if not six_mans_queue._queue_full():
+            return None
         players = [six_mans_queue.queue.get() for _ in range(team_size)]
+        await ctx.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
