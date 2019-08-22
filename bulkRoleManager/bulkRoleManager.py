@@ -180,7 +180,7 @@ class BulkRoleManager(commands.Cog):
         if spreadsheet:
             Outputcsv = "./tmp/Ids.csv"
             header = ["Nickname","Name","Id"]
-            csvwrite = open(Outputcsv, 'w', newline='', encoding="ISO-8859-1")
+            csvwrite = open(Outputcsv, 'w', newline='', encoding='utf-8')
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
             for member in ctx.guild.members:
