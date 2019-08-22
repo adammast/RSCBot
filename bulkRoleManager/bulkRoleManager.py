@@ -173,13 +173,13 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def getIdsWithRole(self, ctx, role: discord.Role, csv: bool = False):
+    async def getIdsWithRole(self, ctx, role: discord.Role, spreadsheet: bool = False):
         """Gets the id for any user that has the given role"""
         messages = []
         message = ""
         if csv:
             Outputcsv = "Ids.csv"
-            header = ["Nickname","Name", "Id"]
+            header = ["Nickname","Name","Id"]
             csvwrite = open(Outputcsv, 'w', newline='')
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
