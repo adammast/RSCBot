@@ -184,10 +184,11 @@ class BulkRoleManager(commands.Cog):
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
             for member in ctx.guild.members:
-                nickname = self.get_player_nickname(member)
                 if role in member.roles:
+                    nickname = self.get_player_nickname(member)
                     newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
                     w.writerow(newrow)
+            csvwrite.close()
             await ctx.send("Done", file=File(Outputcsv))
             os.remove(Outputcsv)
         else:
