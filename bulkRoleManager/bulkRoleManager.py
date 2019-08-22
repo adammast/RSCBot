@@ -11,6 +11,11 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    async def directoryTest(self, ctx):
+        await ctx.send("{}".format(os.getcwd()))
+
+    @commands.command()
+    @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
         """Prints out a list of members with the specific role"""
         count = 0
