@@ -1,7 +1,10 @@
 import discord
+import csv
+import os
 
 from redbot.core import commands
 from redbot.core import checks
+from discord import File
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
@@ -170,21 +173,36 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def getIdsWithRole(self, ctx, role: discord.Role):
+    async def getIdsWithRole(self, ctx, role: discord.Role, csv: bool = False):
         """Gets the id for any user that has the given role"""
         messages = []
         message = ""
-        for member in ctx.guild.members:
-            if role in member.roles:
+        if csv:
+            Outputcsv = "Ids.csv"
+            header = ["Nickname","Name", "Id"]
+            csvwrite = open(Outputcsv, 'w', newline='')
+            w = csv.writer(csvwrite, delimiter=',')
+            w.writerow(header)
+            for member in ctx.guild.members:
                 nickname = self.get_player_nickname(member)
-                message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
-                if len(message) > 1900:
-                    messages.append(message)
-                    message = ""
-        if message is not "":
-            messages.append(message)
-        for msg in messages:
-            await ctx.send("{0}{1}{0}".format("```", msg))
+                if role in member.roles:
+                    newrow = [nickname, "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
+                    w.writerow(newrow)
+            await ctx.send("Done", file=File(Outputcsv))
+            os.remove(Outputcsv)
+        else:
+            for member in ctx.guild.members:
+                if role in member.roles:
+                    nickname = self.get_player_nickname(member)
+                    message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
+                    if len(message) > 1900:
+                        messages.append(message)
+                        message = ""
+            if message is not "":
+                messages.append(message)
+            for msg in messages:
+                await ctx.send("{0}{1}{0}".format("```", msg))
+        
 
     @commands.command()
     @commands.guild_only()
