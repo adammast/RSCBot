@@ -170,6 +170,24 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    async def getIdsWithRole(self, ctx, role: discord.Role):
+        """Gets the id for any user that has the given role"""
+        messages = []
+        message = ""
+        for member in ctx.guild.members:
+            if role in member.roles:
+                nickname = self.get_player_nickname(member)
+                message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
+        if message is not "":
+            messages.append(message)
+        for msg in messages:
+            await ctx.send("{0}{1}{0}".format("```", msg))
+
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
     async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
         """Gives the roleToGive to every member who already has the currentRole"""
