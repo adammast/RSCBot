@@ -177,7 +177,7 @@ class BulkRoleManager(commands.Cog):
         """Gets the id for any user that has the given role"""
         messages = []
         message = ""
-        if csv:
+        if spreadsheet:
             Outputcsv = "Ids.csv"
             header = ["Nickname","Name","Id"]
             csvwrite = open(Outputcsv, 'w', newline='')
@@ -186,7 +186,7 @@ class BulkRoleManager(commands.Cog):
             for member in ctx.guild.members:
                 nickname = self.get_player_nickname(member)
                 if role in member.roles:
-                    newrow = [nickname, "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
+                    newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
                     w.writerow(newrow)
             await ctx.send("Done", file=File(Outputcsv))
             os.remove(Outputcsv)
