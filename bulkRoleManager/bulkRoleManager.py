@@ -183,7 +183,7 @@ class BulkRoleManager(commands.Cog):
         messages = []
         message = ""
         if spreadsheet:
-            Outputcsv = "./temp/Ids.csv"
+            Outputcsv = "./tmp/Ids.csv"
             header = ["Nickname","Name","Id"]
             csvwrite = open(Outputcsv, 'w', newline='')
             w = csv.writer(csvwrite, delimiter=',')
