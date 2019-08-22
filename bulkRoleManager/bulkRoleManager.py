@@ -180,13 +180,13 @@ class BulkRoleManager(commands.Cog):
         if spreadsheet:
             Outputcsv = "./tmp/Ids.csv"
             header = ["Nickname","Name","Id"]
-            csvwrite = open(Outputcsv, 'w', newline='', encoding="ISO-8859-1")
+            csvwrite = open(Outputcsv, 'w', newline='', encoding='utf-8')
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
             for member in ctx.guild.members:
                 if role in member.roles:
                     nickname = self.get_player_nickname(member)
-                    newrow = ["{0}".format(nickname.encode('iso-8859-1')), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
+                    newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
                     w.writerow(newrow)
             csvwrite.close()
             await ctx.send("Done", file=File(Outputcsv))
