@@ -170,7 +170,7 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def getIdForRole(self, ctx, role: discord.Role):
+    async def getIdsWithRole(self, ctx, role: discord.Role):
         """Gets the id for any user that has the given role"""
         messages = []
         message = ""
