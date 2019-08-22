@@ -8,12 +8,7 @@ from discord import File
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
-
-    @commands.command()
-    @commands.guild_only()
-    async def directoryTest(self, ctx):
-        await ctx.send("{}".format(os.getcwd()))
-
+    
     @commands.command()
     @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
