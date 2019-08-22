@@ -8,12 +8,7 @@ from discord import File
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
-
-    @commands.command()
-    @commands.guild_only()
-    async def directoryTest(self, ctx):
-        await ctx.send("{}".format(os.getcwd()))
-
+    
     @commands.command()
     @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname = False):
@@ -183,7 +178,7 @@ class BulkRoleManager(commands.Cog):
         messages = []
         message = ""
         if spreadsheet:
-            Outputcsv = "Ids.csv"
+            Outputcsv = "./tmp/Ids.csv"
             header = ["Nickname","Name","Id"]
             csvwrite = open(Outputcsv, 'w', newline='')
             w = csv.writer(csvwrite, delimiter=',')
