@@ -16,7 +16,7 @@ class Notice(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def notice(self, ctx, message, *, pingRole: discord.Role, channel: discord.TextChannel = None):
+    async def notice(self, ctx, message, *pingRole: discord.Role, channel: discord.TextChannel = None):
         """Sends a notice to a specified channel and pings the specified role(s)
         
         Arguments:
