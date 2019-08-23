@@ -50,7 +50,7 @@ class Notice(commands.Cog):
 
                 final_notice = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
                 await channel.send(final_notice)
-                await ctx.delete_messages([notice_check, react_msg])
+                await ctx.channel.delete_messages([notice_check, react_msg])
 
                 #reset roles back to their original state
                 index = 0
