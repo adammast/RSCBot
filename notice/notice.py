@@ -28,9 +28,9 @@ class Notice(commands.Cog):
 
         try:
             await ctx.send("**What is the message you want to send?**\nIf you want to cancel this command just type `{}cancel`".format(ctx.prefix))
-            pred = MessagePredicate.cancelled(ctx)
-            await ctx.bot.wait_for("message", check=pred, timeout=verify_timeout)
-            if pred.result is True:
+            pred = MessagePredicate.same_context(ctx)
+            await ctx.bot.wait_for("message", check=pred)
+            if pred.result == "{}cancel".format(ctx.prefix):
                 await ctx.send("Notice command canceled")
                 return
             else:
