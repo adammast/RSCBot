@@ -33,8 +33,8 @@ class Notice(commands.Cog):
             await ctx.bot.wait_for("message", check=pred, timeout=verify_timeout)
             channel = pred.result
 
-            formatted_message = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
-            notice_check = await ctx.send("```{}```".format(formatted_message))
+            formatted_message = "```@{0}\n\n{1}```".format(" @".join([role.name for role in pingRole]), message)
+            notice_check = await ctx.send(formatted_message)
             react_msg = await ctx.send("**Are you ready to send this notice now?**")
             start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
@@ -49,14 +49,15 @@ class Notice(commands.Cog):
                         role.edit(mentionable=True)
                         await ctx.send("Test ping: {}".format(role.mention))
 
-                await channel.send(formatted_message)
+                final_notice = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
+                await channel.send(final_notice)
                 await notice_check.delete()
                 await react_msg.delete()
 
                 #reset roles back to their original state
                 index = 0
                 for role in pingRole:
-                    role.edit(mentionable=mentionable[index])
+                    #role.edit(mentionable=mentionable[index])
                     index += 1
 
                 await ctx.send("Done")
