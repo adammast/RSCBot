@@ -34,14 +34,31 @@ class Notice(commands.Cog):
             channel = pred.result
 
             formatted_message = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
-            await ctx.send("```{}```".format(formatted_message))
+            notice_check = await ctx.send("```{}```".format(formatted_message))
             msg = await ctx.send("**Are you ready to send this notice now?**")
             start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
             pred = ReactionPredicate.yes_or_no(msg, ctx.author)
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            react_msg = await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
+                #make all the roles in pingRoles mentionable and save their original state
+                mentionable = []
+                for role in pingRole:
+                    mentionable.append(role.mentionable)
+                    if not role.mentionable:
+                        role.edit(mentionable=True)
+
                 await channel.send(formatted_message)
+                await notice_check.delete()
+                await react_msg.delete()
+
+                #reset roles back to their original state
+                index = 0
+                for role in pingRole:
+                    role.edit(mentionable=mentionable[index])
+                    index += 1
+
+                await ctx.send("Done")
             else:
                 await ctx.send("Notice not sent")
         except asyncio.TimeoutError:
