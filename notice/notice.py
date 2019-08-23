@@ -46,18 +46,16 @@ class Notice(commands.Cog):
                 for role in pingRole:
                     mentionable.append(role.mentionable)
                     if not role.mentionable:
-                        role.edit(mentionable=True)
-                        await ctx.send("Test ping: {}".format(role.mention))
+                        await role.edit(mentionable=True)
 
                 final_notice = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
                 await channel.send(final_notice)
-                await notice_check.delete()
-                await react_msg.delete()
+                await ctx.delete_messages([notice_check, react_msg])
 
                 #reset roles back to their original state
                 index = 0
                 for role in pingRole:
-                    #role.edit(mentionable=mentionable[index])
+                    await role.edit(mentionable=mentionable[index])
                     index += 1
 
                 await ctx.send("Done")
