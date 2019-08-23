@@ -16,13 +16,18 @@ class Notice(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def notice(self, ctx, message, channel: discord.TextChannel = None, *, pingRole: discord.Role):
+    async def notice(self, ctx, message, *, pingRole: discord.Role, channel: discord.TextChannel = None):
         """Sends a notice to a specified channel and pings the specified role(s)
         
+        Arguments:
+            message -- The message to be posted. Must have quotes around it if it's more than one word
+            pingRole -- Can be 1 or more roles that you want to ping in the notice
+            channel -- Can be 0 or 1 channel where the notice will be posted. If no channel is given it will try and post to the default notice channel
+
         Notice will be in this format:
             @role(s)
             
-            [Message]"""
+            [message]"""
         
         await ctx.send("Done")
 
