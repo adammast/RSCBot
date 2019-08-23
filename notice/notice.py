@@ -1,18 +1,16 @@
 import discord
+import asyncio
 
 from redbot.core import commands
 from redbot.core import checks
-from redbot.core import Config
 from redbot.core.utils.predicates import MessagePredicate
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
-defaults = {"NoticeChannel": None}
+verify_timeout = 20
 
 class Notice(commands.Cog):
     """Used to send a notice to a specified channel and ping the specified role(s)"""
-
-    def __init__(self):
-        self.config = Config.get_conf(self, identifier=1234567897, force_registration=True)
-        self.config.register_guild(**defaults)
 
     @commands.guild_only()
     @commands.command()
@@ -29,41 +27,22 @@ class Notice(commands.Cog):
             
             [message]"""
 
-        await ctx.send("Which channel do you want to send the notice too?\nUse `{}cancel` to cancel the command".format(ctx.prefix))
-        pred = MessagePredicate.valid_text_channel(ctx)
-        await ctx.bot.wait_for("message", check=pred)
-        channel = pred.result
-        
-        await ctx.send("{}".format(channel.mention))
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setNoticeChannel(self, ctx, default_channel: discord.TextChannel):
-        """Sets the notice channel where notices will be sent unless another channel is specified"""
-        await self._save_default_channel(ctx, default_channel.id)
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getNoticeChannel(self, ctx):
-        """Gets the notice channel where notices will be sent unless another channel is specified"""
         try:
-            await ctx.send("Default notice channel set to: {0}".format((await self._default_channel(ctx)).mention))
-        except:
-            await ctx.send(":x: Default notice channel not set")
+            await ctx.send("**Which channel do you want to post the notice in?**\nYou have {} seconds to respond before this times out".format(verify_timeout))
+            pred = MessagePredicate.valid_text_channel(ctx)
+            await ctx.bot.wait_for("message", check=pred, timeout=verify_timeout)
+            channel = pred.result
 
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def unsetNoticeChannel(self, ctx):
-        """Unsets the notice channel where notices will be sent unless another channel is specified"""
-        await self._save_default_channel(ctx, None)
-        await ctx.send("Done")
+            formatted_message = "{0}\n\n{1}".format(" ".join([role.mention for role in pingRole]), message)
+            await ctx.send("```{}```".format(formatted_message))
+            msg = await ctx.send("**Are you ready to send this notice now?**")
+            start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
-    async def _notice_channel(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).NoticeChannel())
-
-    async def _save_notice_channel(self, ctx, channel):
-        await self.config.guild(ctx.guild).NoticeChannel.set(channel)
+            pred = ReactionPredicate.yes_or_no(msg, ctx.author)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result is True:
+                await channel.send(formatted_message)
+            else:
+                await ctx.send("Notice not sent")
+        except asyncio.TimeoutError:
+            await ctx.send("Response timed out. Notice not sent.")
