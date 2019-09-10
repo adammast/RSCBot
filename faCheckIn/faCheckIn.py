@@ -72,6 +72,7 @@ class FaCheckIn(commands.Cog):
         perm_fa_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.PERM_FA_ROLE)
 
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
+        await ctx.send("{}".format(tier_list))
         for user in tier_list:
             member = await commands.MemberConverter().convert(ctx, user)
             if member in ctx.message.guild.members:
