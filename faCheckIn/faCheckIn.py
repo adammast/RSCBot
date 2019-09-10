@@ -74,12 +74,11 @@ class FaCheckIn(commands.Cog):
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
         await ctx.send("{}".format(tier_list))
         for user in tier_list:
-            member = await commands.MemberConverter().convert(ctx, user)
-            if member in ctx.message.guild.members:
-                if await self._find_tier_from_fa_role(ctx, member) is not None:
-                    message += "\n\t{0}".format(member.nick)
-                    if perm_fa_role is not None and perm_fa_role in member.roles:
-                        message += " (Permanent FA)"
+            member = ctx.guild.get_member(user)
+            if await self._find_tier_from_fa_role(ctx, member) is not None:
+                message += "\n\t{0}".format(member.nick)
+                if perm_fa_role is not None and perm_fa_role in member.roles:
+                    message += " (Permanent FA)"
         message += "```"
         await ctx.send(message)
 
