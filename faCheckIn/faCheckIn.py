@@ -109,9 +109,8 @@ class FaCheckIn(commands.Cog):
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
-        message = await user.send(embed=embed)
 
-        react_msg = await user.send(message)
+        react_msg = await user.send(embed=embed)
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         try:
@@ -132,9 +131,8 @@ class FaCheckIn(commands.Cog):
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
-        message = await user.send(embed=embed)
-
-        react_msg = await user.send(message)
+        
+        react_msg = await user.send(embed=embed)
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         try:
