@@ -73,7 +73,7 @@ class FaCheckIn(commands.Cog):
 
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
         for user in tier_list:
-            member = commands.MemberConverter(ctx, user).convert()
+            member = await commands.MemberConverter().convert(ctx, user)
             if member in ctx.message.guild.members:
                 if await self._find_tier_from_fa_role(ctx, member) is not None:
                     message += "\n\t{0}".format(member.nick)
@@ -131,7 +131,7 @@ class FaCheckIn(commands.Cog):
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
-        
+
         react_msg = await user.send(embed=embed)
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
