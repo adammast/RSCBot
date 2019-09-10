@@ -72,7 +72,6 @@ class FaCheckIn(commands.Cog):
         perm_fa_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.PERM_FA_ROLE)
 
         message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
-        await ctx.send("{}".format(tier_list))
         for user in tier_list:
             member = ctx.guild.get_member(user)
             if await self._find_tier_from_fa_role(ctx, member) is not None:
@@ -127,7 +126,7 @@ class FaCheckIn(commands.Cog):
     async def _send_check_out_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Check Out", 
             description="You are currently checked in as available for the following match day and tier. "
-                "Do you wish to take yourself off the availability list? To confirm you want to check out, react with 👎",
+                "Do you wish to take yourself off the availability list? To confirm you want to check out, react with {}".format(ReactionPredicate.YES_OR_NO_EMOJIS[0]),
             colour=discord.Colour.blue())
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
