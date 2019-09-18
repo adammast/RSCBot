@@ -308,7 +308,7 @@ class TeamManager(commands.Cog):
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
         
         embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue())
-        emoji = self._get_franchise_emoji(ctx, gm.name)
+        emoji = await self._get_franchise_emoji(ctx, gm.name)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
         formatted_members = []
