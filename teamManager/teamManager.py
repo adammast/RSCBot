@@ -337,7 +337,7 @@ class TeamManager(commands.Cog):
             teams_message += "\n\t{0} ({1})".format(team, gmNameFromRole)
 
         color = discord.Colour.blue()
-        for role in ctx.guild.role:
+        for role in ctx.guild.roles:
             if role.name.lower() == tier.lower():
                 color = role.color
 
