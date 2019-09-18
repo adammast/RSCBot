@@ -2,6 +2,8 @@ import discord
 import re
 import ast
 import difflib
+import io
+import Image
 
 from redbot.core import Config
 from redbot.core import commands
@@ -327,7 +329,7 @@ class TeamManager(commands.Cog):
         color = discord.Colour.blue()
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
-            rgb = self._get_dominant_color(await emoji.url.read())
+            rgb = self._get_dominant_color(Image.open(io.BytesIO(await emoji.url.read())))
             await ctx.send("RGB: {}".format(rgb))
             color = discord.Colour.from_rgb(rgb[0], rgb[1], rgb[2])
             embed = discord.Embed(title="{0}:".format(franchise_role.name), color=color, description=teams_message, thumbnail=emoji)
