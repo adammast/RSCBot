@@ -516,7 +516,8 @@ class TeamManager(commands.Cog):
 
     async def _get_franchise_emoji(self, ctx, gm_name):
         prefix = await self.prefix_cog._get_gm_prefix(ctx, gm_name)
-        emojis = ctx.guild.emojis
-        for emoji in emojis:
-            if emoji.name.lower() == prefix.lower():
-                return emoji
+        if prefix:
+            emojis = ctx.guild.emojis
+            for emoji in emojis:
+                if emoji.name.lower() == prefix.lower():
+                    return emoji
