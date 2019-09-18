@@ -319,7 +319,7 @@ class TeamManager(commands.Cog):
         if not team_members:
             formatted_members.append("No known members.")
 
-        embed.add_field(name="Roster Members", value="{}".format("\n".join([member for member in formatted_members])), inline=False)
+        embed.add_field(value="{}".format("\n".join([member for member in formatted_members])), inline=False)
         return embed
 
     def _format_team_member_for_message(self, member, *args):
