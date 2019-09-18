@@ -6,6 +6,8 @@ import difflib
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
+from sklearn.cluster import KMeans
+from collections import Counter
 
 
 defaults = {"Tiers": [], "Teams": [], "Team_Roles": {}}
@@ -322,10 +324,15 @@ class TeamManager(commands.Cog):
             tier_role = (await self._roles_for_team(ctx, team))[1]
             teams_message += "\n\t{0} ({1})".format(team, tier_role.name)
 
-        embed = discord.Embed(title="{0}:".format(franchise_role.name), color=discord.Colour.blue(), description=teams_message)
+        color = discord.Colour.blue()
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
-            embed.set_thumbnail(url=emoji.url)
+            rgb = self._get_dominant_color(await emoji.url.read())
+            await ctx.send("RGB: {}".format(rgb))
+            color = discord.Colour.from_rgb(rgb[0], rgb[1], rgb[2])
+            embed = discord.Embed(title="{0}:".format(franchise_role.name), color=color, description=teams_message, thumbnail=emoji)
+        else:
+            embed = discord.Embed(title="{0}:".format(franchise_role.name), color=color, description=teams_message)
         return embed
 
     async def _format_teams_for_tier(self, ctx, tier):
@@ -531,3 +538,31 @@ class TeamManager(commands.Cog):
             for emoji in emojis:
                 if emoji.name.lower() == prefix.lower():
                     return emoji
+
+    def _get_dominant_color(self, image, k=4):
+        """
+        takes an image as input
+        returns the dominant color of the image as a list
+        
+        dominant color is found by running k means on the 
+        pixels & returning the centroid of the largest cluster
+
+        processing time is sped up by working with a smaller image;
+
+        >>> get_dominant_color(my_image, k=4)
+        [56.2423442, 34.0834233, 70.1234123]
+        """
+        #reshape the image to be a list of pixels
+        image = image.reshape((image.shape[0] * image.shape[1], 3))
+
+        #cluster and assign labels to the pixels 
+        clt = KMeans(n_clusters = k)
+        labels = clt.fit_predict(image)
+
+        #count labels to find most popular
+        label_counts = Counter(labels)
+
+        #subset out most popular centroid
+        dominant_color = clt.cluster_centers_[label_counts.most_common(1)[0][0]]
+
+        return list(dominant_color)
