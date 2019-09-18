@@ -307,19 +307,19 @@ class TeamManager(commands.Cog):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
         
-        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue())
-        emoji = await self._get_franchise_emoji(ctx, franchise_role)
-        if(emoji):
-            embed.set_thumbnail(url=emoji.url)
         formatted_members = []
         if gm:
             formatted_members.append(self._format_team_member_for_message(gm, "GM"))
         for member in team_members:
             formatted_members.append(self._format_team_member_for_message(member))
         if not team_members:
-            formatted_members.append("No known members.")
+            formatted_members.append("No known members")
 
-        embed.add_field(value="{}".format("\n".join([member for member in formatted_members])), inline=False)
+        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue(), 
+            description="{}".format("\n".join([member for member in formatted_members])))
+        emoji = await self._get_franchise_emoji(ctx, franchise_role)
+        if(emoji):
+            embed.set_thumbnail(url=emoji.url)
         return embed
 
     def _format_team_member_for_message(self, member, *args):
