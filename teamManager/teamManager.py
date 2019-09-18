@@ -308,7 +308,7 @@ class TeamManager(commands.Cog):
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
         
         embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue())
-        emoji = await self._get_franchise_emoji(ctx, gm.name)
+        emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
         formatted_members = []
@@ -514,8 +514,8 @@ class TeamManager(commands.Cog):
                 teams_in_tier.append(team)
         return teams_in_tier
 
-    async def _get_franchise_emoji(self, ctx, gm_name):
-        prefix = await self.prefix_cog._get_gm_prefix(ctx, gm_name)
+    async def _get_franchise_emoji(self, ctx, franchise_role):
+        prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
         if prefix:
             await ctx.send("Prefix = {}".format(prefix))
             emojis = ctx.guild.emojis
