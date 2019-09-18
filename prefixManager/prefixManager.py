@@ -104,7 +104,7 @@ class PrefixManager(commands.Cog):
     @commands.guild_only()
     async def lookupPrefix(self, ctx, gm_name: str):
         """Gets the prefix corresponding to the GM's franchise"""
-        prefix = self._get_gm_prefix(ctx, gm_name)
+        prefix = await self._get_gm_prefix(ctx, gm_name)
         if(prefix):
             await ctx.send("Prefix for {0} = {1}".format(gm_name, prefix))
             return
