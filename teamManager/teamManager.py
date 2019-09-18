@@ -54,39 +54,20 @@ class TeamManager(commands.Cog):
                 if franchise_tier_prefix.lower() == value.lower():
                     gm_name = key
                     franchise_role = self._get_franchise_role(ctx, gm_name)
-                    teams = await self._find_teams_for_franchise(ctx, franchise_role)
-                    message = "```{0}:".format(franchise_role.name)
-                    for team in teams:
-                        tier_role = (await self._roles_for_team(ctx, team))[1]
-                        message += "\n\t{0} ({1})".format(team, tier_role.name)
-                    message += "```"
-                    await ctx.send(message)
+                    await ctx.send(embed=await self._format_teams_for_franchise(ctx, franchise_role))
                     return
 
         # Tier
         tiers = await self._tiers(ctx)
         for tier in tiers:
             if tier.lower() == franchise_tier_prefix.lower():
-                teams = await self._find_teams_for_tier(ctx, franchise_tier_prefix)
-                message = "```{0} teams:".format(tier)
-                for team in teams:
-                    franchise_role = (await self._roles_for_team(ctx, team))[0]
-                    gmNameFromRole = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
-                    message += "\n\t{0} ({1})".format(team, gmNameFromRole)
-                message += "```"
-                await ctx.send(message)
+                await ctx.send(embed=await self._format_teams_for_tier(ctx, tier))
                 return
 
         # Franchise name
         franchise_role = self.get_franchise_role_from_name(ctx, franchise_tier_prefix)
         if franchise_role is not None:
-            teams = await self._find_teams_for_franchise(ctx, franchise_role)
-            message = "```{0}:".format(franchise_role.name)
-            for team in teams:
-                tier_role = (await self._roles_for_team(ctx, team))[1]
-                message += "\n\t{0} ({1})".format(team, tier_role.name)
-            message += "```"
-            await ctx.send(message)
+            await ctx.send(embed=await self._format_teams_for_franchise(ctx, franchise_role))
         else:
             await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
@@ -331,8 +312,37 @@ class TeamManager(commands.Cog):
             extraRoles.append("IR")
         roleString = ""
         if extraRoles:
-            roleString = " ({0})".format("|".join(extraRoles))
+            roleString = " **({0})**".format("|".join(extraRoles))
         return "{0}{1}".format(member.mention, roleString)
+
+    async def _format_teams_for_franchise(self, ctx, franchise_role):
+        teams = await self._find_teams_for_franchise(ctx, franchise_role)
+        teams_message = ""
+        for team in teams:
+            tier_role = (await self._roles_for_team(ctx, team))[1]
+            teams_message += "\n\t{0} ({1})".format(team, tier_role.name)
+
+        embed = discord.Embed(title="{0}:".format(franchise_role.name), color=discord.Colour.blue(), description=teams_message)
+        emoji = await self._get_franchise_emoji(ctx, franchise_role)
+        if(emoji):
+            embed.set_thumbnail(url=emoji.url)
+        return embed
+
+    async def _format_teams_for_tier(self, ctx, tier):
+        teams = await self._find_teams_for_tier(ctx, tier)
+        teams_message = ""
+        for team in teams:
+            franchise_role = (await self._roles_for_team(ctx, team))[0]
+            gmNameFromRole = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
+            teams_message += "\n\t{0} ({1})".format(team, gmNameFromRole)
+
+        color = discord.Colour.blue()
+        for role in ctx.guild.role:
+            if role.name.lower() == tier.lower():
+                color = role.color
+
+        embed = discord.Embed(title="{0} teams:".format(tier), color=color, description=teams_message)
+        return embed
 
     async def _tiers(self, ctx):
         return await self.config.guild(ctx.guild).Tiers()
