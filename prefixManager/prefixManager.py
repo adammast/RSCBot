@@ -102,15 +102,13 @@ class PrefixManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def lookupPrefix(self, ctx, gmName: str):
+    async def lookupPrefix(self, ctx, gm_name: str):
         """Gets the prefix corresponding to the GM's franchise"""
-        prefixes = await self._prefixes(ctx)
-
-        try:
-            prefix = prefixes[gmName]
-            await ctx.send("Prefix for {0} = {1}".format(gmName, prefix))
-        except KeyError:
-            await ctx.send(":x: Prefix not found for {0}".format(gmName))
+        prefix = self._get_gm_prefix(ctx, gm_name)
+        if(prefix):
+            await ctx.send("Prefix for {0} = {1}".format(gm_name, prefix))
+            return
+        await ctx.send(":x: Prefix not found for {0}".format(gm_name))
 
     def _find_role(self, ctx, role_id):
         guild = ctx.message.guild
@@ -155,6 +153,13 @@ class PrefixManager(commands.Cog):
                     return gmNameFromRole
             except:
                 continue
+
+    async def _get_gm_prefix(self, ctx, gm_name):
+        prefixes = await self._prefixes(ctx)
+        try:
+            return prefixes[self._get_proper_gm_name(ctx, gm_name)]
+        except:
+            return None
 
     async def _get_franchise_prefix(self, ctx, franchise_role):
         prefixes = await self._prefixes(ctx)

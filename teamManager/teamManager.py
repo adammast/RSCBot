@@ -100,7 +100,7 @@ class TeamManager(commands.Cog):
             if franchise_role is None or tier_role is None:
                 await ctx.send("No franchise and tier roles set up for {0}".format(team))
                 return
-            await ctx.send(await self.format_roster_info(ctx, team))
+            await ctx.send(embed=await self.format_roster_info(ctx, team))
         else:
             message = "No team with name: {0}".format(team_name)
             if len(team) > 0:
@@ -306,23 +306,25 @@ class TeamManager(commands.Cog):
     async def format_roster_info(self, ctx, team_name: str):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
-
-        message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
+        
+        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue())
+        emoji = self._get_franchise_emoji(ctx, gm.name)
+        if(emoji):
+            embed.set_thumbnail(url=emoji.url)
+        formatted_members = []
         if gm:
-            message += "  {0}\n".format(
-                self._format_team_member_for_message(gm, "GM"))
+            formatted_members.append(self._format_team_member_for_message(gm, "GM"))
         for member in team_members:
-            message += "  {0}\n".format(
-                self._format_team_member_for_message(member))
+            formatted_members.append(self._format_team_member_for_message(member))
         if not team_members:
-            message += "  No known members."
-        message += "```\n"
-        return message
+            formatted_members.append("No known members.")
+
+        embed.add_field(name="Roster Members", value="{}".format("\n".join([member in formatted_members])), inline=False)
+        return embed
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
 
-        name = member.nick if member.nick else member.name
         if self.is_captain(member):
             extraRoles.append("C")
         if self.is_IR(member):
@@ -330,7 +332,7 @@ class TeamManager(commands.Cog):
         roleString = ""
         if extraRoles:
             roleString = " ({0})".format("|".join(extraRoles))
-        return "{0}{1}".format(name, roleString)
+        return "{0}{1}".format(member.mention, roleString)
 
     async def _tiers(self, ctx):
         return await self.config.guild(ctx.guild).Tiers()
@@ -511,3 +513,10 @@ class TeamManager(commands.Cog):
             if team_tier.name.lower() == tier.lower():
                 teams_in_tier.append(team)
         return teams_in_tier
+
+    async def _get_franchise_emoji(self, ctx, gm_name):
+        prefix = await self.prefix_cog._get_gm_prefix(ctx, gm_name)
+        emojis = ctx.guild.emojis
+        for emoji in emojis:
+            if emoji.name.lower() == prefix.lower():
+                return emoji
