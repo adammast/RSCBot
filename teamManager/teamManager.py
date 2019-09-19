@@ -298,7 +298,7 @@ class TeamManager(commands.Cog):
         if not team_members:
             formatted_members.append("No known members")
 
-        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=discord.Colour.blue(), 
+        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=tier_role.color, 
             description="{}".format("\n".join([member for member in formatted_members])))
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
