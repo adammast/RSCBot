@@ -6,7 +6,6 @@ import difflib
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
-from sklearn.cluster import KMeans
 from collections import Counter
 
 
