@@ -528,8 +528,15 @@ class TeamManager(commands.Cog):
 
     async def _get_franchise_emoji(self, ctx, franchise_role):
         prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
+        gm_name = self._get_gm_name(franchise_role)
         if prefix:
             emojis = ctx.guild.emojis
             for emoji in emojis:
-                if emoji.name.lower() == prefix.lower():
+                if emoji.name.lower() == prefix.lower() or emoji.name.lower() == gm_name.lower():
                     return emoji
+        
+    def _get_gm_name(self, franchise_role):
+        try:
+            return re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
+        except:
+            raise LookupError('GM name not found from role {0}'.format(franchise_role.name))

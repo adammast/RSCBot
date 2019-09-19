@@ -24,6 +24,17 @@ class Match(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
+    async def test(self, ctx, team):
+        embeds = []
+        embeds.append(await self.team_manager.format_roster_info(ctx, team))
+        embeds.append(await self.team_manager.format_roster_info(ctx, team))
+
+        await ctx.message.author.send("This is a test", embeds=embeds)
+
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def setMatchDay(self, ctx, day: str):
         """Sets the active match day to the specified day.
 
