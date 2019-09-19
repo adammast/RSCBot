@@ -25,11 +25,12 @@ class Match(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def test(self, ctx, team):
-        embeds = []
-        embeds.append(await self.team_manager.format_roster_info(ctx, team))
-        embeds.append(await self.team_manager.format_roster_info(ctx, team))
+        home_embed = await self.team_manager.format_roster_info(ctx, team)
+        away_embed = await self.team_manager.format_roster_info(ctx, team)
 
-        await ctx.message.author.send("This is a test", embeds=embeds)
+        await ctx.message.author.send("This is a test")
+        await ctx.message.author.send("**Home Team:**", embed=home_embed)
+        await ctx.message.author.send("**Away Team:**", embed=away_embed)
 
 
     @commands.command()
