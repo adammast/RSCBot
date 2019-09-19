@@ -136,7 +136,6 @@ class Match(commands.Cog):
                     "No match on day {0} for {1}".format(match_day,
                                                          team_name)
                 )
-            await asyncio.sleep(3)
         await ctx.message.delete()
 
     @commands.command()
@@ -375,8 +374,7 @@ class Match(commands.Cog):
                     # "Screenshots and replays do not need to be uploaded to the website for "
                     # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
 
-        await ctx.message.author.send(message)
-        await ctx.message.author.send("**Home Team:**", embed=await self.team_manager.format_roster_info(ctx, home))
+        await ctx.message.author.send(message += "**Home Team:**", embed=await self.team_manager.format_roster_info(ctx, home))
         await ctx.message.author.send("**Away Team:**", embed=await self.team_manager.format_roster_info(ctx, away))
 
     def _generate_name_pass(self):
