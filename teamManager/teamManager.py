@@ -235,7 +235,7 @@ class TeamManager(commands.Cog):
         message = ""
         for member in ctx.message.guild.members:
             if fa_role in member.roles:
-                message += "\n\t{0}".format(member.nick)
+                message += "\n{0}".format(member.mention)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
 
