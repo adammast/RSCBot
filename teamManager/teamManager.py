@@ -33,11 +33,9 @@ class TeamManager(commands.Cog):
         """Provides a list of all the franchises set up in the server 
         including the name of the GM for each franchise"""
         franchise_roles = self._get_all_franchise_roles(ctx)
-        message = "```Franchises:"
-        for role in franchise_roles:
-            message += "\n\t{0}".format(role.name)
-        message += "```"
-        await ctx.send(message)
+        embed = discord.Embed(title="Franchises:", color=discord.Colour.blue(), 
+            description="{}".format("\n".join([role.name for role in franchise_roles])), thumbnail=ctx.guild.icon_url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.guild_only()
@@ -234,13 +232,21 @@ class TeamManager(commands.Cog):
 
         perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
 
-        message = "```{0} Free Agents:".format(tier_name)
+        message = ""
         for member in ctx.message.guild.members:
             if fa_role in member.roles:
                 message += "\n\t{0}".format(member.nick)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
-        await ctx.send(message + "```")
+
+        color = discord.Colour.blue()
+        for role in ctx.guild.roles:
+            if role.name.lower() == tier_name.lower():
+                color = role.color
+        embed = discord.Embed(title="{0} Free Agents:".format(tier_name), color=color, 
+            description=message, thumbnail=ctx.guild.icon_url)
+                    
+        await ctx.send(embed=embed)
 
 
     def is_gm(self, member):
