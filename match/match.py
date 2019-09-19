@@ -374,7 +374,7 @@ class Match(commands.Cog):
                     # "Screenshots and replays do not need to be uploaded to the website for "
                     # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
 
-        await ctx.message.author.send(message += "**Home Team:**", embed=await self.team_manager.format_roster_info(ctx, home))
+        await ctx.message.author.send("{}**Home Team:**".format(message), embed=await self.team_manager.format_roster_info(ctx, home))
         await ctx.message.author.send("**Away Team:**", embed=await self.team_manager.format_roster_info(ctx, away))
 
     def _generate_name_pass(self):
