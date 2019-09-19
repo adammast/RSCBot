@@ -3,6 +3,7 @@ import ast
 import random
 from datetime import datetime
 import json
+import asyncio
 
 from redbot.core import Config
 from redbot.core import commands
@@ -20,6 +21,18 @@ class Match(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager = bot.get_cog("TeamManager")
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def test(self, ctx, team):
+        home_embed = await self.team_manager.format_roster_info(ctx, team)
+        away_embed = await self.team_manager.format_roster_info(ctx, team)
+
+        await ctx.message.author.send("This is a test")
+        await ctx.message.author.send("**Home Team:**", embed=home_embed)
+        await ctx.message.author.send("**Away Team:**", embed=away_embed)
+
 
     @commands.command()
     @commands.guild_only()
@@ -116,9 +129,8 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                await ctx.message.author.send(
-                    await self._format_match_info(ctx, match_index,
-                                            team_name_for_info))
+                await self._send_match_info(ctx, match_index,
+                                            team_name_for_info)
             else:
                 await ctx.message.author.send(
                     "No match on day {0} for {1}".format(match_day,
@@ -312,7 +324,7 @@ class Match(commands.Cog):
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    async def _format_match_info(self, ctx, match_index, user_team_name=None):
+    async def _send_match_info(self, ctx, match_index, user_team_name=None):
         matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:
@@ -362,12 +374,8 @@ class Match(commands.Cog):
                     # "Screenshots and replays do not need to be uploaded to the website for "
                     # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
 
-        message += "**Home Team:**\n"
-        message += await self.team_manager.format_roster_info(ctx, home)
-        message += "\n**Away Team:**\n"
-        message += await self.team_manager.format_roster_info(ctx, away)
-
-        return message
+        await ctx.message.author.send("{}**Home Team:**".format(message), embed=await self.team_manager.format_roster_info(ctx, home))
+        await ctx.message.author.send("**Away Team:**", embed=await self.team_manager.format_roster_info(ctx, away))
 
     def _generate_name_pass(self):
         # TODO: Load from file?
