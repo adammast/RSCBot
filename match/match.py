@@ -136,7 +136,7 @@ class Match(commands.Cog):
                     "No match on day {0} for {1}".format(match_day,
                                                          team_name)
                 )
-            await asyncio.sleep(.25)
+            await asyncio.sleep(1)
         await ctx.message.delete()
 
     @commands.command()
