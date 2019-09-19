@@ -71,15 +71,22 @@ class FaCheckIn(commands.Cog):
         tier_list = await self._tier_data(ctx, match_day, tier)
         perm_fa_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.PERM_FA_ROLE)
 
-        message = "```Availability for {0} tier on match day {1}:".format(tier, match_day)
+        message = ""
         for user in tier_list:
             member = ctx.guild.get_member(user)
             if await self._find_tier_from_fa_role(ctx, member) is not None:
-                message += "\n\t{0}".format(member.nick)
+                message += "\n{0}".format(member.mention)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
-        message += "```"
-        await ctx.send(message)
+
+        color = discord.Colour.blue()
+        for role in ctx.guild.roles:
+            if role.name.lower() == tier_name.lower():
+                color = role.color
+        embed = discord.Embed(title="Availability for {0} tier on match day {1}:".format(tier, match_day), color=color, 
+            description=message, thumbnail=ctx.guild.icon_url)
+                    
+        await ctx.send(embed=embed)
 
     @commands.command()
     @commands.guild_only()
