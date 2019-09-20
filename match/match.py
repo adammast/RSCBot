@@ -129,7 +129,7 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                await ctx.message.author.send(embed=self._send_match_info(ctx,
+                await ctx.message.author.send(embed=await self._format_match_info(ctx,
                                             match_index, team_name_for_info))
             else:
                 await ctx.message.author.send(
@@ -324,7 +324,7 @@ class Match(commands.Cog):
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    async def _send_match_info(self, ctx, match_index, user_team_name=None):
+    async def _format_match_info(self, ctx, match_index, user_team_name=None):
         matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:

@@ -80,8 +80,7 @@ class TeamManager(commands.Cog):
             if franchise_role is None or tier_role is None:
                 await ctx.send("No franchise and tier roles set up for {0}".format(team))
                 return
-            embed = await self.create_roster_embed(ctx, team)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=await self.create_roster_embed(ctx, team))
         else:
             message = "No team with name: {0}".format(team_name)
             if len(team) > 0:
@@ -295,7 +294,7 @@ class TeamManager(commands.Cog):
 
     async def create_roster_embed(self, ctx, team_name):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-        message = self.format_roster_info(ctx, team_name)
+        message = await self.format_roster_info(ctx, team_name)
 
         embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), 
             description=message, color=tier_role.color)
