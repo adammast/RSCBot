@@ -80,7 +80,7 @@ class TeamManager(commands.Cog):
             if franchise_role is None or tier_role is None:
                 await ctx.send("No franchise and tier roles set up for {0}".format(team))
                 return
-            await ctx.send(embed=await self.format_roster_info(ctx, team))
+            await ctx.send(embed=await self.create_roster_embed(ctx, team))
         else:
             message = "No team with name: {0}".format(team_name)
             if len(team) > 0:
@@ -231,12 +231,13 @@ class TeamManager(commands.Cog):
 
         perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
 
-        message = ""
+        message = "```"
         for member in ctx.message.guild.members:
             if fa_role in member.roles:
-                message += "\n{0}".format(member.mention)
+                message += "\n{0}".format(member.display_name)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
+        message += "```"
 
         color = discord.Colour.blue()
         for role in ctx.guild.roles:
@@ -291,24 +292,32 @@ class TeamManager(commands.Cog):
                     team_members.append(member)
         return (gm, team_members)
 
-    async def format_roster_info(self, ctx, team_name: str):
+    async def create_roster_embed(self, ctx, team_name):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-        gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
-        
-        formatted_members = []
-        if gm:
-            formatted_members.append(self._format_team_member_for_message(gm, "GM"))
-        for member in team_members:
-            formatted_members.append(self._format_team_member_for_message(member))
-        if not team_members:
-            formatted_members.append("No known members")
+        message = self.format_roster_info(ctx, team_name)
 
-        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), color=tier_role.color, 
-            description="{}".format("\n".join([member for member in formatted_members])))
+        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), 
+            description=message, color=tier_role.color)
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
         return embed
+
+    async def format_roster_info(self, ctx, team_name: str):
+        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+        gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+
+        message = "```"
+        if gm:
+            message += "{0}\n".format(
+                self._format_team_member_for_message(gm, "GM"))
+        for member in team_members:
+            message += "{0}\n".format(
+                self._format_team_member_for_message(member))
+        if not team_members:
+            message += "No known members."
+        message += "```"
+        return message
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
@@ -319,8 +328,8 @@ class TeamManager(commands.Cog):
             extraRoles.append("IR")
         roleString = ""
         if extraRoles:
-            roleString = " **({0})**".format("|".join(extraRoles))
-        return "{0}{1}".format(member.mention, roleString)
+            roleString = " ({0})".format("|".join(extraRoles))
+        return "{0}{1}".format(member.display_name, roleString)
 
     async def _format_teams_for_franchise(self, ctx, franchise_role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)

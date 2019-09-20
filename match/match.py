@@ -3,7 +3,7 @@ import ast
 import random
 from datetime import datetime
 import json
-import asyncio
+import discord
 
 from redbot.core import Config
 from redbot.core import commands
@@ -129,8 +129,8 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                await self._send_match_info(ctx, match_index,
-                                            team_name_for_info)
+                await ctx.message.author.send(embed=self._send_match_info(ctx,
+                                            match_index, team_name_for_info))
             else:
                 await ctx.message.author.send(
                     "No match on day {0} for {1}".format(match_day,
@@ -338,14 +338,23 @@ class Match(commands.Cog):
         # }
         home = match['home']
         away = match['away']
-        message = "__Match Day {0}: {1}__\n".format(match['matchDay'],
-                                                    match['matchDate'])
-        message += "**{0}**\n    versus\n**{1}**\n\n".format(home,
-                                                             away)
-        message += ("Room Name: **{0}**\nPassword: "
-                    "**{1}**\n").format(match['roomName'], match['roomPass'])
+
+        tier_role = (await self.team_manager._roles_for_team(ctx, home))[1]
+
+        title = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
+        description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
+
+        embed = discord.Embed(title=title, description=description, color=tier_role.color)
+        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}"
+                                        .format(match['roomName'], match['roomPass']), inline=False)
+        embed.add_field(name="{0} ({1}):".format(home, tier_role.name),
+                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+        embed.add_field(name="{0} ({1}):".format(away, tier_role.name),
+                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+
+        extra_info = ""
         if user_team_name and user_team_name == home:
-            message += ("\nYou are the **home** team. You will create the "
+            extra_info += ("You are the **home** team. You will create the "
                         "room using the above information. Contact the "
                         "other team when your team is ready to begin the "
                         "match. Do not join a team until the away team starts "
@@ -354,7 +363,7 @@ class Match(commands.Cog):
                         "team would like to switch server region after 2 "
                         "games.")
         elif user_team_name and user_team_name == away:
-            message += ("\nYou are the **away** team. You will join the room "
+            extra_info += ("You are the **away** team. You will join the room "
                         "using the above information once the other team "
                         "contacts you. Do not begin joining a team until "
                         "your entire team is ready to begin playing.")
@@ -362,7 +371,7 @@ class Match(commands.Cog):
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
         # REGULAR SEASON INFO
-        message += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
+        extra_info += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                     "and screenshots of the end-of-game scoreboard. Do not leave "
                     "the game until screenshots have been taken. "
                    "These must be uploaded by one member of your team after the 4-game series "
@@ -374,8 +383,8 @@ class Match(commands.Cog):
                     # "Screenshots and replays do not need to be uploaded to the website for "
                     # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
 
-        await ctx.message.author.send("{}**Home Team:**".format(message), embed=await self.team_manager.format_roster_info(ctx, home))
-        await ctx.message.author.send("**Away Team:**", embed=await self.team_manager.format_roster_info(ctx, away))
+        embed.add_field(name="Additional Info:", value=extra_info)
+        return embed
 
     def _generate_name_pass(self):
         # TODO: Load from file?
