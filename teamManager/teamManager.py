@@ -80,7 +80,8 @@ class TeamManager(commands.Cog):
             if franchise_role is None or tier_role is None:
                 await ctx.send("No franchise and tier roles set up for {0}".format(team))
                 return
-            await ctx.send(embed=await self.create_roster_embed(ctx, team))
+            embed = await self.create_roster_embed(ctx, team)
+            await ctx.send(embed=embed)
         else:
             message = "No team with name: {0}".format(team_name)
             if len(team) > 0:
