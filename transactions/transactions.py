@@ -44,15 +44,15 @@ class Transactions(commands.Cog):
         if _trans_channel is not None:
             try:
                 await self.add_player_to_team(ctx, user, team_name)
-                freeAgentRole = await self.find_free_agent_role(ctx, user)
+                free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
                 await _trans_channel.send(message)
                 draftEligibleRole = None
                 for role in user.roles:
                     if role.name == "Draft Eligible":
                         draftEligibleRole = role
                         break
-                if freeAgentRole is not None:
-                    await user.remove_roles(freeAgentRole)
+                if len(free_agent_roles) > 0:
+                    await user.remove_roles((role for role in free_agent_roles))
                 if draftEligibleRole is not None:
                     await user.remove_roles(draftEligibleRole)
                 await ctx.send("Done")
@@ -77,12 +77,12 @@ class Transactions(commands.Cog):
         if _trans_channel is not None:
            try:
                await self.add_player_to_team(ctx, user, team_name)
-               freeAgentRole = await self.find_free_agent_role(ctx, user)
+               free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
                gm_name = self.team_manager_cog._get_gm_name(franchise_role)
                message = "{0} was signed by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                await _trans_channel.send(message)
-               if freeAgentRole is not None:
-                   await user.remove_roles(freeAgentRole)
+               if len(free_agent_roles) > 0:
+                    await user.remove_roles((role for role in free_agent_roles))
                await ctx.send("Done")
            except Exception as e:
                await ctx.send(e)
@@ -90,17 +90,18 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
-    async def cut(self, ctx, user : discord.Member, team_name: str, freeAgentRole: discord.Role = None):
+    async def cut(self, ctx, user : discord.Member, team_name: str, tier_fa_role: discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix and role to a user and posts to the assigned channel"""
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         _trans_channel = await self._trans_channel(ctx)
         if _trans_channel is not None:
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
-                if freeAgentRole is None:
-                    freeAgentRole = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name))
+                if tier_fa_role is None:
+                    tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name))
+                fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
-                await user.add_roles(freeAgentRole)
+                await user.add_roles(tier_fa_role, fa_role)
                 gm_name = self.team_manager_cog._get_gm_name(franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await _trans_channel.send(message)
@@ -234,14 +235,15 @@ class Transactions(commands.Cog):
             if prefix is not None:
                 await user.remove_roles(franchise_role)
 
-    async def find_free_agent_role(self, ctx, user):
+    async def find_user_free_agent_roles(self, ctx, user):
         free_agent_roles = await self.get_free_agent_roles(ctx)
+        user_fa_roles = []
         if(len(free_agent_roles) > 0):
             for fa_role in free_agent_roles:
                 for role in user.roles:
                     if role.id == fa_role.id:
-                        return role
-        return None
+                        user_fa_roles.append(role)
+        return user_fa_roles
 
     async def get_free_agent_roles(self, ctx):
         free_agent_roles = []
@@ -250,6 +252,7 @@ class Transactions(commands.Cog):
             role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier))
             if role is not None:
                 free_agent_roles.append(role)
+        free_agent_roles.append(self.team_manager_cog._find_role_by_name("Free Agent"))
         return free_agent_roles
 
     def get_player_nickname(self, user : discord.Member):
