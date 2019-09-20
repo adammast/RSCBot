@@ -345,7 +345,7 @@ class Match(commands.Cog):
         description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
 
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
-        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}"
+        embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
                                         .format(match['roomName'], match['roomPass']), inline=False)
         embed.add_field(name="{0} ({1}):".format(home, tier_role.name),
                 value=await self.team_manager.format_roster_info(ctx, home), inline=False)
