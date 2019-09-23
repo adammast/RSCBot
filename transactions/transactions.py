@@ -98,7 +98,8 @@ class Transactions(commands.Cog):
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
                 if tier_fa_role is None:
-                    tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name))
+                    role_name = "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name)
+                    tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, role_name)
                 fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
                 await user.add_roles(tier_fa_role, fa_role)
@@ -252,7 +253,7 @@ class Transactions(commands.Cog):
             role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier))
             if role is not None:
                 free_agent_roles.append(role)
-        free_agent_roles.append(self.team_manager_cog._find_role_by_name("Free Agent"))
+        free_agent_roles.append(self.team_manager_cog._find_role_by_name(ctx, "Free Agent"))
         return free_agent_roles
 
     def get_player_nickname(self, user : discord.Member):
