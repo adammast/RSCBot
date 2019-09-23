@@ -309,10 +309,10 @@ class TeamManager(commands.Cog):
 
         message = "```"
         if gm:
-            message += "\t{0}\n".format(
+            message += " {0}\n".format(
                 self._format_team_member_for_message(gm, "GM"))
         for member in team_members:
-            message += "\t{0}\n".format(
+            message += " {0}\n".format(
                 self._format_team_member_for_message(member))
         if not team_members:
             message += "No known members."
