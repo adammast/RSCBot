@@ -436,28 +436,27 @@ room_pass = [
     'tex', 'tusk', 'viper', 'wolfman', 'yuri'
 ]
 
-home_info = "You are the **home** team. You will create the "
-"room using the above information. Contact the "
-"other team when your team is ready to begin the "
-"match. Do not join a team until the away team starts "
-"to.\n"
-"Remember to ask before the match begins if the other "
-"team would like to switch server region after 2 "
-"games."
+home_info = ("You are the **home** team. You will create the "
+            "room using the above information. Contact the "
+            "other team when your team is ready to begin the "
+            "match. Do not join a team until the away team starts "
+            "to.\nRemember to ask before the match begins if the other "
+            "team would like to switch server region after 2 "
+            "games.")
 
-away_info = "You are the **away** team. You will join the room "
-"using the above information once the other team "
-"contacts you. Do not begin joining a team until "
-"your entire team is ready to begin playing."
+away_info = ("You are the **away** team. You will join the room "
+            "using the above information once the other team "
+            "contacts you. Do not begin joining a team until "
+            "your entire team is ready to begin playing.")
 
-regular_info = "\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
-"and screenshots of the end-of-game scoreboard. Do not leave "
-"the game until screenshots have been taken. "
-"These must be uploaded by one member of your team after the 4-game series "
-"is over. Remember that the deadline to reschedule matches is "
-"at 10 minutes before the currently scheduled match time. They "
-"can be scheduled no later than 11:59 PM ET on the original match day.\n\n"
+regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
+                "and screenshots of the end-of-game scoreboard. Do not leave "
+                "the game until screenshots have been taken. "
+                "These must be uploaded by one member of your team after the 4-game series "
+                "is over. Remember that the deadline to reschedule matches is "
+                "at 10 minutes before the currently scheduled match time. They "
+                "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
 
-playoff_info = "Playoff matches are a best of 5 series for every round until the finals. "
-"Screenshots and replays do not need to be uploaded to the website for "
-"playoff matches but you will need to report the scores in #score-reporting.\n\n"
+playoff_info = ("Playoff matches are a best of 5 series for every round until the finals. "
+                "Screenshots and replays do not need to be uploaded to the website for "
+                "playoff matches but you will need to report the scores in #score-reporting.\n\n")
