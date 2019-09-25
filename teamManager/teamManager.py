@@ -296,8 +296,7 @@ class TeamManager(commands.Cog):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         message = await self.format_roster_info(ctx, team_name)
 
-        embed = discord.Embed(title="{0} ({1}):".format(team_name, tier_role.name), 
-            description=message, color=tier_role.color)
+        embed = discord.Embed(description=message, color=tier_role.color)
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
@@ -307,12 +306,12 @@ class TeamManager(commands.Cog):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
-        message = "```"
+        message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
         if gm:
-            message += "{0}\n".format(
+            message += "  {0}\n".format(
                 self._format_team_member_for_message(gm, "GM"))
         for member in team_members:
-            message += "{0}\n".format(
+            message += "  {0}\n".format(
                 self._format_team_member_for_message(member))
         if not team_members:
             message += "No known members."
@@ -548,6 +547,13 @@ class TeamManager(commands.Cog):
             for emoji in emojis:
                 if emoji.name.lower() == prefix.lower() or emoji.name.lower() == gm_name.lower():
                     return emoji
+
+    def _get_gm(self, ctx, franchise_role):
+        for member in ctx.message.guild.members:
+            if franchise_role in member.roles:
+                if self.is_gm(member):
+                    return member
+
         
     def _get_gm_name(self, franchise_role):
         try:

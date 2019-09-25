@@ -25,18 +25,6 @@ class Match(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def test(self, ctx, team):
-        home_embed = await self.team_manager.format_roster_info(ctx, team)
-        away_embed = await self.team_manager.format_roster_info(ctx, team)
-
-        await ctx.message.author.send("This is a test")
-        await ctx.message.author.send("**Home Team:**", embed=home_embed)
-        await ctx.message.author.send("**Away Team:**", embed=away_embed)
-
-
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
     async def setMatchDay(self, ctx, day: str):
         """Sets the active match day to the specified day.
 
@@ -129,7 +117,11 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                await ctx.message.author.send(embed=await self._format_match_info(ctx,
+                if not ctx.message.author.is_on_mobile():
+                    await ctx.message.author.send(embed=await self._format_match_embed(ctx,
+                                            match_index, team_name_for_info))
+                else:
+                    await ctx.message.author.send(await self._format_match_message(ctx,
                                             match_index, team_name_for_info))
             else:
                 await ctx.message.author.send(
@@ -324,7 +316,7 @@ class Match(commands.Cog):
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    async def _format_match_info(self, ctx, match_index, user_team_name=None):
+    async def _format_match_embed(self, ctx, match_index, user_team_name=None):
         matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:
@@ -347,89 +339,124 @@ class Match(commands.Cog):
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
         embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
                                         .format(match['roomName'], match['roomPass']), inline=False)
-        embed.add_field(name="{0} ({1}):".format(home, tier_role.name),
+        embed.add_field(name="**Home Team:**",
                 value=await self.team_manager.format_roster_info(ctx, home), inline=False)
-        embed.add_field(name="{0} ({1}):".format(away, tier_role.name),
+        embed.add_field(name="**Away Team:**",
                 value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
-        extra_info = ""
+        additional_info = self._create_additional_info(user_team_name, home, away)
+
+        embed.add_field(name="Additional Info:", value=additional_info)
+        return embed
+
+    async def _format_match_message(self, ctx, match_index, user_team_name=None):
+        matches = await self._matches(ctx)
+        match = matches[match_index]
+        # Match format:
+        # match_data = {
+        #     'matchDay': match_day,
+        #     'matchDate': match_date,
+        #     'home': home,
+        #     'away': away,
+        #     'roomName': roomName,
+        #     'roomPass': roomPass
+        # }
+        home = match['home']
+        away = match['away']
+
+        message = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
+        message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
+        message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
+        message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
+        message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
+        message += self._create_additional_info(user_team_name, home, away)
+        return message
+
+    def _create_additional_info(self, user_team_name, home, away):
+        additional_info = ""
         if user_team_name and user_team_name == home:
-            extra_info += ("You are the **home** team. You will create the "
-                        "room using the above information. Contact the "
-                        "other team when your team is ready to begin the "
-                        "match. Do not join a team until the away team starts "
-                        "to.\n"
-                        "Remember to ask before the match begins if the other "
-                        "team would like to switch server region after 2 "
-                        "games.")
+            additional_info += home_info
         elif user_team_name and user_team_name == away:
-            extra_info += ("You are the **away** team. You will join the room "
-                        "using the above information once the other team "
-                        "contacts you. Do not begin joining a team until "
-                        "your entire team is ready to begin playing.")
+            additional_info += away_info
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
         # REGULAR SEASON INFO
-        extra_info += ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
-                    "and screenshots of the end-of-game scoreboard. Do not leave "
-                    "the game until screenshots have been taken. "
-                   "These must be uploaded by one member of your team after the 4-game series "
-                   "is over. Remember that the deadline to reschedule matches is "
-                   "at 10 minutes before the currently scheduled match time. They "
-                   "can be scheduled no later than 11:59 PM ET on the original match day.\n\n") 
+        additional_info += regular_info
         # PLAYOFF INFO
-                    # "Playoff matches are a best of 5 series for every round until the finals. "
-                    # "Screenshots and replays do not need to be uploaded to the website for "
-                    # "playoff matches but you will need to report the scores in #score-reporting.\n\n")
-
-        embed.add_field(name="Additional Info:", value=extra_info)
-        return embed
+        #additional_info += playoff_info
+        return additional_info
 
     def _generate_name_pass(self):
-        # TODO: Load from file?
-        set = [
-            'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-            'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-            'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-            'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-            'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-            'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-            'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-            'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-            'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-            'vulcan', 'zippy',
+        return room_pass[random.randrange(len(room_pass))]
 
-            'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-            'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-            'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-            'dunkhouse', 'throwback', 'underpass', 'badlands',
+# TODO: Load from file?
+room_pass = [
+    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
+    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
+    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
+    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
+    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
+    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
+    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
+    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
+    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
+    'vulcan', 'zippy',
 
-            '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-            'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-            'stormwatch', 'tora', 'trigon', 'wetpaint',
+    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
+    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
+    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
+    'dunkhouse', 'throwback', 'underpass', 'badlands',
 
-            'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-            'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-            'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-            'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-            'voltaic', 'wonderment', 'zomba',
+    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
+    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
+    'stormwatch', 'tora', 'trigon', 'wetpaint',
 
-            'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-            'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-            'platinum', 'diamond',
+    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
+    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
+    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
+    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
+    'voltaic', 'wonderment', 'zomba',
 
-            'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-            'doubles', 'standard', 'chaos',
+    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
+    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
+    'platinum', 'diamond',
 
-            'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-            'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-            'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-            'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-            'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-            'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-            'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-            'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-            'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-        ]
-        return set[random.randrange(len(set))]
+    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
+    'doubles', 'standard', 'chaos',
+
+    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
+    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
+    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
+    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
+    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
+    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
+    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
+    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
+    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
+]
+
+home_info = ("You are the **home** team. You will create the "
+            "room using the above information. Contact the "
+            "other team when your team is ready to begin the "
+            "match. Do not join a team until the away team starts "
+            "to.\nRemember to ask before the match begins if the other "
+            "team would like to switch server region after 2 "
+            "games.")
+
+away_info = ("You are the **away** team. You will join the room "
+            "using the above information once the other team "
+            "contacts you. Do not begin joining a team until "
+            "your entire team is ready to begin playing.")
+
+regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
+                "and screenshots of the end-of-game scoreboard. Do not leave "
+                "the game until screenshots have been taken. "
+                "These must be uploaded by one member of your team after the 4-game series "
+                "is over. Remember that the deadline to reschedule matches is "
+                "at 10 minutes before the currently scheduled match time. They "
+                "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
+
+playoff_info = ("Playoff matches are a best of 5 series for every round until the finals. "
+                "Screenshots and replays do not need to be uploaded to the website for "
+                "playoff matches but you will need to report the scores in #score-reporting.\n\n")
