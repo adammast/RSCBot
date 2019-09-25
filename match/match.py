@@ -117,7 +117,7 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                if ctx.message.author.is_on_mobile():
+                if not ctx.message.author.is_on_mobile():
                     await ctx.message.author.send(embed=await self._format_match_embed(ctx,
                                             match_index, team_name_for_info))
                 else:
@@ -369,8 +369,8 @@ class Match(commands.Cog):
         message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
         message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
-
         message += self._create_additional_info(user_team_name, home, away)
+        return message
 
     def _create_additional_info(self, user_team_name, home, away):
         additional_info = ""
