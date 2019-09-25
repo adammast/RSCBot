@@ -547,6 +547,13 @@ class TeamManager(commands.Cog):
             for emoji in emojis:
                 if emoji.name.lower() == prefix.lower() or emoji.name.lower() == gm_name.lower():
                     return emoji
+
+    def _get_gm(self, ctx, franchise_role):
+        for member in ctx.message.guild.members:
+            if franchise_role in member.roles:
+                if self.is_gm(member):
+                    return member
+
         
     def _get_gm_name(self, franchise_role):
         try:

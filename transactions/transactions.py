@@ -34,7 +34,7 @@ class Transactions(commands.Cog):
     async def draft(self, ctx, user: discord.Member, team_name: str, round: int = None, pick: int = None):
         """Assigns the franchise, tier, and league role to a user when they are drafted and posts to the assigned channel"""
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-        gm_name = self.team_manager_cog._get_gm_name(franchise_role)
+        gm_name = self._get_gm_name(ctx, franchise_role)
         if franchise_role in user.roles:
             message = "Round {0} Pick {1}: {2} was kept by the {3} ({4} - {5})".format(round, pick, user.mention, team_name, gm_name, tier_role.name)
         else:
@@ -78,7 +78,7 @@ class Transactions(commands.Cog):
            try:
                await self.add_player_to_team(ctx, user, team_name)
                free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
-               gm_name = self.team_manager_cog._get_gm_name(franchise_role)
+               gm_name = self._get_gm_name(ctx, franchise_role)
                message = "{0} was signed by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                await _trans_channel.send(message)
                if len(free_agent_roles) > 0:
@@ -103,7 +103,7 @@ class Transactions(commands.Cog):
                 fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
                 await user.add_roles(tier_fa_role, fa_role)
-                gm_name = self.team_manager_cog._get_gm_name(franchise_role)
+                gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await _trans_channel.send(message)
                 await ctx.send("Done")
@@ -119,8 +119,8 @@ class Transactions(commands.Cog):
         """Swaps the teams of the two players and announces the trade in the assigned channel"""
         franchise_role_1, tier_role_1 = await self.team_manager_cog._roles_for_team(ctx, new_team_name)
         franchise_role_2, tier_role_2 = await self.team_manager_cog._roles_for_team(ctx, new_team_name_2)
-        gm_name_1 = self.team_manager_cog._get_gm_name(franchise_role_1)
-        gm_name_2 = self.team_manager_cog._get_gm_name(franchise_role_2)
+        gm_name_1 = self._get_gm_name(ctx, franchise_role_1)
+        gm_name_2 = self._get_gm_name(ctx, franchise_role_2)
         if franchise_role_1 in user.roles and tier_role_1 in user.roles:
             await ctx.send(":x: {0} is already on the {1}".format(user.mention, new_team_name))
             return
@@ -149,7 +149,7 @@ class Transactions(commands.Cog):
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-                gm_name = self.team_manager_cog._get_gm_name(franchise_role)
+                gm_name = self._get_gm_name(ctx, franchise_role)
                 if franchise_role in user.roles and tier_role in user.roles:
                     await user.remove_roles(franchise_role, tier_role)
                     message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm_name, tier_role.name)
@@ -175,7 +175,7 @@ class Transactions(commands.Cog):
                 await self.remove_player_from_team(ctx, user, old_team_name)
                 await self.add_player_to_team(ctx, user, team_name)
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-                gm_name = self.team_manager_cog._get_gm_name(franchise_role)
+                gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was promoted to the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await _trans_channel.send(message)
                 await ctx.send("Done")
@@ -265,6 +265,13 @@ class Transactions(commands.Cog):
                 currentNickname = array[0]
             return currentNickname
         return user.name
+
+    def _get_gm_name(self, ctx, franchise_role):
+        gm = self.team_manager_cog._get_gm(ctx, franchise_role)
+        if(gm):
+            return gm.mention
+        else:
+           return self.team_manager_cog._get_gm_name(franchise_role)
 
     async def _trans_channel(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).TransChannel())
