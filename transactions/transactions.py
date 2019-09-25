@@ -268,7 +268,7 @@ class Transactions(commands.Cog):
 
     def _get_gm_name(self, ctx, franchise_role):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)
-        if(gm):
+        if gm:
             return gm.mention
         else:
            return self.team_manager_cog._get_gm_name(franchise_role)
