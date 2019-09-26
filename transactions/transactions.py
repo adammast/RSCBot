@@ -52,7 +52,8 @@ class Transactions(commands.Cog):
                         draftEligibleRole = role
                         break
                 if len(free_agent_roles) > 0:
-                    await user.remove_roles((role for role in free_agent_roles))
+                   for role in free_agent_roles:
+                       await user.remove_roles(role)
                 if draftEligibleRole is not None:
                     await user.remove_roles(draftEligibleRole)
                 await ctx.send("Done")
@@ -78,11 +79,12 @@ class Transactions(commands.Cog):
            try:
                await self.add_player_to_team(ctx, user, team_name)
                free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
-               gm_name = await self._get_gm_name(ctx, franchise_role)
+               if len(free_agent_roles) > 0:
+                   for role in free_agent_roles:
+                       await user.remove_roles(role)
+               gm_name = self._get_gm_name(ctx, franchise_role)
                message = "{0} was signed by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                await trans_channel.send(message)
-               if len(free_agent_roles) > 0:
-                    await user.remove_roles((role for role in free_agent_roles))
                await ctx.send("Done")
            except Exception as e:
                await ctx.send(e)
@@ -103,7 +105,7 @@ class Transactions(commands.Cog):
                 fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
                 await user.add_roles(tier_fa_role, fa_role)
-                gm_name = await self._get_gm_name(ctx, franchise_role)
+                gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await trans_channel.send(message)
                 await ctx.send("Done")
@@ -266,12 +268,9 @@ class Transactions(commands.Cog):
             return currentNickname
         return user.name
 
-    async def _get_gm_name(self, ctx, franchise_role):
+    def _get_gm_name(self, ctx, franchise_role):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)
         if gm:
-            await ctx.send("{}".format(gm))
-            await ctx.send("{}".format(gm.display_name))
-            await ctx.send("{}".format(gm.mention))
             return gm.mention
         else:
            return self.team_manager_cog._get_gm_name(franchise_role)
