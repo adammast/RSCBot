@@ -22,8 +22,8 @@ class Transactions(commands.Cog):
     async def genericAnnounce(self, ctx, *, message):
         """Posts the message to the transaction log channel"""
         try:
-            _trans_channel = await self._trans_channel(ctx)
-            await _trans_channel.send(message)
+            trans_channel = await self._trans_channel(ctx)
+            await trans_channel.send(message)
             await ctx.send("Done")
         except KeyError:
             await ctx.send(":x: Transaction log channel not set")
@@ -40,12 +40,12 @@ class Transactions(commands.Cog):
         else:
             message = "Round {0} Pick {1}: {2} was drafted by the {3} ({4} - {5})".format(round, pick, user.mention, team_name, gm_name, tier_role.name)
 
-        _trans_channel = await self._trans_channel(ctx)
-        if _trans_channel is not None:
+        trans_channel = await self._trans_channel(ctx)
+        if trans_channel is not None:
             try:
                 await self.add_player_to_team(ctx, user, team_name)
                 free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
-                await _trans_channel.send(message)
+                await trans_channel.send(message)
                 draftEligibleRole = None
                 for role in user.roles:
                     if role.name == "Draft Eligible":
@@ -73,14 +73,14 @@ class Transactions(commands.Cog):
             await ctx.send(":x: {0} is already on the {1}".format(user.mention, team_name))
             return
 
-        _trans_channel = await self._trans_channel(ctx)
-        if _trans_channel is not None:
+        trans_channel = await self._trans_channel(ctx)
+        if trans_channel is not None:
            try:
                await self.add_player_to_team(ctx, user, team_name)
                free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
-               gm_name = self._get_gm_name(ctx, franchise_role)
+               gm_name = await self._get_gm_name(ctx, franchise_role)
                message = "{0} was signed by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
-               await _trans_channel.send(message)
+               await trans_channel.send(message)
                if len(free_agent_roles) > 0:
                     await user.remove_roles((role for role in free_agent_roles))
                await ctx.send("Done")
@@ -93,8 +93,8 @@ class Transactions(commands.Cog):
     async def cut(self, ctx, user : discord.Member, team_name: str, tier_fa_role: discord.Role = None):
         """Removes the team role and franchise role. Adds the free agent prefix and role to a user and posts to the assigned channel"""
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-        _trans_channel = await self._trans_channel(ctx)
-        if _trans_channel is not None:
+        trans_channel = await self._trans_channel(ctx)
+        if trans_channel is not None:
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
                 if tier_fa_role is None:
@@ -103,9 +103,9 @@ class Transactions(commands.Cog):
                 fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
                 await user.edit(nick="FA | {0}".format(self.get_player_nickname(user)))
                 await user.add_roles(tier_fa_role, fa_role)
-                gm_name = self._get_gm_name(ctx, franchise_role)
+                gm_name = await self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
-                await _trans_channel.send(message)
+                await trans_channel.send(message)
                 await ctx.send("Done")
             except KeyError:
                 await ctx.send(":x: Free agent role not found in dictionary")
@@ -128,15 +128,15 @@ class Transactions(commands.Cog):
             await ctx.send(":x: {0} is already on the {1}".format(user_2.mention, new_team_name_2))
             return
 
-        _trans_channel = await self._trans_channel(ctx)
-        if _trans_channel is not None:
+        trans_channel = await self._trans_channel(ctx)
+        if trans_channel is not None:
             await self.remove_player_from_team(ctx, user, new_team_name_2)
             await self.remove_player_from_team(ctx, user_2, new_team_name)
             await self.add_player_to_team(ctx, user, new_team_name)
             await self.add_player_to_team(ctx, user_2, new_team_name_2)
             message = "{0} was traded by the {1} ({4} - {5}) to the {2} ({6} - {7}) for {3}".format(user.mention, new_team_name_2, new_team_name, 
                 user_2.mention, gm_name_2, tier_role_2.name, gm_name_1, tier_role_1.name)
-            await _trans_channel.send(message)
+            await trans_channel.send(message)
             await ctx.send("Done")
 
     @commands.guild_only()
@@ -144,8 +144,8 @@ class Transactions(commands.Cog):
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
         """Adds the team roles to the user and posts to the assigned channel"""
-        _trans_channel = await self._trans_channel(ctx)
-        if _trans_channel is not None:
+        trans_channel = await self._trans_channel(ctx)
+        if trans_channel is not None:
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
@@ -156,7 +156,7 @@ class Transactions(commands.Cog):
                 else:
                     await user.add_roles(franchise_role, tier_role, leagueRole)
                     message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
-                await _trans_channel.send(message)
+                await trans_channel.send(message)
                 await ctx.send("Done")
 
     @commands.guild_only()
@@ -170,14 +170,14 @@ class Transactions(commands.Cog):
                 await ctx.send(":x: {0} is not in the same franchise as {1}'s current team, the {2}".format(team_name.name, user.name, old_team_name))
                 return
             
-            _trans_channel = await self._trans_channel(ctx)
-            if _trans_channel:
+            trans_channel = await self._trans_channel(ctx)
+            if trans_channel:
                 await self.remove_player_from_team(ctx, user, old_team_name)
                 await self.add_player_to_team(ctx, user, team_name)
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
                 gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was promoted to the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
-                await _trans_channel.send(message)
+                await trans_channel.send(message)
                 await ctx.send("Done")
         else:
             await ctx.send("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
@@ -266,9 +266,12 @@ class Transactions(commands.Cog):
             return currentNickname
         return user.name
 
-    def _get_gm_name(self, ctx, franchise_role):
+    async def _get_gm_name(self, ctx, franchise_role):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)
         if gm:
+            await ctx.send("{}".format(gm))
+            await ctx.send("{}".format(gm.display_name))
+            await ctx.send("{}".format(gm.mention))
             return gm.mention
         else:
            return self.team_manager_cog._get_gm_name(franchise_role)
