@@ -310,8 +310,9 @@ class Match(commands.Cog):
 
     async def _team_day_match_index(self, ctx, team, match_day):
         team_days_index = await self._team_days_index(ctx)
+        team_days_index =  {k.lower(): v.lower() for k, v in team_days_index.items()}
         return team_days_index.get(
-            self._team_day_key(team, match_day))
+            self._team_day_key(team.lower(), match_day.lower()))
 
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
