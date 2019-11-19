@@ -3,11 +3,18 @@ import csv
 import os
 
 from redbot.core import commands
+from redbot.core import Config
 from redbot.core import checks
 from discord import File
 
+defaults = {"DraftEligibleMessage": None}
+
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
+
+    def __init__(self):
+        self.config = Config.get_conf(self, identifier=1234567897, force_registration=True)
+        self.config.register_guild(**defaults)
 
     @commands.command()
     @commands.guild_only()
@@ -124,6 +131,9 @@ class BulkRoleManager(commands.Cog):
                         added += 1
                         await member.edit(nick="{0} | {1}".format("DE", self.get_player_nickname(member)))
                         await member.remove_roles(spectatorRole)
+                        deMessage = await self._draft_eligible_message(ctx)
+                        if deMessage:
+                            await member.send(deMessage)
                     else:
                         message += "Already in League: {0}\n".format(member.mention)
                         had += 1
@@ -241,3 +251,27 @@ class BulkRoleManager(commands.Cog):
                 currentNickname = array[0]
             return currentNickname
         return user.name
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setDEMessage(self, ctx, *, message):
+        """Sets the draft eligible message. This message will be sent to anyone who is made a DE via the makeDE command"""
+        await self._save_draft_eligible_message(ctx, message)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getDEMessage(self, ctx):
+        """Gets the draft eligible message"""
+        try:
+            await ctx.send("Draft eligible message set to: {0}".format((await self._draft_eligible_message(ctx))))
+        except:
+            await ctx.send(":x: Draft eligible message not set")
+
+    async def _draft_eligible_message(self, ctx):
+        return await self.config.guild(ctx.guild).DraftEligibleMessage()
+
+    async def _save_draft_eligible_message(self, ctx, message):
+        await self.config.guild(ctx.guild).DraftEligibleMessage.set(message)
