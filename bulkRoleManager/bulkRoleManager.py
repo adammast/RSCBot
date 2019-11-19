@@ -255,7 +255,7 @@ class BulkRoleManager(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setDEMessage(self, ctx, message):
+    async def setDEMessage(self, ctx, *, message):
         """Sets the draft eligible message. This message will be sent to anyone who is made a DE via the makeDE command"""
         await self._save_draft_eligible_message(ctx, message)
         await ctx.send("Done")
