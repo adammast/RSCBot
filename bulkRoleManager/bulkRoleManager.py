@@ -24,16 +24,15 @@ class BulkRoleManager(commands.Cog):
         messages = []
         message = ""
         await ctx.send("Players with {0} role:\n".format(role.name))
-        for member in ctx.guild.members:
-            if role in member.roles:
-                if getNickname:
-                    message += "{0.nick}: {0.name}#{0.discriminator}\n".format(member)
-                else:
-                    message += "{0.name}#{0.discriminator}\n".format(member)
-                if len(message) > 1900:
-                    messages.append(message)
-                    message = ""
-                count += 1
+        for member in role.members:
+            if getNickname:
+                message += "{0.nick}: {0.name}#{0.discriminator}\n".format(member)
+            else:
+                message += "{0.name}#{0.discriminator}\n".format(member)
+            if len(message) > 1900:
+                messages.append(message)
+                message = ""
+            count += 1
         if count == 0:
             await ctx.send("Nobody has the {0} role".format(role.name))
         else:
@@ -49,12 +48,11 @@ class BulkRoleManager(commands.Cog):
     async def removeRoleFromAll(self, ctx, role: discord.Role):
         """Removes the role from every member who has it in the server"""
         empty = True
-        for member in ctx.message.guild.members:
-            if role in member.roles:
-                await member.remove_roles(role)
-                empty = False
+        for member in role.members:
+            await member.remove_roles(role)
+            empty = False
         if empty:
-            await ctx.send(":x: Nobody has the {0} role".format(role.mention))
+            await ctx.send(":x: Nobody had the {0} role".format(role.mention))
         else:
             await ctx.send(":white_check_mark: {0} role removed from everyone in the server".format(role.name))
 
@@ -193,22 +191,20 @@ class BulkRoleManager(commands.Cog):
             csvwrite = open(Outputcsv, 'w', newline='', encoding='utf-8')
             w = csv.writer(csvwrite, delimiter=',')
             w.writerow(header)
-            for member in ctx.guild.members:
-                if role in member.roles:
-                    nickname = self.get_player_nickname(member)
-                    newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
-                    w.writerow(newrow)
+            for member in role.members:
+                nickname = self.get_player_nickname(member)
+                newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(member), "{0.id}".format(member)]
+                w.writerow(newrow)
             csvwrite.close()
             await ctx.send("Done", file=File(Outputcsv))
             os.remove(Outputcsv)
         else:
-            for member in ctx.guild.members:
-                if role in member.roles:
-                    nickname = self.get_player_nickname(member)
-                    message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
-                    if len(message) > 1900:
-                        messages.append(message)
-                        message = ""
+            for member in role.members:
+                nickname = self.get_player_nickname(member)
+                message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
             if message is not "":
                 messages.append(message)
             for msg in messages:
@@ -224,14 +220,13 @@ class BulkRoleManager(commands.Cog):
         hadRoleCount = 0
         countGiven = 0
         
-        for member in ctx.guild.members:
-            if currentRole in member.roles:
-                count += 1
-                if roleToGive in member.roles:
-                    hadRoleCount += 1
-                else:
-                    await member.add_roles(roleToGive)
-                    countGiven += 1
+        for member in currentRole.members:
+            count += 1
+            if roleToGive in member.roles:
+                hadRoleCount += 1
+            else:
+                await member.add_roles(roleToGive)
+                countGiven += 1
         if count == 0:
             message = ":x: Nobody has the {0} role".format(currentRole.name)
         else:
