@@ -121,39 +121,40 @@ class BulkRoleManager(commands.Cog):
             if leagueRole and deRole and spectatorRole and formerPlayerRole:
                 break
 
-        if deRole is None or leagueRole is None or spectatorRole is None:
+        if deRole is None or leagueRole is None or spectatorRole is None or formerPlayerRole is None:
             await ctx.send("Couldn't find either the Draft Eligible, League, Spectator, or Former Player role in the server")
             return
 
         for user in userList:
             try:
                 member = await commands.MemberConverter().convert(ctx, user)
-                if member in ctx.guild.members:
-                    if leagueRole in member.roles:
-                        msg = await ctx.send("{0} already has the league role, are you sure you want to make him a DE?".format(member.mention))
-                        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
-
-                        pred = ReactionPredicate.yes_or_no(msg, ctx.author)
-                        await ctx.bot.wait_for("reaction_add", check=pred)
-                        if pred.result is False:
-                            await ctx.send("{0} not made DE.".format(member.name))
-                            had += 1
-                            break
-                        else:
-                            await ctx.send("You will need to manually remove any team or free agent roles if {0} has any.".format(member.mention))
-
-                    await member.add_roles(deRole, leagueRole)
-                    added += 1
-                    await member.edit(nick="{0} | {1}".format("DE", self.get_player_nickname(member)))
-                    await member.remove_roles(spectatorRole, formerPlayerRole)
-                    deMessage = await self._draft_eligible_message(ctx)
-                    if deMessage:
-                        await member.send(deMessage)
-                        
-                    empty = False
             except:
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
+            if member in ctx.guild.members:
+                if leagueRole in member.roles:
+                    msg = await ctx.send("{0} already has the league role, are you sure you want to make him a DE?".format(member.mention))
+                    start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+                    pred = ReactionPredicate.yes_or_no(msg, ctx.author)
+                    await ctx.bot.wait_for("reaction_add", check=pred)
+                    if pred.result is False:
+                        await ctx.send("{0} not made DE.".format(member.name))
+                        had += 1
+                        break
+                    else:
+                        await ctx.send("You will need to manually remove any team or free agent roles if {0} has any.".format(member.mention))
+
+                await member.add_roles(deRole, leagueRole)
+                added += 1
+                await member.edit(nick="{0} | {1}".format("DE", self.get_player_nickname(member)))
+                await member.remove_roles(spectatorRole, formerPlayerRole)
+                deMessage = await self._draft_eligible_message(ctx)
+                if deMessage:
+                    await member.send(deMessage)
+                    
+                empty = False
+            
         if empty:
             message += ":x: Nobody was given the Draft Eligible role"
         else:
