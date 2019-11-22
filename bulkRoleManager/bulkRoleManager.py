@@ -131,6 +131,7 @@ class BulkRoleManager(commands.Cog):
             except:
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
+                break
             if member in ctx.guild.members:
                 if leagueRole in member.roles:
                     msg = await ctx.send("{0} already has the league role, are you sure you want to make him a DE?".format(member.mention))
