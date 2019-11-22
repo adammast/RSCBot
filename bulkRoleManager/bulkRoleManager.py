@@ -131,7 +131,7 @@ class BulkRoleManager(commands.Cog):
             except:
                 message += "Couldn't find: {0}\n".format(user)
                 notFound += 1
-                break
+                continue
             if member in ctx.guild.members:
                 if leagueRole in member.roles:
                     msg = await ctx.send("{0} already has the league role, are you sure you want to make him a DE?".format(member.mention))
@@ -142,7 +142,7 @@ class BulkRoleManager(commands.Cog):
                     if pred.result is False:
                         await ctx.send("{0} not made DE.".format(member.name))
                         had += 1
-                        break
+                        continue
                     else:
                         await ctx.send("You will need to manually remove any team or free agent roles if {0} has any.".format(member.mention))
 
