@@ -97,6 +97,43 @@ class BulkRoleManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @checks.admin_or_permissions(manage_roles=True)
+    async def removeRole(self, ctx, role : discord.Role, *userList):
+        """Removes the role from every member that can be found from the userList"""
+        empty = True
+        removed = 0
+        notHave = 0
+        notFound = 0
+        message = ""
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    if role in member.roles:
+                        await member.remove_roles(role)
+                        removed += 1
+                    else:
+                        notHave += 1
+                    empty = False
+            except:
+                if notFound == 0:
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody had the {0} role removed".format(role.name)
+        else:
+           message += ":white_check_mark: {0} role removed from everyone that was found from list".format(role.name)
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if notHave > 0:
+            message += ". {0} user(s) didn't have the role".format(notHave)
+        if removed > 0:
+            message += ". {0} user(s) had the role removed".format(removed)
+        await ctx.send(message)
+
+    @commands.command()
+    @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def makeDE(self, ctx, *userList):
         """Adds the Draft Eligible and League roles, removes Spectator role, and adds the DE prefix to every member that can be found from the userList"""
