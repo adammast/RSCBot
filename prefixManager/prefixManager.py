@@ -118,6 +118,37 @@ class PrefixManager(commands.Cog):
                 return role
         raise LookupError('No role with id: {0} found in server roles'.format(role_id))
 
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_nicknames=True)
+    async def removeNicknames(self, ctx, *userList):
+        """Removes any nickname from every member that can be found from the userList"""
+        empty = True
+        removed = 0
+        notFound = 0
+        message = ""
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    await member.edit(nick=None)
+                    removed += 1
+                    empty = False
+            except:
+                if notFound == 0:
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody found from list"
+        else:
+           message += ":white_check_mark: Removed nicknames from everyone that was found from list"
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if removed > 0:
+            message += ". {0} user(s) had their nickname removed".format(removed)
+        await ctx.send(message)
+
     async def _add_prefix(self, ctx, gm_name: str, prefix: str):
         prefixes = await self._prefixes(ctx)
 
