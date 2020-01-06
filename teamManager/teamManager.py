@@ -132,8 +132,17 @@ class TeamManager(commands.Cog):
         """Provides a list of all the teams set up in the server"""
         teams = await self._teams(ctx)
         if teams:
-            await ctx.send(
-                "Teams set up in this server: {0}".format(", ".join(teams)))
+            messages = []
+            message = "Teams set up in this server: "
+            for team in teams:
+                message += "{0}".format(", ".join(team))
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
+            if message is not "":
+                messages.append(message)
+            for msg in messages:
+                await ctx.send("{0}{1}{0}".format("```", msg))
         else:
             await ctx.send("No teams set up in this server.")
 
@@ -212,7 +221,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def removeAllTeams(self, ctx):
+    async def clearTeams(self, ctx):
         """Removes all teams from the file system. Team roles will be cleared as well"""
         teams = await self._teams(ctx)
         team_roles = await self._team_roles(ctx)
