@@ -135,7 +135,7 @@ class TeamManager(commands.Cog):
             messages = []
             message = "Teams set up in this server: "
             for team in teams:
-                message += "{0}".format(", ".join(team))
+                message += "\n{0}".format(team)
                 if len(message) > 1900:
                     messages.append(message)
                     message = ""
