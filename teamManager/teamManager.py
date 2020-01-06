@@ -211,6 +211,21 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeAllTeams(self, ctx):
+        """Removes all teams from the file system. Team roles will be cleared as well"""
+        teams = await self._teams(ctx)
+        team_roles = await self._team_roles(ctx)
+
+        teams.clear()
+        team_roles.clear()
+        
+        await self._save_teams(ctx, teams)
+        await self._save_team_roles(ctx, team_roles)
+        await ctx.send("Done.")
+
+    @commands.command()
+    @commands.guild_only()
     async def freeAgents(self, ctx, tier: str):
         """Gets a list of all free agents in a specific tier"""
         tiers = await self._tiers(ctx)
