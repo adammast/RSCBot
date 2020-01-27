@@ -74,7 +74,7 @@ class FaCheckIn(commands.Cog):
         message = ""
         for user in tier_list:
             member = ctx.guild.get_member(user)
-            if await self._find_tier_from_fa_role(ctx, member) is not None:
+            if member is not None and await self._find_tier_from_fa_role(ctx, member) is not None:
                 message += "\n{0}".format(member.display_name)
                 if perm_fa_role is not None and perm_fa_role in member.roles:
                     message += " (Permanent FA)"
