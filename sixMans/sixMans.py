@@ -817,6 +817,7 @@ class SixMans(commands.Cog):
         return True
 
     async def _display_game_info(self, ctx, game, six_mans_queue):
+        helper_role = await self._helper_role(ctx)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
@@ -830,9 +831,10 @@ class SixMans(commands.Cog):
             "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
             "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
             "cancel the game.".format(ctx.prefix), inline=False)
-        embed.add_field(name="Help", value="If you need any help or have questions please contact someone with the {} role. "
-            "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast.".format((await self._helper_role(ctx)).mention),
-            inline=False)
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
         await game.textChannel.send(embed=embed)
 
     async def _create_game(self, ctx, six_mans_queue):
