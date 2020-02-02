@@ -16,7 +16,6 @@ from redbot.core.utils.menus import start_adding_reactions
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
 player_timeout_time = 60 #Second (1 Minutes)
-timeout_task = None
 verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
@@ -34,14 +33,16 @@ class SixMans(commands.Cog):
         self.config.register_guild(**defaults)
         self.queues = []
         self.games = []
-        self.busy = False
+        self.timeout_task = None
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def cancelTask(self, ctx):
-        if timeout_task:
-            timeout_task.cancel()
+        if self.timeout_task:
+            self.timeout_task.cancel()
+        else:
+            ctx.send("No task created")
         await ctx.send("Done")
 
     @commands.guild_only()
