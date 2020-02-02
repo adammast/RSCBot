@@ -15,6 +15,8 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
+player_timeout_time = 60 #Second (1 Minutes)
+timeout_task = None
 verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
@@ -33,6 +35,14 @@ class SixMans(commands.Cog):
         self.queues = []
         self.games = []
         self.busy = False
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def cancelTask(self, ctx):
+        if timeout_task:
+            timeout_task.cancel()
+        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
@@ -616,6 +626,7 @@ class SixMans(commands.Cog):
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
+        self.timeout_task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -637,6 +648,14 @@ class SixMans(commands.Cog):
 
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
+
+    async def _auto_remove_from_queue(self, player, six_mans_queue):
+        try:
+            await asyncio.sleep(player_timeout_time)
+            self._remove_from_queue(player, six_mans_queue)
+        except asyncio.CancelledError:
+            for channel in six_mans_queue.channels:
+                await channel.send("Task cancelled")
 
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
