@@ -658,13 +658,16 @@ class SixMans(commands.Cog):
             await channel.send("Task created")
         try:
             await asyncio.sleep(player_timeout_time)
-            self._remove_from_queue(player, six_mans_queue)
+            await self._remove_from_queue(player, six_mans_queue)
         except asyncio.CancelledError:
             for channel in six_mans_queue.channels:
                 await channel.send("Task cancelled")
         except:
             for channel in six_mans_queue.channels:
                 await channel.send("Error")
+        finally:
+            for channel in six_mans_queue.channels:
+                await channel.send("Task Finished")
 
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
