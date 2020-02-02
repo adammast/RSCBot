@@ -15,7 +15,7 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
-player_timeout_time = 60 #Second (1 Minutes)
+player_timeout_time = 30 #Seconds
 verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
@@ -33,18 +33,6 @@ class SixMans(commands.Cog):
         self.config.register_guild(**defaults)
         self.queues = []
         self.games = []
-        self.timeout_task = None
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def cancelTask(self, ctx):
-        if self.timeout_task:
-            self.timeout_task.cancel()
-            self.timeout_task = None
-        else:
-            ctx.send("No task")
-        await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
@@ -628,7 +616,7 @@ class SixMans(commands.Cog):
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
-        self.timeout_task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
+        task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -639,7 +627,7 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
 
-        await self.timeout_task
+        await task
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
@@ -654,20 +642,13 @@ class SixMans(commands.Cog):
             await channel.send(embed=embed)
 
     async def _auto_remove_from_queue(self, player, six_mans_queue):
-        for channel in six_mans_queue.channels:
-            await channel.send("Task created")
         try:
             await asyncio.sleep(player_timeout_time)
             await self._remove_from_queue(player, six_mans_queue)
+            await player.send("You have been timed out from the {} 6 mans queue. You'll need to use the "
+                "queue command again if you wish to play some more.".format(six_mans_queue.name))
         except asyncio.CancelledError:
-            for channel in six_mans_queue.channels:
-                await channel.send("Task cancelled")
-        except:
-            for channel in six_mans_queue.channels:
-                await channel.send("Error")
-        finally:
-            for channel in six_mans_queue.channels:
-                await channel.send("Task Finished")
+            pass
 
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
