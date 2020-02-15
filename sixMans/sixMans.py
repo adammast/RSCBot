@@ -668,7 +668,7 @@ class SixMans(commands.Cog):
                     if join_time < deadline:
                         try:
                             player = self.bot.get_user(player_id)
-                            if player is not None:
+                            if player:
                                 await self._auto_remove_from_queue(player, queue)
                         except Exception as e:
                             for channel in queue.channels:
@@ -681,8 +681,8 @@ class SixMans(commands.Cog):
                         #     pass
                         # else:
                         #     del queue.activeJoinLog[player_id]
-            await asyncio.sleep(loop_time)
-
+            await asyncio.sleep(5)
+            
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
         losing_players = []
