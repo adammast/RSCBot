@@ -253,7 +253,7 @@ class SixMans(commands.Cog):
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
-        game, six_mans_queue = self._get_info(ctx)
+        game, six_mans_queue = await self._get_info(ctx)
         if game is None or six_mans_queue is None:
             return
 
@@ -286,11 +286,7 @@ class SixMans(commands.Cog):
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
-        game, six_mans_queue = self._get_info(ctx)
-        if game is None or six_mans_queue is None:
-            return
-
-        game, six_mans_queue = self._get_info(ctx)
+        game, six_mans_queue = await self._get_info(ctx)
         if game is None or six_mans_queue is None:
             return
 
@@ -320,7 +316,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
             return
 
-        game, six_mans_queue = self._get_info(ctx)
+        game, six_mans_queue = await self._get_info(ctx)
         if game is None or six_mans_queue is None:
             return
 
@@ -359,7 +355,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
             return
 
-        game, six_mans_queue = self._get_info(ctx)
+        game, six_mans_queue = await self._get_info(ctx)
         if game is None or six_mans_queue is None:
             return
 
@@ -920,7 +916,7 @@ class SixMans(commands.Cog):
         ]
         return text_channel, voice_channels
 
-    def _get_info(self, ctx):
+    async def _get_info(self, ctx):
         game = self._get_game(ctx)
         if game is None:
             await ctx.send(":x: This command can only be used in a 6 mans game channel.")
