@@ -662,6 +662,8 @@ class SixMans(commands.Cog):
             deadline = datetime.timedelta(seconds=player_timeout_time)
             for queue in self.queues:
                 for player_id, join_time in queue.activeJoinLog.items():
+                    for channel in queue.channels:
+                        await channel.send("Checking {0} Queue:\nPlayer: {1}, Join Time: {2}\nDeadline: {3}".format(queue.name, player_id, join_time, deadline))
                     if join_time < deadline:
                         try:
                             player = self.bot.get_user(player_id)
