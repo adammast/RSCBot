@@ -83,7 +83,7 @@ class SixMans(commands.Cog):
                     return
 
         points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
-        six_mans_queue = SixMansQueue(name, queue_channels, points, {}, 0)
+        six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0)
         self.queues.append(six_mans_queue)
         await self._save_queues(ctx, self.queues)
         await ctx.send("Done")
@@ -142,7 +142,8 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx)
         queue_names = ""
         for queue in self.queues:
-            queue_names += "{0}\n".format(queue.name)
+            if queue.guild == ctx.guild:
+                queue_names += "{0}\n".format(queue.name)
         await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
 
     @commands.guild_only()
@@ -566,7 +567,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def setCategory(self, ctx, category_channel: discord.CategoryChannel):
-        """Sets the six mans category channel where all six mans channels will be created under"""
+        """Sets the 6 mans category channel where all 6 mans channels will be created under"""
         await self._save_category(ctx, category_channel.id)
         await ctx.send("Done")
 
@@ -576,15 +577,15 @@ class SixMans(commands.Cog):
     async def getCategory(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            await ctx.send("Six mans category channel set to: {0}".format((await self._category(ctx)).mention))
+            await ctx.send("6 mans category channel set to: {0}".format((await self._category(ctx)).mention))
         except:
-            await ctx.send(":x: Six mans category channel not set")
+            await ctx.send(":x: 6 mans category channel not set")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetCategory(self, ctx):
-        """Unsets the six mans category channel. Six mans channels will not be created if this is not set"""
+        """Unsets the 6 mans category channel. 6 mans channels will not be created if this is not set"""
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
@@ -592,7 +593,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def setHelperRole(self, ctx, helper_role: discord.Role):
-        """Sets the six mans helper role. Anyone with this role will be able to see all the game channels that are created"""
+        """Sets the 6 mans helper role. Anyone with this role will be able to see all the game channels that are created"""
         await self._save_helper_role(ctx, helper_role.id)
         await ctx.send("Done")
 
@@ -602,21 +603,21 @@ class SixMans(commands.Cog):
     async def getHelperRole(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            await ctx.send("Six mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
+            await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
         except:
-            await ctx.send(":x: Six mans helper role not set")
+            await ctx.send(":x: 6 mans helper role not set")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetHelperRole(self, ctx):
-        """Unsets the six mans helper role."""
+        """Unsets the 6 mans helper role."""
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
-        task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
+        await asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -626,8 +627,6 @@ class SixMans(commands.Cog):
 
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
-
-        await task
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
@@ -952,7 +951,7 @@ class SixMans(commands.Cog):
                             await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
                             return
 
-                six_mans_queue = SixMansQueue(queue_name, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
+                six_mans_queue = SixMansQueue(queue_name, ctx.guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
                 six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 
@@ -992,7 +991,8 @@ class SixMans(commands.Cog):
     async  def _save_queues(self, ctx, queues):
         queue_dict = {}
         for queue in queues:
-            queue_dict[queue.id] = queue._to_dict()
+            if queue.guild == ctx.guild:
+                queue_dict[queue.id] = queue._to_dict()
         await self.config.guild(ctx.guild).Queues.set(queue_dict)
 
     async def _scores(self, ctx):
@@ -1145,10 +1145,11 @@ class PlayerQueue(Queue):
             return item in self.queue
 
 class SixMansQueue:
-    def __init__(self, name, channels, points, players, gamesPlayed):
+    def __init__(self, name, guild, channels, points, players, gamesPlayed):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
+        self.guild = guild
         self.channels = channels
         self.points = points
         self.players = players
