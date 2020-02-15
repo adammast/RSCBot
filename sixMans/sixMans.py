@@ -16,6 +16,7 @@ from redbot.core.utils.menus import start_adding_reactions
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
 player_timeout_time = 30 #Seconds
+loop_time = 5 #How often to check the queues in seconds
 verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
@@ -28,11 +29,18 @@ defaults = {"CategoryChannel": None, "HelperRole": None, "Games": {}, "Queues": 
 
 class SixMans(commands.Cog):
 
-    def __init__(self):
+    def __init__(self, bot):
+        self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
         self.config.register_guild(**defaults)
         self.queues = []
         self.games = []
+        self.task = self.bot.loop.create_task(self.check_queues())
+
+    def cog_unload(self):
+        """Clean up when cog shuts down."""
+        if self.task:
+            self.task.cancel()
 
     @commands.guild_only()
     @commands.command()
@@ -209,11 +217,9 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: You are already in a game")
                 return
 
-        task = await self._add_to_queue(player, six_mans_queue)
+        await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
             await self._randomize_teams(ctx, six_mans_queue)
-        else:
-            await task
 
     @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
@@ -618,7 +624,7 @@ class SixMans(commands.Cog):
         await ctx.send("Done")
 
     async def _add_to_queue(self, player, six_mans_queue):
-        six_mans_queue.queue.put(player)
+        six_mans_queue._put(player)
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -629,10 +635,8 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
 
-        return asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
-
     async def _remove_from_queue(self, player, six_mans_queue):
-        six_mans_queue.queue.remove(player)
+        six_mans_queue._remove(player)
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.red())
@@ -645,12 +649,32 @@ class SixMans(commands.Cog):
 
     async def _auto_remove_from_queue(self, player, six_mans_queue):
         try:
-            await asyncio.sleep(player_timeout_time)
             await self._remove_from_queue(player, six_mans_queue)
             await player.send("You have been timed out from the {} 6 mans queue. You'll need to use the "
                 "queue command again if you wish to play some more.".format(six_mans_queue.name))
-        except asyncio.CancelledError:
+        except:
             pass
+
+    async def check_queues(self):
+        """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be removed."""
+        await self.bot.wait_until_ready()
+        while self.bot.get_cog("SixMans") == self:
+            deadline = datetime.timedelta(seconds=player_timeout_time)
+            for queue in self.queues:
+                for player_id, join_time in queue.activeJoinLog.items():
+                    if join_time < deadline:
+                        try:
+                            player = self.bot.get_user(player_id)
+                            if player is not None:
+                                self._auto_remove_from_queue(player, queue)
+                            else:
+                                # Can't see the user (no shared servers)
+                                del queue.activeJoinLog[player_id]
+                        except discord.HTTPException:
+                            pass
+                        else:
+                            del queue.activeJoinLog[player_id]
+            await asyncio.sleep(loop_time)
 
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
@@ -1141,7 +1165,7 @@ class PlayerQueue(Queue):
     def _get(self):
         return self.queue.pop()
 
-    def remove(self, value):
+    def _remove(self, value):
         self.queue.remove(value)
 
     def __contains__(self, item):
@@ -1158,6 +1182,18 @@ class SixMansQueue:
         self.points = points
         self.players = players
         self.gamesPlayed = gamesPlayed
+        self.activeJoinLog = {}
+
+    def _put(self, player):
+        self.queue.put(player)
+        self.activeJoinLog[player.id] = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+
+    def _remove(self, player):
+        self.queue._remove(player)
+        try:
+            del self.activeJoinLog[player.id]
+        except:
+            pass
 
     def _queue_full(self):
         return self.queue.qsize() >= team_size
