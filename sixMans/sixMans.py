@@ -658,11 +658,10 @@ class SixMans(commands.Cog):
     async def check_queues(self):
         """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be removed."""
         await self.bot.wait_until_ready()
-        while self.bot.get_cog("SixMans") == self:
+        while True:
+            self = self.bot.get_cog("SixMans")
             deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)           
             for queue in self.queues:
-                for channel in queue.channels:
-                    await channel.send("Checking {0} Queue:\n```Deadline: {1}```".format(queue.name, deadline))
                 for player_id, join_time in queue.activeJoinLog.items():
                     for channel in queue.channels:
                         await channel.send("Checking {0} Queue:\n```Player: {1}, Join Time: {2}\nDeadline: {3}```".format(queue.name, player_id, join_time, deadline))
