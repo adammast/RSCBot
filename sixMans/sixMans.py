@@ -666,26 +666,27 @@ class SixMans(commands.Cog):
             while self.bot.get_cog("SixMans") == self:
                 deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)           
                 for queue in self.queues:
+                    players_to_remove = []
+                    ids_to_remove = []
                     for player_id, join_time in queue.activeJoinLog.items():
-                        for channel in queue.channels:
-                            await channel.send("Checking {0} Queue:\n```Player: {1}, Join Time: {2}\nDeadline: {3}```".format(queue.name, player_id, join_time, deadline))
+                        await tester.send("Checking {0} Queue:\n```Player: {1}, Join Time: {2}\nDeadline: {3}```".format(queue.name, player_id, join_time, deadline))
                         if join_time < deadline:
                             try:
                                 player = self.bot.get_user(player_id)
                                 if player:
-                                    await self._auto_remove_from_queue(player, queue)
-                            except Exception as e:
-                                for channel in queue.channels:
-                                    await channel.send("Checking {0} Queue:\n```Exception: {1}```".format(queue.name, str(e)))
+                                    players_to_remove.append(player)
+                                else:
+                                    # Can't see the user (no shared servers)
+                                    ids_to_remove.append(player_id)  
+                            except discord.HTTPException:
                                 pass
-                                # else:
-                                #     # Can't see the user (no shared servers)
-                                #     del queue.activeJoinLog[player_id]
-                            # except discord.HTTPException:
-                            #     pass
-                            # else:
-                            #     del queue.activeJoinLog[player_id]
-                await asyncio.sleep(5)
+                            else:
+                               ids_to_remove.append(player_id)
+                    for player in players_to_remove:
+                        await self._auto_remove_from_queue(player, queue)
+                    for player_id in ids_to_remove:
+                        del queue.activeJoinLog[player_id]
+                await asyncio.sleep(loop_time)
         except Exception as e:
             await tester.send("Exception: {}".format(str(e)))
         await tester.send("Reached outside loop")
