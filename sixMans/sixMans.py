@@ -209,9 +209,11 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: You are already in a game")
                 return
 
-        await self._add_to_queue(player, six_mans_queue)
+        task = await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
             await self._randomize_teams(ctx, six_mans_queue)
+        else:
+            await task
 
     @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
@@ -617,7 +619,6 @@ class SixMans(commands.Cog):
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
-        task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -628,7 +629,7 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
 
-        await task
+        return asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
