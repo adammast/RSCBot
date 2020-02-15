@@ -15,7 +15,7 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
-player_timeout_time = 30 #How long players can be in a queue in seconds
+player_timeout_time = 30 #14400 How long players can be in a queue in seconds
 loop_time = 5 #How often to check the queues in seconds
 verify_timeout = 15
 pp_play_key = "Play"
@@ -35,13 +35,11 @@ class SixMans(commands.Cog):
         self.config.register_guild(**defaults)
         self.queues = []
         self.games = []
-        self.task = self.bot.loop.create_task(self.check_queues())
+        self.task = self.bot.loop.create_task(self.timeout_queues())
 
-    async def cog_unload(self):
+    def cog_unload(self):
         """Clean up when cog shuts down."""
-        tester = self.bot.get_user(226869393626234881)
         if self.task:
-            await tester.send("Canceling task")
             self.task.cancel()
 
     @commands.guild_only()
@@ -657,39 +655,35 @@ class SixMans(commands.Cog):
         except:
             pass
 
-    async def check_queues(self):
-        """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be removed."""
-        tester = self.bot.get_user(226869393626234881)
-        try:
-            await tester.send("Starting task")
-            await self.bot.wait_until_ready()
-            while self.bot.get_cog("SixMans") == self:
-                deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)           
-                for queue in self.queues:
-                    players_to_remove = []
-                    ids_to_remove = []
-                    for player_id, join_time in queue.activeJoinLog.items():
-                        await tester.send("Checking {0} Queue:\n```Player: {1}, Join Time: {2}\nDeadline: {3}```".format(queue.name, player_id, join_time, deadline))
-                        if join_time < deadline:
-                            try:
-                                player = self.bot.get_user(player_id)
-                                if player:
-                                    players_to_remove.append(player)
-                                else:
-                                    # Can't see the user (no shared servers)
-                                    ids_to_remove.append(player_id)  
-                            except discord.HTTPException:
-                                pass
-                            except:
-                               ids_to_remove.append(player_id)
-                    for player in players_to_remove:
-                        await self._auto_remove_from_queue(player, queue)
-                    for player_id in ids_to_remove:
+    async def timeout_queues(self):
+        """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be timed out."""
+        await self.bot.wait_until_ready()
+        while self.bot.get_cog("SixMans") == self:
+            deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)           
+            for queue in self.queues:
+                players_to_remove = []
+                ids_to_remove = []
+                for player_id, join_time in queue.activeJoinLog.items():
+                    if join_time < deadline:
+                        try:
+                            player = self.bot.get_user(player_id)
+                            if player:
+                                players_to_remove.append(player)
+                            else:
+                                # Can't see the user (no shared servers)
+                                ids_to_remove.append(player_id)  
+                        except discord.HTTPException:
+                            pass
+                        except:
+                            ids_to_remove.append(player_id)
+                for player in players_to_remove:
+                    await self._auto_remove_from_queue(player, queue)
+                for player_id in ids_to_remove:
+                    try:
                         del queue.activeJoinLog[player_id]
-                await asyncio.sleep(loop_time)
-        except Exception as e:
-            await tester.send("Exception: {}".format(str(e)))
-        await tester.send("Reached outside loop")
+                    except:
+                        pass
+            await asyncio.sleep(loop_time)
             
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
         winning_players = []
@@ -845,10 +839,6 @@ class SixMans(commands.Cog):
         game = await self._create_game(ctx, six_mans_queue)
         if game is None:
             return False
-        for player in game.players:
-            for queue in self.queues:
-                if player in queue.queue:
-                    await self._remove_from_queue(player, queue)
 
         orange = random.sample(game.players, 3)
         for player in orange:
@@ -893,7 +883,7 @@ class SixMans(commands.Cog):
     async def _create_game(self, ctx, six_mans_queue):
         if not six_mans_queue._queue_full():
             return None
-        players = [six_mans_queue.queue.get() for _ in range(team_size)]
+        players = [six_mans_queue._get() for _ in range(team_size)]
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
@@ -1202,6 +1192,14 @@ class SixMansQueue:
     def _put(self, player):
         self.queue.put(player)
         self.activeJoinLog[player.id] = datetime.datetime.now()
+
+    def _get(self):
+        player = self.queue.get()
+        try:
+            del self.activeJoinLog[player.id]
+        except:
+            pass
+        return player
 
     def _remove(self, player):
         self.queue._remove(player)
