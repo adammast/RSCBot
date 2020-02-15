@@ -617,7 +617,7 @@ class SixMans(commands.Cog):
 
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue.queue.put(player)
-        await asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
+        task = asyncio.create_task(self._auto_remove_from_queue(player, six_mans_queue))
         player_list = self._format_player_list(six_mans_queue)
 
         embed = discord.Embed(color=discord.Colour.green())
@@ -627,6 +627,8 @@ class SixMans(commands.Cog):
 
         for channel in six_mans_queue.channels:
             await channel.send(embed=embed)
+
+        await task
 
     async def _remove_from_queue(self, player, six_mans_queue):
         six_mans_queue.queue.remove(player)
@@ -852,7 +854,8 @@ class SixMans(commands.Cog):
         if not six_mans_queue._queue_full():
             return None
         players = [six_mans_queue.queue.get() for _ in range(team_size)]
-        await ctx.send("**Queue is full! Game is being created.**")
+        for channel in six_mans_queue.channels:
+            await channel.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
