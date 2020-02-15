@@ -680,7 +680,7 @@ class SixMans(commands.Cog):
                                     ids_to_remove.append(player_id)  
                             except discord.HTTPException:
                                 pass
-                            else:
+                            except:
                                ids_to_remove.append(player_id)
                     for player in players_to_remove:
                         await self._auto_remove_from_queue(player, queue)
