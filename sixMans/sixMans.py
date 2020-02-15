@@ -659,23 +659,29 @@ class SixMans(commands.Cog):
         """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be removed."""
         await self.bot.wait_until_ready()
         while self.bot.get_cog("SixMans") == self:
-            deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)
+            deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)           
             for queue in self.queues:
+                for channel in queue.channels:
+                    await channel.send("Checking {0} Queue:\n```Deadline: {1}```".format(queue.name, deadline))
                 for player_id, join_time in queue.activeJoinLog.items():
                     for channel in queue.channels:
-                        await channel.send("Checking {0} Queue:\nPlayer: {1}, Join Time: {2}\nDeadline: {3}".format(queue.name, player_id, join_time, deadline))
+                        await channel.send("Checking {0} Queue:\n```Player: {1}, Join Time: {2}\nDeadline: {3}```".format(queue.name, player_id, join_time, deadline))
                     if join_time < deadline:
                         try:
                             player = self.bot.get_user(player_id)
                             if player is not None:
                                 await self._auto_remove_from_queue(player, queue)
-                            else:
-                                # Can't see the user (no shared servers)
-                                del queue.activeJoinLog[player_id]
-                        except discord.HTTPException:
+                        except Exception as e:
+                            for channel in queue.channels:
+                                await channel.send("Checking {0} Queue:\n```Exception: {1}```".format(queue.name, str(e)))
                             pass
-                        else:
-                            del queue.activeJoinLog[player_id]
+                            # else:
+                            #     # Can't see the user (no shared servers)
+                            #     del queue.activeJoinLog[player_id]
+                        # except discord.HTTPException:
+                        #     pass
+                        # else:
+                        #     del queue.activeJoinLog[player_id]
             await asyncio.sleep(loop_time)
 
     async def _finish_game(self, ctx, game, six_mans_queue, winning_team):
