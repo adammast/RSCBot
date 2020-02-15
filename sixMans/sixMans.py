@@ -269,8 +269,8 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                await self._remove_game(ctx, game)
                 await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
@@ -298,8 +298,8 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                await self._remove_game(ctx, game)
                 await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
