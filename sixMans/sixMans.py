@@ -15,7 +15,7 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
-player_timeout_time = 30 #Seconds
+player_timeout_time = 30 #How long players can be in a queue in seconds
 loop_time = 5 #How often to check the queues in seconds
 verify_timeout = 15
 pp_play_key = "Play"
@@ -666,7 +666,7 @@ class SixMans(commands.Cog):
                         try:
                             player = self.bot.get_user(player_id)
                             if player is not None:
-                                self._auto_remove_from_queue(player, queue)
+                                await self._auto_remove_from_queue(player, queue)
                             else:
                                 # Can't see the user (no shared servers)
                                 del queue.activeJoinLog[player_id]
