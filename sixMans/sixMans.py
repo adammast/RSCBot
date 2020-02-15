@@ -659,7 +659,7 @@ class SixMans(commands.Cog):
         """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be removed."""
         await self.bot.wait_until_ready()
         while self.bot.get_cog("SixMans") == self:
-            deadline = datetime.timedelta(seconds=player_timeout_time)
+            deadline = datetime.datetime.now() - datetime.timedelta(seconds=player_timeout_time)
             for queue in self.queues:
                 for player_id, join_time in queue.activeJoinLog.items():
                     for channel in queue.channels:
@@ -1188,7 +1188,7 @@ class SixMansQueue:
 
     def _put(self, player):
         self.queue.put(player)
-        self.activeJoinLog[player.id] = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
+        self.activeJoinLog[player.id] = datetime.datetime.now()
 
     def _remove(self, player):
         self.queue._remove(player)
