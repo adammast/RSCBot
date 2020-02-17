@@ -835,6 +835,12 @@ class SixMans(commands.Cog):
         game = await self._create_game(ctx, six_mans_queue)
         if game is None:
             return False
+        
+        #Remove players from any other queue they were in
+        for player in game.players:
+            for queue in self.queues:
+                if player in queue.queue:
+                    await self._remove_from_queue(player, queue)
 
         orange = random.sample(game.players, 3)
         for player in orange:
