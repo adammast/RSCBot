@@ -15,7 +15,6 @@ from redbot.core.utils.menus import start_adding_reactions
 
 team_size = 6
 minimum_game_time = 600 #Seconds (10 Minutes)
-team_timeout_time = 14400 #How long teams can be in a queue in seconds (4 Hours)
 verify_timeout = 15
 k_factor = 50
 
@@ -29,12 +28,6 @@ class Ladder(commands.Cog):
         self.config.register_guild(**defaults)
         self.games = []
         self.teams = []
-        self.task = self.bot.loop.create_task(self.timeout_queues())
-
-    def cog_unload(self):
-        """Clean up when cog shuts down."""
-        if self.task:
-            self.task.cancel()
 
     def update_elo(self, team_1_elo, team_2_elo, result):
         """Calculates and returns the new Elo ratings for the two teams based on their match results and the K-factor.
@@ -102,6 +95,30 @@ class Ladder(commands.Cog):
         for game in games:
             game_dict[game.id] = game._to_dict()
         await self.config.guild(ctx.guild).Games.set(game_dict)
+
+    async def _scores(self, ctx):
+        return await self.config.guild(ctx.guild).Scores()
+
+    async def _save_scores(self, ctx, scores):
+        await self.config.guild(ctx.guild).Scores.set(scores)
+
+    async def _games_played(self, ctx):
+        return await self.config.guild(ctx.guild).GamesPlayed()
+
+    async def _save_games_played(self, ctx, games_played):
+        await self.config.guild(ctx.guild).GamesPlayed.set(games_played)
+
+    async def _category(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
+
+    async def _save_category(self, ctx, category):
+        await self.config.guild(ctx.guild).CategoryChannel.set(category)
+
+    async def _helper_role(self, ctx):
+        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
+
+    async def _save_helper_role(self, ctx, helper_role):
+        await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
 class Team:
     def __init__(self, name, captain, players, wins, losses, elo_rating):
