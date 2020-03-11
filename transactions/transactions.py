@@ -151,13 +151,14 @@ class Transactions(commands.Cog):
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-                gm = self.team_manager_cog._get_gm(ctx, franchise_role)
                 if franchise_role in user.roles and tier_role in user.roles:
                     await user.remove_roles(franchise_role, tier_role)
-                    message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm.name, tier_role.name)
+                    gm = self._get_gm_name(ctx, franchise_role, True)
+                    message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, tier_role.name)
                 else:
                     await user.add_roles(franchise_role, tier_role, leagueRole)
-                    message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm.mention, tier_role.name)
+                    gm = self._get_gm_name(ctx, franchise_role)
+                    message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, tier_role.name)
                 await trans_channel.send(message)
                 await ctx.send("Done")
 
@@ -268,10 +269,13 @@ class Transactions(commands.Cog):
             return currentNickname
         return user.name
 
-    def _get_gm_name(self, ctx, franchise_role):
+    def _get_gm_name(self, ctx, franchise_role, returnNameAsString=False):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)
         if gm:
-            return gm.mention
+            if returnNameAsString:
+                return gm.name
+            else:
+                return gm.mention
         else:
            return self.team_manager_cog._get_gm_name(franchise_role)
 
