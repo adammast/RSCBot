@@ -42,6 +42,10 @@ class SixMans(commands.Cog):
         if self.task:
             self.task.cancel()
 
+    @commands.command()
+    async def test(self, ctx):
+        await ctx.send("test")
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
