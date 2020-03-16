@@ -288,7 +288,8 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @commands.has_role("Admin")
+    @commands.has_role("6 Mans Helper")
     async def forceCancelGame(self, ctx):
         """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
