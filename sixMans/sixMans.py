@@ -244,7 +244,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["kq"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def kickQueue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
         await self._pre_load_queues(ctx)
@@ -288,7 +288,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
-    @commands.has_any_role(*["Admin", "6 Mans Help"])
+    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def forceCancelGame(self, ctx):
         """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
@@ -316,7 +316,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
-    @checks.admin_or_permissions(manage_guild=True)
+    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def forceResult(self, ctx, winning_team):
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
