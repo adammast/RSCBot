@@ -41,14 +41,6 @@ class SixMans(commands.Cog):
         """Clean up when cog shuts down."""
         if self.task:
             self.task.cancel()
-    
-    @commands.guild_only()
-    @commands.command()
-    async def test(self, ctx):
-        try:
-            await ctx.send("test")
-        except:
-            await ctx.send("**lol something went wrong. ur bad.**")
 
     @commands.guild_only()
     @commands.command()
