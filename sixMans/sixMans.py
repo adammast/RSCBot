@@ -864,6 +864,7 @@ class SixMans(commands.Cog):
     async def _display_game_info(self, ctx, game, six_mans_queue):
         helper_role = await self._helper_role(ctx)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        await game.textChannel.send("{} **choose the series length**").format(random.choice([player.mention for player in game.players]))
         embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
