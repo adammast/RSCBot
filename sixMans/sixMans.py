@@ -899,7 +899,7 @@ class SixMans(commands.Cog):
         if helper_role:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True, connect=True)
+                helper_role: discord.PermissionOverwrite(read_messages=True)
             }
         else:
             text_overwrites = {
