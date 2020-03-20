@@ -911,14 +911,12 @@ class SixMans(commands.Cog):
         voice_channels = [
             await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), 
                 overwrites= {
-                    guild.default_role: discord.PermissionOverwrite(connect=False),
-                    helper_role: discord.PermissionOverwrite(connect=True)
+                    guild.default_role: discord.PermissionOverwrite(connect=False)
                 },
                 category= await self._category(ctx)),
             await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), 
                 overwrites= {
-                    guild.default_role: discord.PermissionOverwrite(connect=False),
-                    helper_role: discord.PermissionOverwrite(connect=True)
+                    guild.default_role: discord.PermissionOverwrite(connect=False)
                 },
                 category= await self._category(ctx))
         ]
