@@ -13,7 +13,7 @@ from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
-team_size = 6
+team_size = 3
 minimum_game_time = 600 #Seconds (10 Minutes)
 verify_timeout = 15
 k_factor = 50
@@ -29,6 +29,38 @@ class Ladder(commands.Cog):
         self.games = []
         self.teams = []
 
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addTeam(self, ctx, name, captain: discord.Member, *players: discord.Member):
+        await self.load_teams(ctx, False)
+        for team in self.teams:
+            if team.name == name:
+                await ctx.send(":x: {} is already the name of a team.".format(name))
+                return
+
+        player_list = list(players)
+        if captain not in player_list:
+            player_list.append(captain)
+        if len(player_list) != team_size:
+            await ctx.send(":x: Teams need to have {} players".format(team_size))
+            return
+        
+        team = Team(name, captain, player_list, 0, 0, 1500)
+        self.teams.append(team)
+        await self._save_teams(ctx, self.teams)
+
+    @commands.guild_only()
+    @commands.command()
+    async def getTeamInfo(self, ctx, team_name):
+        await self.load_teams(ctx, False)
+        for team in self.teams:
+            if team.name == team_name:
+                await ctx.send(embed=self.embed_team_info(ctx, team))
+                return
+
+        await ctx.send(":x: There's no team with the name: {}".format(team_name))
+
     def update_elo(self, team_1_elo, team_2_elo, result):
         """Calculates and returns the new Elo ratings for the two teams based on their match results and the K-factor.
         Result param should be a decimal between 0 and 1 relating to the match results for team 1, i.e. a result of 1 
@@ -39,6 +71,15 @@ class Ladder(commands.Cog):
         team_1_new_elo = round(team_1_elo + (k_factor * (result - expectation)))
         team_2_new_elo = round(team_2_elo + (k_factor * ((1 - result) - (1 - expectation))))
         return team_1_new_elo, team_2_new_elo
+
+    def embed_team_info(self, ctx, team: Team):
+        embed = discord.Embed(title="{0} Team Info".format(team.name), color=discord.Colour.blue())
+        embed.add_field(name="Captain", value="{}\n".format(team.captain.mention), inline=False)
+        embed.add_field(name="Players", value="{}\n".format(", ".join([player.mention for player in team.players])), inline=False)
+        embed.add_field(name="Games Played", value="{}\n".format(team.wins + team.losses), inline=False)
+        embed.add_field(name="Record", value="{0} - {1}\n".format(team.wins, team.losses), inline=False)
+        embed.add_field(name="Elo Rating", value="{}\n".format(team.elo_rating), inline=False)
+        return embed
 
     async def load_teams(self, ctx, force_load):
         if self.teams is None or self.teams == [] or force_load:
