@@ -912,11 +912,11 @@ class SixMans(commands.Cog):
         if helper_role:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channel=True)
+                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
             }
             voice_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(connect=False),
-                helper_role: discord.PermissionOverwrite(manage_channel=True)
+                helper_role: discord.PermissionOverwrite(manage_channels=True)
             }
         else:
             text_overwrites = {
