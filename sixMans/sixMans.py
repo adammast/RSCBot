@@ -236,9 +236,11 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["kq"])
-    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def kickQueue(self, ctx, player: discord.Member):
         """Remove someone else from the queue"""
+        if not await self.has_perms(ctx):
+            return
+
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
         if player in six_mans_queue.queue:
@@ -280,10 +282,12 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
-    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def forceCancelGame(self, ctx):
         """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
+        if not await self.has_perms(ctx):
+            return
+
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
         game, six_mans_queue = await self._get_info(ctx)
@@ -308,8 +312,10 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
-    @commands.has_any_role(*["Admin", "6 Mans Help"]) #Add the roles you would like to have access to this command
     async def forceResult(self, ctx, winning_team):
+        if not await self.has_perms(ctx):
+            return
+
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
         if winning_team.lower() != "blue" and winning_team.lower() != "orange":
@@ -619,6 +625,13 @@ class SixMans(commands.Cog):
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
+    async def has_perms(self, ctx):
+        helper_role = await self._helper_role(ctx)
+        if ctx.author.guild_permissions.administrator:
+            return True
+        elif helper_role and helper_role in ctx.author.roles:
+            return True
+
     async def _add_to_queue(self, player, six_mans_queue):
         six_mans_queue._put(player)
         player_list = self._format_player_list(six_mans_queue)
@@ -899,26 +912,25 @@ class SixMans(commands.Cog):
         if helper_role:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True)
+                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channel=True)
+            }
+            voice_overwrites = {
+                guild.default_role: discord.PermissionOverwrite(connect=False),
+                helper_role: discord.PermissionOverwrite(manage_channel=True)
             }
         else:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False)
             }
+            voice_overwrites = {
+                guild.default_role: discord.PermissionOverwrite(connect=False)
+            }
         
         text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
             category= await self._category(ctx))
         voice_channels = [
-            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), 
-                overwrites= {
-                    guild.default_role: discord.PermissionOverwrite(connect=False)
-                },
-                category= await self._category(ctx)),
-            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), 
-                overwrites= {
-                    guild.default_role: discord.PermissionOverwrite(connect=False)
-                },
-                category= await self._category(ctx))
+            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx)),
+            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx))
         ]
         return text_channel, voice_channels
 
