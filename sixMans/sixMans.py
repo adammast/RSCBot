@@ -916,7 +916,7 @@ class SixMans(commands.Cog):
             }
             voice_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(connect=False),
-                helper_role: discord.PermissionOverwrite(manage_channels=True)
+                helper_role: discord.PermissionOverwrite(connect=True, manage_channels=True)
             }
         else:
             text_overwrites = {
