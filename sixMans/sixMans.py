@@ -282,16 +282,26 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
-    async def forceCancelGame(self, ctx):
+    async def forceCancelGame(self, ctx, gameId: int = None):
         """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         if not await self.has_perms(ctx):
             return
-
+        
         await self._pre_load_queues(ctx)
         await self._pre_load_games(ctx, False)
-        game, six_mans_queue = await self._get_info(ctx)
-        if game is None or six_mans_queue is None:
+        game = None
+        if gameId is None:
+            game, six_mans_queue = await self._get_info(ctx)
+            if game is None or six_mans_queue is None:
+                return
+        else:
+            for active_game in self.games:
+                if active_game.id == gameId:
+                    game = active_game
+
+        if not game:
+            await ctx.send("No game found with id: {}".format(gameId))
             return
 
         msg = await ctx.send("{0} Please verify that you want to cancel this game.".format(ctx.author.mention))
@@ -302,7 +312,7 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This queue's channels will be deleted in 30 seconds**")
                 await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
@@ -625,6 +635,30 @@ class SixMans(commands.Cog):
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
+    @commands.guild_only()
+    @commands.command(aliases=["cag"])
+    async def checkActiveGames(self, ctx):
+        if not await self.has_perms(ctx):
+            return
+
+        await self._pre_load_queues(ctx)
+        await self._pre_load_games(ctx, False)
+        queueGames = {}
+        for game in self.games:
+            if game.queueId in queueGames.keys():
+                queueGames[game.queueId].append(game)
+            else:
+                queueGames[game.queueId] = [game]
+        
+        embed = discord.Embed(title="6Mans Active Games", color=discord.Colour.blue())
+
+        for queue_id in queueGames.keys():
+            queue_games = queueGames[queue_id]
+            queue_name = next(queue.name for queue in self.queues if queue.id == queue_id)
+            embed.add_field(name="{}:".format(queue_name), value="{}".format("\n".join(["{0}\n{1}".format(str(game.id), ", ".join([player.mention for player in game.players])) for game in queue_games])), inline=False)
+
+        await ctx.channel.send(embed=embed)
+
     async def has_perms(self, ctx):
         helper_role = await self._helper_role(ctx)
         if ctx.author.guild_permissions.administrator:
@@ -733,9 +767,15 @@ class SixMans(commands.Cog):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
         await asyncio.sleep(30)
-        await ctx.channel.delete()
+        try:
+            await game.textChannel.delete()
+        except:
+            pass
         for vc in game.voiceChannels:
-            await vc.delete()
+            try:
+                await vc.delete()
+            except:
+                pass
 
     def _get_opposing_captain(self, ctx, game):
         opposing_captain = None
@@ -912,11 +952,11 @@ class SixMans(commands.Cog):
         if helper_role:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channel=True)
+                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
             }
             voice_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(connect=False),
-                helper_role: discord.PermissionOverwrite(manage_channel=True)
+                helper_role: discord.PermissionOverwrite(connect=True, manage_channels=True)
             }
         else:
             text_overwrites = {
