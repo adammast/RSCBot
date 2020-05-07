@@ -1,23 +1,23 @@
 # RSCBot
 
-RSCBot is a collection of cogs written in Python that can be installed and used with the [Red Discord Bot](https://docs.discord.red/en/stable/index.html). These cogs are primarily written for use within [RSC (Rocket Soccar Confederation)](https://www.rocketsoccarconfederation.com/), a 3v3 Rocket League Amateur League that runs trough [Discord](https://discord.gg/Q6RkvYm).
+RSCBot is a collection of cogs written in Python that can be installed and used with the [Red Discord Bot](https://docs.discord.red/en/stable/index.html). These cogs are primarily written for use within [RSC (Rocket Soccar Confederation)](https://www.rocketsoccarconfederation.com/), a 3v3 Rocket League Amateur League that runs through [Discord](https://discord.gg/Q6RkvYm).
 
 ## Installation
 
-Follow the Red Discord Bot installation guide for [Windows](https://docs.discord.red/en/stable/install_windows.html) or [Linux/Mac](https://docs.discord.red/en/stable/install_linux_mac.html). You'll need to also [create a Discord bot account](https://discordpy.readthedocs.io/en/latest/discord.html) to get a token for use during the bot setup. After you have the bot setup, running, and invited to one of your Discord servers, you can begin installing and loading the cogs to the bot using the following commands in Discord (where <p> represents the prefix you selected your bot to use):
+Follow the Red Discord Bot installation guide for [Windows](https://docs.discord.red/en/stable/install_windows.html) or [Linux/Mac](https://docs.discord.red/en/stable/install_linux_mac.html). You'll need to also [create a Discord bot account](https://discordpy.readthedocs.io/en/latest/discord.html) to get a token for use during the bot setup. After you have the bot setup, running, and invited to one of your Discord servers, you can begin installing and loading the cogs to the bot using the following commands in Discord (where `<p>` represents the prefix you selected your bot to use):
 
 ```
 <p>load Downloader
 <p>repo add RSCBot https://github.com/adammast/RSCBot [branch]
 <p>cog install RSCBot <cog_name>
-<p>load prefixManager <cog_name>
+<p>load <cog_name>
 ```
 
-Certain cogs use methods from another cog and thus depend on that other cog being loaded first in order to work correctly. You can see a visualization of the cog dependencies [here](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing). Any cog that isn't shown in that chart is a stand-alone cog that can be loaded and will work on its own.
+Certain cogs depend on another cog being loaded first in order to work correctly. You can see a visualization of the cog dependencies [here](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing). Any cog that isn't shown in that chart is a stand-alone cog that can be loaded whenever and will work on its own.
 
 ## Usage
 
-Many of the RSC league specific cogs rely on roles being set up in the Discord server a certain way or data, such as team names and prefixes, to be added to the bot before they can be used. In this section I'll attempt to explain all the steps required in setting the league specifics cogs up correctly. 
+Many of the RSC league specific cogs rely on roles being set up in the Discord server a certain way or data, such as team names and prefixes, to be added to the bot before they can be used. In this section I'll attempt to explain all the steps required in setting up the league specifics cogs correctly. 
 
 #### Prefixes
 
