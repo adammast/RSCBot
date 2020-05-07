@@ -152,7 +152,7 @@ class Transactions(commands.Cog):
             if leagueRole is not None:
                 franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
                 free_agent_role = get(ctx.guild.roles, name="Free Agent")
-                if franchise_role in user.roles and tier_role in user.roles:
+                if franchise_role in user.roles and tier_role in user.roles:  # TODO: Follow pre-existing convention (see examples in faCheckIn.py)
                     if free_agent_role in user.roles:
                         await user.remove_roles(franchise_role, tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
