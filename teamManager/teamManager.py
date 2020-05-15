@@ -116,7 +116,7 @@ class TeamManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
         """Remove a tier from the tier list"""
-        tiers = self._tiers(ctx)
+        tiers = await self._tiers(ctx)
         try:
             tiers.remove(tier_name)
         except ValueError:
