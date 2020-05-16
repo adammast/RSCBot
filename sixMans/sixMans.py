@@ -283,7 +283,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
     async def forceCancelGame(self, ctx, gameId: int = None):
-        """Cancel the current 6Mans game. Can only be used in a 6Mans game channel.
+        """Cancel the current 6Mans game. Can only be used in a 6Mans game channel unless a gameId is given.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         if not await self.has_perms(ctx):
             return
@@ -312,7 +312,8 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This queue's channels will be deleted in 30 seconds**")
+                await ctx.send("Done.")
+                await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
                 await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
