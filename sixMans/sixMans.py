@@ -313,7 +313,11 @@ class SixMans(commands.Cog):
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
                 await ctx.send("Done.")
-                await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
+                try:
+                    # If the text channel has been deleted this will throw an error and we'll instead want to send the message to wherever the command was used
+                    await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
+                except:
+                    await ctx.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
                 await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
