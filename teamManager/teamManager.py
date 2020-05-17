@@ -33,16 +33,11 @@ class TeamManager(commands.Cog):
     async def addFranchise(self, ctx, gm: discord.Member, franchise_name: str, franchise_prefix: str):
         """Add a single franchise and prefix"""
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
-        franchise_role_name = "{0} ({1})".format(franchise_name, gm_name)
-        franchise_role = self._create_role(franchise_role_name) # create role for <frachise> (<gm_name>)
+        franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
+        franchise_role = await self._create_role(ctx, franchise_role_name)
         await gm.add_roles(gm_role, franchise_role)
-
-        gm_name = gm.name
-        await self.prefix_cog.addPrefix(ctx, gm_name, franchise_prefix)
-        # self._create_role(franchise_role_name)
-        
-        # assign General Manager role to gm
-        await ctx.send("Done")
+        await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
+        await ctx.send("Done.")
 
     @commands.command()
     @commands.guild_only()
@@ -369,7 +364,10 @@ class TeamManager(commands.Cog):
         return message
 
     async def _create_role(self, ctx, role_name: str):
+        """Creates and returns a new Guild Role"""
         return await ctx.guild.create_role(name=role_name)
+
+    async def _remove_role(self, ctx, role_)
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
