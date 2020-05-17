@@ -59,13 +59,13 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
     async def removeFranchise(self, ctx, gm: discord.Member):
-        gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
-        await gm.remove_roles(gm_role)
         franchise_role = self._get_franchise_role(ctx, gm.name)
         franchise_teams = await self._find_teams_for_franchise(ctx, franchise_role)
         if len(franchise_teams) > 0:
             await ctx.send(":x: Cannot remove a franchise that has teams enrolled.")
         else:
+            gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
+            await gm.remove_roles(gm_role)
             await franchise_role.delete()
             await self.prefix_cog.remove_prefix(ctx, gm.name)
             try: 
@@ -165,7 +165,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
-        """Remove a tier from the tier list"""
+        """Remove a tier from the tier list and removes the tier's roles"""
 
         if len(await self._find_teams_for_tier(ctx, tier_name)) > 0:
             await ctx.send(":x: Cannot remove a tier that has teams enrolled.")
