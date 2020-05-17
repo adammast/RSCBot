@@ -48,8 +48,8 @@ class TeamManager(commands.Cog):
         franchise_role = self._get_franchise_role(ctx, gm.name)
         await franchise_role.delete()
         # TODO: Remove each team within the franchise and their roles
-        await self.prefix_cog.removePrefix(ctx, gm.name)
-        # "Done." message sent in removePrefix function
+        await self.prefix_cog.remove_prefix(ctx, gm.name)
+        await ctx.send("Done.")
 
     @commands.command()
     @commands.guild_only()
