@@ -30,13 +30,15 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addFranchise(self, ctx, gm: discord.Member, franchise_name: str, franchise_prefix: str):
+    async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *franchise_name: str):
         """Add a single franchise and prefix
         
         This will also create the franchise role in the format: <franchise name> (GM name)
         
-        Afterwards it will assign this role and the General Manager role to the new GM
+        Afterwards it will assign this role and the General Manager role to the new GM and modify their nickname
         """
+        franchise_name = ' '.join(franchise_name)
+        await ctx.send("Team Name: {0} ({1})".format(franchise_name, franchise_prefix))
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
         franchise_role = await self._create_role(ctx, franchise_role_name)
