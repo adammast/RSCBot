@@ -42,10 +42,14 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
-    async def newRole(self, ctx, role_name: str):
-        role = await self._create_role(ctx, role_name)
-        await ctx.author.add_roles(role)
-        await ctx.send("Done?")
+    async def removeFranchise(self, ctx, gm: discord.Member):
+        gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
+        await gm.remove_roles(gm_role)
+        franchise_role = self._get_franchise_role(ctx, gm.name)
+        await franchise_role.delete()
+        # TODO: Remove each team within the franchise and their roles
+        await self.prefix_cog.removePrefix(ctx, gm.name)
+        # "Done." message sent in removePrefix function
 
     @commands.command()
     @commands.guild_only()
@@ -366,8 +370,6 @@ class TeamManager(commands.Cog):
     async def _create_role(self, ctx, role_name: str):
         """Creates and returns a new Guild Role"""
         return await ctx.guild.create_role(name=role_name)
-
-    async def _remove_role(self, ctx, role_)
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
