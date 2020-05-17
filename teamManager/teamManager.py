@@ -45,7 +45,10 @@ class TeamManager(commands.Cog):
         if franchise_role and not self.is_gm(gm):
             await gm.add_roles(gm_role, franchise_role)
             await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
-            # await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
+            try:
+                await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
+            except discord.Forbidden:
+                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
             await ctx.send("Done.")
         else:
             if self.is_gm(gm):
@@ -65,7 +68,10 @@ class TeamManager(commands.Cog):
         else:
             await franchise_role.delete()
             await self.prefix_cog.remove_prefix(ctx, gm.name)
-            # await gm.edit(nick=self.get_player_nickname(gm))
+            try: 
+                await gm.edit(nick=self.get_player_nickname(gm))
+            except:
+                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
             await ctx.send("Done.")
 
     @commands.command()
