@@ -265,6 +265,7 @@ class TeamManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTeam(self, ctx, team_name: str):
         """Removes team from the file system. Team roles will be cleared as well"""
+        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         teams = await self._teams(ctx)
         team_roles = await self._team_roles(ctx)
         try:
@@ -276,6 +277,8 @@ class TeamManager(commands.Cog):
             return
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
+        gm = self._get_gm(ctx, franchise_role)
+        await gm.remove_roles(tier_role)
         await ctx.send("Done.")
 
     @commands.command()
@@ -495,6 +498,8 @@ class TeamManager(commands.Cog):
             return False
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
+        gm = self._get_gm(ctx, franchise_role)
+        await gm.add_roles(tier_role)
         return True
 
     def _get_tier_role(self, ctx, tier: str):
