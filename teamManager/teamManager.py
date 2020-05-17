@@ -38,16 +38,18 @@ class TeamManager(commands.Cog):
         Afterwards it will assign this role and the General Manager role to the new GM and modify their nickname
         """
         franchise_name = ' '.join(franchise_name)
-        await ctx.send("Team Name: {0} ({1})".format(franchise_name, franchise_prefix))
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
         franchise_role = await self._create_role(ctx, franchise_role_name)
-        if franchise_role:
+
+        if franchise_role and not self.is_gm(gm):
             await gm.add_roles(gm_role, franchise_role)
             await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
-            await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
+            # await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
             await ctx.send("Done.")
         else:
+            if self.is_gm(gm):
+                await ctx.send("{0} is already a General Manager.".format(gm.name))
             await ctx.send("Franchise was not created.")
 
     @commands.command()
@@ -57,11 +59,14 @@ class TeamManager(commands.Cog):
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         await gm.remove_roles(gm_role)
         franchise_role = self._get_franchise_role(ctx, gm.name)
-        await franchise_role.delete()
-        # TODO: Remove each team within the franchise and their roles
-        await self.prefix_cog.remove_prefix(ctx, gm.name)
-        await gm.edit(nick=self.get_player_nickname(gm))
-        await ctx.send("Done.")
+        franchise_teams = await self._find_teams_for_franchise(ctx, franchise_role)
+        if len(franchise_teams) > 0:
+            await ctx.send(":x: Cannot remove a franchise that has teams enrolled.")
+        else:
+            await franchise_role.delete()
+            await self.prefix_cog.remove_prefix(ctx, gm.name)
+            # await gm.edit(nick=self.get_player_nickname(gm))
+            await ctx.send("Done.")
 
     @commands.command()
     @commands.guild_only()
