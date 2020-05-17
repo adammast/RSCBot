@@ -51,7 +51,7 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         """Add a single prefix and corresponding GM name."""
-        prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
+        prefixAdded = await self.add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
             await ctx.send("Done.")
         else:
@@ -149,7 +149,7 @@ class PrefixManager(commands.Cog):
             message += ". {0} user(s) had their nickname removed".format(removed)
         await ctx.send(message)
 
-    async def _add_prefix(self, ctx, gm_name: str, prefix: str):
+    async def add_prefix(self, ctx, gm_name: str, prefix: str):
         prefixes = await self._prefixes(ctx)
 
         proper_gm_name = self._get_proper_gm_name(ctx, gm_name)

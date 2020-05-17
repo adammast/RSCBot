@@ -26,6 +26,32 @@ class TeamManager(commands.Cog):
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
 
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addFranchise(self, ctx, gm: discord.Member, franchise_name: str, franchise_prefix: str):
+        """Add a single franchise and prefix"""
+        gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
+        franchise_role_name = "{0} ({1})".format(franchise_name, gm_name)
+        franchise_role = self._create_role(franchise_role_name) # create role for <frachise> (<gm_name>)
+        await gm.add_roles(gm_role, franchise_role)
+
+        gm_name = gm.name
+        await self.prefix_cog.addPrefix(ctx, gm_name, franchise_prefix)
+        # self._create_role(franchise_role_name)
+        
+        # assign General Manager role to gm
+        await ctx.send("Done")
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def newRole(self, ctx, role_name: str):
+        role = await self._create_role(ctx, role_name)
+        await ctx.author.add_roles(role)
+        await ctx.send("Done?")
+
     @commands.command()
     @commands.guild_only()
     async def franchises(self, ctx):
@@ -341,6 +367,9 @@ class TeamManager(commands.Cog):
             message += "No known members."
         message += "```"
         return message
+
+    async def _create_role(self, ctx, role_name: str):
+        return await ctx.guild.create_role(name=role_name)
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
