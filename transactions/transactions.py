@@ -264,14 +264,7 @@ class Transactions(commands.Cog):
         return free_agent_roles
 
     def get_player_nickname(self, user : discord.Member):
-        if user.nick is not None:
-            array = user.nick.split(' | ', 1)
-            if len(array) == 2:
-                currentNickname = array[1].strip()
-            else:
-                currentNickname = array[0]
-            return currentNickname
-        return user.name
+        return self.team_manager_cog.get_player_nickname()
 
     def _get_gm_name(self, ctx, franchise_role, returnNameAsString=False):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)

@@ -37,6 +37,7 @@ class TeamManager(commands.Cog):
         franchise_role = await self._create_role(ctx, franchise_role_name)
         await gm.add_roles(gm_role, franchise_role)
         await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
+        await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
         await ctx.send("Done.")
 
     @commands.command()
@@ -49,6 +50,7 @@ class TeamManager(commands.Cog):
         await franchise_role.delete()
         # TODO: Remove each team within the franchise and their roles
         await self.prefix_cog.remove_prefix(ctx, gm.name)
+        await gm.edit(nick=self.get_player_nickname(gm))
         await ctx.send("Done.")
 
     @commands.command()
@@ -556,6 +558,16 @@ class TeamManager(commands.Cog):
         tier_role = await self.get_current_tier_role(ctx, user)
         franchise_role = self.get_current_franchise_role(user)
         return await self._find_team_name(ctx, franchise_role, tier_role)
+
+    def get_player_nickname(self, user: discord.Member):
+        if user.nick is not None:
+            array = user.nick.split(' | ', 1)
+            if len(array) == 2:
+                currentNickname = array[1].strip()
+            else:
+                currentNickname = array[0]
+            return currentNickname
+        return user.name
 
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
         for role in ctx.message.guild.roles:
