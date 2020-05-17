@@ -31,14 +31,22 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addFranchise(self, ctx, gm: discord.Member, franchise_name: str, franchise_prefix: str):
-        """Add a single franchise and prefix"""
+        """Add a single franchise and prefix
+        
+        This will also create the franchise role in the format: <franchise name> (GM name)
+        
+        Afterwards it will assign this role and the General Manager role to the new GM
+        """
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
         franchise_role = await self._create_role(ctx, franchise_role_name)
-        await gm.add_roles(gm_role, franchise_role)
-        await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
-        await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
-        await ctx.send("Done.")
+        if franchise_role:
+            await gm.add_roles(gm_role, franchise_role)
+            await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
+            await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
+            await ctx.send("Done.")
+        else:
+            await ctx.send("Franchise was not created.")
 
     @commands.command()
     @commands.guild_only()
@@ -371,6 +379,10 @@ class TeamManager(commands.Cog):
 
     async def _create_role(self, ctx, role_name: str):
         """Creates and returns a new Guild Role"""
+        for role in ctx.guild.roles:
+            if role.name == role_name:
+                await ctx.send("The role \"{0}\" already exists in the server.".format(role_name))
+                return None
         return await ctx.guild.create_role(name=role_name)
 
     def _format_team_member_for_message(self, member, *args):
