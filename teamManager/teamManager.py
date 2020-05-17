@@ -152,8 +152,10 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addTier(self, ctx, tier_name: str):
-        """Add a tier to the tier list. 
+        """Add a tier to the tier list and creates tier roles. 
         This will need to be done before any transactions can be done for players in this tier"""
+        await self._create_role(ctx, tier_name)
+        await self._create_role(ctx, "{0}FA".format(tier_name))
         tiers = await self._tiers(ctx)
         tiers.append(tier_name)
         await self._save_tiers(ctx, tiers)
@@ -164,15 +166,25 @@ class TeamManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
         """Remove a tier from the tier list"""
-        tiers = await self._tiers(ctx)
-        try:
-            tiers.remove(tier_name)
-        except ValueError:
-            await ctx.send(
-                "{0} does not seem to be a tier.".format(tier_name))
-            return
-        await self._save_tiers(ctx, tiers)
-        await ctx.send("Done.")
+
+        if len(await self._find_teams_for_tier(ctx, tier_name)) > 0:
+            await ctx.send(":x: Cannot remove a tier that has teams enrolled.")
+        else:
+            tier_role = self._get_tier_role(ctx, tier_name)
+            tier_fa_role = self._find_role_by_name(ctx, "{0}FA".format(tier_name))
+            if tier_role:
+                await tier_role.delete()
+            if tier_fa_role:
+                await tier_fa_role.delete()
+            tiers = await self._tiers(ctx)
+            try:
+                tiers.remove(tier_name)
+            except ValueError:
+                await ctx.send(
+                    "{0} does not seem to be a tier.".format(tier_name))
+                return
+            await self._save_tiers(ctx, tiers)
+            await ctx.send("Done.")
 
     @commands.command()
     @commands.guild_only()
@@ -643,7 +655,6 @@ class TeamManager(commands.Cog):
             if franchise_role in member.roles:
                 if self.is_gm(member):
                     return member
-
         
     def _get_gm_name(self, franchise_role):
         try:
