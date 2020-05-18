@@ -145,7 +145,10 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
-        """Adds the team roles to the user and posts to the assigned channel"""
+        """
+        Adds the team roles to the user and posts to the assigned transaction channel
+        
+        This command is also used to end substitution periods"""
         trans_channel = await self._trans_channel(ctx)
         free_agent_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
         if trans_channel is not None:
