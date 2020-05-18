@@ -283,7 +283,6 @@ class Transactions(commands.Cog):
         return user.name
 
     async def get_tier_role_for_fa(self, ctx, user : discord.Member):
-        # TODO: THIS FUN. use get_fa_roles functions
         fa_roles = await self.find_user_free_agent_roles(ctx, user)
         fa_roles.remove(self.team_manager_cog._find_role_by_name(ctx, "Free Agent"))
         tier_role_name = fa_roles[0].name[:-2]
