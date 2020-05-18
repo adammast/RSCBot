@@ -29,7 +29,7 @@ class TeamManager(commands.Cog):
     
     @commands.command()
     @commands.guild_only()
-    @checks.admin_or_permissions("manage_guild"=True)
+    @checks.admin_or_permissions(manage_guild=True)
     async def transferFranchise(ctx, old_gm: discord.Member, new_gm: discord.Member):
         if not is_gm(old_gm):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm))
