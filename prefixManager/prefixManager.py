@@ -171,7 +171,7 @@ class PrefixManager(commands.Cog):
         await self._save_prefixes(ctx, prefixes)
         return True
 
-    async def remove_prefix(ctx, gm_name: str):
+    async def remove_prefix(self, ctx, gm_name: str):
         prefixes = await self._prefixes(ctx)
         try:
             del prefixes[gm_name]

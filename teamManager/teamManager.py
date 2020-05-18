@@ -30,30 +30,39 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def transferFranchise(ctx, old_gm: discord.Member, new_gm: discord.Member):
-        if not is_gm(old_gm):
-            await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm))
+    async def transferFranchise(self, ctx, old_gm: discord.Member, new_gm: discord.Member):
+        """Transfers ownership of a franchise to a new GM"""
+        if not self.is_gm(old_gm):
+            await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
             return False
-        if is_gm(new_gm):
-            await ctx.send("{0} already has the \"General Manager\" role.".format(old_gm))
+        if self.is_gm(new_gm):
+            await ctx.send("{0} already has the \"General Manager\" role.".format(new_gm.name))
             return False
         franchise_role = self._get_franchise_role(ctx, old_gm.name)
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
 
-        # reassign roles
-        await new_gm.add_roles(gm_role, franchise_role)
-        await old_gm.remove_roles(gm, franchise_role)
+        # reassign roles for gm/franchise
+        franchise_tier_roles = await self._get_user_tier_roles(ctx, old_gm)
+        # transfer_roles = gm_role + franchise_role + franchise_tier_roles
+
+        await new_gm.add_roles(franchise_role, gm_role)
+        await old_gm.remove_roles(franchise_role, gm_role)
+        await new_gm.add_roles(franchise_tier_roles)
+        await old_gm.remove_roles(franchise_tier_roles)
         
         # rename franchise
         franchise_name = self.get_franchise_name_from_role(franchise_role)
-        new_franchise_name = "{0} ({1})".format(franchise_name, new_gm)
+        franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, franchise_role)
+        new_franchise_name = "{0} ({1})".format(franchise_name, new_gm.name)
         await franchise_role.edit(name=new_franchise_name)
 
         # change prefix association to new GM
-        franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
         await self.prefix_cog.remove_prefix(ctx, old_gm.name)
         await self.prefix_cog.add_prefix(ctx, new_gm.name, franchise_prefix)
 
+        # change nicknames
+
+        await ctx.send("Done.")
 
     @commands.command()
     @commands.guild_only()
@@ -597,7 +606,7 @@ class TeamManager(commands.Cog):
         return teams_in_tier
 
     async def _get_franchise_emoji(self, ctx, franchise_role):
-        prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
+        prefix = await self.prefix_cog.get_franchise_prefix(ctx, franchise_role)
         gm_name = self._get_gm_name(franchise_role)
         if prefix:
             emojis = ctx.guild.emojis
@@ -610,10 +619,18 @@ class TeamManager(commands.Cog):
             if franchise_role in member.roles:
                 if self.is_gm(member):
                     return member
-
-        
+      
     def _get_gm_name(self, franchise_role):
         try:
             return re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
         except:
             raise LookupError('GM name not found from role {0}'.format(franchise_role.name))
+    
+    async def _get_user_tier_roles(self, ctx, user: discord.Member):
+        user_tier_roles = []
+        for tier_name in await self._tiers(ctx):
+            tier_role = self._find_role_by_name(ctx, tier_name)
+            if tier_role in user.roles:
+                user_tier_roles.append(user_tier_roles)
+        return user_tier_roles
+
