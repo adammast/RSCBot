@@ -26,6 +26,35 @@ class TeamManager(commands.Cog):
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
 
+    
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions("manage_guild"=True)
+    async def transferFranchise(ctx, old_gm: discord.Member, new_gm: discord.Member):
+        if not is_gm(old_gm):
+            await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm))
+            return False
+        if is_gm(new_gm):
+            await ctx.send("{0} already has the \"General Manager\" role.".format(old_gm))
+            return False
+        franchise_role = self._get_franchise_role(ctx, old_gm.name)
+        gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
+
+        # reassign roles
+        await new_gm.add_roles(gm_role, franchise_role)
+        await old_gm.remove_roles(gm, franchise_role)
+        
+        # rename franchise
+        franchise_name = self.get_franchise_name_from_role(franchise_role)
+        new_franchise_name = "{0} ({1})".format(franchise_name, new_gm)
+        await franchise_role.edit(name=new_franchise_name)
+
+        # change prefix association to new GM
+        franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
+        await self.prefix_cog.remove_prefix(ctx, old_gm.name)
+        await self.prefix_cog.add_prefix(ctx, new_gm.name, franchise_prefix)
+
+
     @commands.command()
     @commands.guild_only()
     async def franchises(self, ctx):
@@ -536,6 +565,10 @@ class TeamManager(commands.Cog):
                     return role
             except:
                 continue
+
+    def get_franchise_name_from_role(self, franchise_role: discord.Role):
+        end_of_name = franchise_role.name.rindex("(") - 1
+        return franchise_role.name[0:end_of_name]
 
     async def _match_team_name(self, ctx, team_name):
         teams = await self._teams(ctx)

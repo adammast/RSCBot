@@ -39,7 +39,7 @@ class PrefixManager(commands.Cog):
             for prefixStr in prefixes_to_add:
                 prefix = ast.literal_eval(prefixStr)
                 await ctx.send("Adding prefix: {0}".format(repr(prefix)))
-                prefixAdded = await self._add_prefix(ctx, *prefix)
+                prefixAdded = await self.add_prefix(ctx, *prefix)
                 if prefixAdded:
                     addedCount += 1
         finally:
@@ -51,7 +51,7 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         """Add a single prefix and corresponding GM name."""
-        prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
+        prefixAdded = await self.add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
             await ctx.send("Done.")
         else:
@@ -77,14 +77,11 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Remove a single prefix. The GM will no longer have a prefix in the dictionary"""
-        prefixes = await self._prefixes(ctx)
-        try:
-            del prefixes[gm_name]
-        except ValueError:
-            await ctx.send("{0} does not have a prefix.".format(gm_name))
-            return
-        await self._save_prefixes(ctx, prefixes)
-        await ctx.send("Done.")
+        prefixRemoved = await self._remove_prefix(ctx, gm_name)
+        if prefixRemoved:
+            await ctx.send("Done.")
+        else:
+            await ctx.send("Error removing prefix for GM: {0}".format(gm_name))
 
     @commands.command()
     @commands.guild_only()
@@ -149,7 +146,7 @@ class PrefixManager(commands.Cog):
             message += ". {0} user(s) had their nickname removed".format(removed)
         await ctx.send(message)
 
-    async def _add_prefix(self, ctx, gm_name: str, prefix: str):
+    async def add_prefix(self, ctx, gm_name: str, prefix: str):
         prefixes = await self._prefixes(ctx)
 
         proper_gm_name = self._get_proper_gm_name(ctx, gm_name)
@@ -174,6 +171,16 @@ class PrefixManager(commands.Cog):
         await self._save_prefixes(ctx, prefixes)
         return True
 
+    async def remove_prefix(ctx, gm_name: str):
+        prefixes = await self._prefixes(ctx)
+        try:
+            del prefixes[gm_name]
+        except ValueError:
+            await ctx.send("{0} does not have a prefix.".format(gm_name))
+            return False
+        await self._save_prefixes(ctx, prefixes)
+        return True
+
     def _get_proper_gm_name(self, ctx, gm_name):
         guild = ctx.message.guild
         roles = guild.roles
@@ -192,7 +199,7 @@ class PrefixManager(commands.Cog):
         except:
             return None
 
-    async def _get_franchise_prefix(self, ctx, franchise_role):
+    async def get_franchise_prefix(self, ctx, franchise_role):
         prefixes = await self._prefixes(ctx)
         try:
             gm_name = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
