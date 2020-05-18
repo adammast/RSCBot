@@ -21,7 +21,7 @@ Many of the RSC league specific cogs rely on roles being set up in the Discord s
 
 #### Commands
 
-For any command, you can use the command `<p>help <command name>` to see documentation explaining how to use the command.
+For any command, you can see documentation explaining how to use the command with the format: `<p>help <command name>`
 
 #### Franchises/Prefixes
 
