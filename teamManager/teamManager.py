@@ -152,7 +152,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addTier(self, ctx, tier_name: str):
-        """Add a tier to the tier list and creates tier roles. 
+        """Add a tier to the tier list and creates corresponding roles. 
         This will need to be done before any transactions can be done for players in this tier"""
         await self._create_role(ctx, tier_name)
         await self._create_role(ctx, "{0}FA".format(tier_name))
@@ -165,7 +165,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
-        """Remove a tier from the tier list and removes the tier's roles"""
+        """Remove a tier from the tier list and the tier's corresponding roles"""
 
         if len(await self._find_teams_for_tier(ctx, tier_name)) > 0:
             await ctx.send(":x: Cannot remove a tier that has teams enrolled.")

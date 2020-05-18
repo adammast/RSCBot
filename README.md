@@ -19,17 +19,21 @@ Certain cogs depend on another cog being loaded first in order to work correctly
 
 Many of the RSC league specific cogs rely on roles being set up in the Discord server a certain way or data, such as team names and prefixes, to be added to the bot before they can be used. In this section I'll attempt to explain all the steps required in setting up the league specifics cogs correctly.
 
-#### Prefixes
+#### Commands
 
-As can be seen in the [cog dependencies doc](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing), the prefixManager cog should be the first cog loaded from the league specific cogs. For RSC, a prefix should be added for each franchise within the league. To add a prefix you first need to set up a franchise role with the following name format: [<franchise_name> (<GM_name>)](https://media.discordapp.net/attachments/679698891129880580/707975741505273938/Capture.PNG). After that the `<p>addPrefix` command can be used to add prefixes one at a time, or the `<p>addPrefixes` command can be used to add them in bulk. You can use `<p>help addPrefix` and `<p>help addPrefixes` in Discord to see documentation explaining how to use each command.
+For any command, you can use the command `<p>help <command name>` to see documentation explaining how to use the command.
+
+#### Franchises/Prefixes
+
+As can be seen in the [cog dependencies doc](https://docs.google.com/drawings/d/1Ys3Ne_66uTECXY47WTLPr3LlWi_XL8rUGf2S90jY7Nk/edit?usp=sharing), the prefixManager cog should be the first cog loaded from the league specific cogs. For RSC, a prefix should be added for each franchise within the league. To add a prefix you first need to set up a franchise role with the following name format: [<franchise_name> (<GM_name>)](https://media.discordapp.net/attachments/679698891129880580/707975741505273938/Capture.PNG). After that the `<p>addPrefix` command can be used to add prefixes one at a time, or the `<p>addPrefixes` command can be used to add them in bulk. Alternatively, the command `<p>addFranchise` to complete all of these steps simultaneously.
 
 #### Tiers
 
-Tiers are added through the teamManager cog using the `<p>addTier` command. The bot will accept any name for the tier, but you'll also want a role in the Discord server with the same name as the tier. This tier role, along with the franchise roles, will be used to help determine what team a player is currently on. For each tier, you'll also want a corresponding free agent role. For example, for a tier named `Premier` you'll want to have a tier role also named `Premier` and a free agent role named `PremierFA`.
+Tiers are added through the teamManager cog using the `<p>addTier` command. The bot will accept any name for the tier. This will create a role for the tier, which along with the franchise roles, will be used to help determine what team a player is currently on. For each tier added, a corresponding free agent role will also be generated. For example, for a tier named `Premier` the role `Premier` and a free agent role named `PremierFA` will be generated.
 
 #### Teams
 
-For RSC, each team will need to have a team name, a corresponding GM (General Manager), and a tier that the team plays in. For each GM, there must be a corresponding franchise role that follows the naming format given in the Prefixes subsection above. Each tier should already be loaded into the bot according to the Tiers subsection above. Teams need to be added to the bot in order to use commands such as `<p>match`, `<p>roster`, or any of the transaction commands. Most of the commands involving teams are in the teamManager cog. To add a team to the bot the `<p>addTeam` command can be used to add them one at a time, or the `<p>addTeams` command can be used to add them in bulk. You can use `<p>help addTeam` and `<p>help addTeams` in Discord to see documentation explaining how to use each command.
+For RSC, each team will need to have a team name, a corresponding GM (General Manager), and a tier that the team plays in (which are generated from previous commands). Each tier should already be loaded into the bot according to the Tiers subsection above. Teams need to be added to the bot in order to use commands such as `<p>match`, `<p>roster`, or any of the transaction commands. Most of the commands involving teams are in the teamManager cog. To add a team to the bot the `<p>addTeam` command can be used to add them one at a time, or the `<p>addTeams` command can be used to add them in bulk. When a team is added to a franchise, the GM is given the tier role to reflect the addition of the team at that tier.
 
 #### Matches
 
