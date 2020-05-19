@@ -58,6 +58,14 @@ class TeamManager(commands.Cog):
         await self.prefix_cog.add_prefix(ctx, new_gm.name, franchise_prefix)
 
         # change nicknames
+        try:
+            await new_gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(new_gm)))
+        except discord.Forbidden:
+            await ctx.send("Chaning nickname forbidden for user: {0}".format(new_gm.name))
+        try:
+            await old_gm.edit(nick="{0}".format(self.get_player_nickname(old_gm)))
+        except discord.Forbidden:
+            await ctx.send("Chaning nickname forbidden for user: {0}".format(old_gm.name))
 
         await ctx.send("Done.")
 
@@ -631,3 +639,12 @@ class TeamManager(commands.Cog):
                 user_tier_roles.append(tier_role)
         return user_tier_roles
 
+    def get_player_nickname(self, user: discord.Member):
+        if user.nick is not None:
+            array = user.nick.split(' | ', 1)
+            if len(array) == 2:
+                currentNickname = array[1].strip()
+            else:
+                currentNickname = array[0]
+            return currentNickname
+        return user.name
