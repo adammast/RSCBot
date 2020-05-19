@@ -43,12 +43,9 @@ class TeamManager(commands.Cog):
 
         # reassign roles for gm/franchise
         franchise_tier_roles = await self._get_user_tier_roles(ctx, old_gm)
-        # transfer_roles = gm_role + franchise_role + franchise_tier_roles
-
-        await new_gm.add_roles(franchise_role, gm_role)
-        await old_gm.remove_roles(franchise_role, gm_role)
-        await new_gm.add_roles(franchise_tier_roles)
-        await old_gm.remove_roles(franchise_tier_roles)
+        transfer_roles = [gm_role, franchise_role] + franchise_tier_roles
+        await new_gm.add_roles(*transfer_roles)
+        await old_gm.remove_roles(*transfer_roles)
         
         # rename franchise
         franchise_name = self.get_franchise_name_from_role(franchise_role)
@@ -631,6 +628,6 @@ class TeamManager(commands.Cog):
         for tier_name in await self._tiers(ctx):
             tier_role = self._find_role_by_name(ctx, tier_name)
             if tier_role in user.roles:
-                user_tier_roles.append(user_tier_roles)
+                user_tier_roles.append(tier_role)
         return user_tier_roles
 
