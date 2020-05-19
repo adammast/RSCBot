@@ -72,7 +72,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def transferTeam(self, ctx, old_gm: discord.Member, new_gm: discord.Member, old_team_name: str, new_team_name=old_team_name):
+    async def transferTeam(self, ctx, old_gm: discord.Member, old_team_name: str, new_gm: discord.Member, new_team_name: str):
         """Transfers ownership of a franchise to a new GM"""
         if not self.is_gm(old_gm):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
@@ -83,8 +83,8 @@ class TeamManager(commands.Cog):
 
         new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
         new_franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, new_franchise_role)
-        old_franchise_role, tier_role = await self._roles_for_team(self, ctx, old_team_name)
-        old_gm, team_players = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        old_franchise_role, tier_role = await self._roles_for_team(ctx, old_team_name)
+        old_gm, team_players = self.gm_and_members_from_team(ctx, old_franchise_role, tier_role)
         # remove team tier role from GM, add to new gm (Should be done in add/remove team functions)
         
         # make sure new_gm doesn't already have a team at that tier
