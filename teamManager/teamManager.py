@@ -71,6 +71,45 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def transferTeam(self, ctx, old_gm: discord.Member, new_gm: discord.Member, old_team_name: str, new_team_name=old_team_name):
+        """Transfers ownership of a franchise to a new GM"""
+        if not self.is_gm(old_gm):
+            await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
+            return False
+        if not self.is_gm(new_gm):
+            await ctx.send("{0} does not have the \"General Manager\" role.".format(new_gm.name))
+            return False
+
+        new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
+        new_franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, new_franchise_role)
+        old_franchise_role, tier_role = await self._roles_for_team(self, ctx, old_team_name)
+        old_gm, team_players = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        # remove team tier role from GM, add to new gm (Should be done in add/remove team functions)
+        
+        # make sure new_gm doesn't already have a team at that tier
+        if tier_role in new_gm.roles:
+            await ctx.send(":x: {0} already has a team in the {1} tier.")
+            return
+
+        # Move Team from old to new franchise/gm ownership
+        await self._remove_team(ctx, old_team_name)
+        await self._add_team(ctx, new_team_name, new_gm.name, tier_role.name)
+
+        # for each player, replace franchise role, change nickname
+        for player in team_players:
+            player.remove_roles(old_franchise_role)
+            player.add_roles(new_franchise_name)
+            try:
+                await player.edit(nick="{0} | {1}".format(new_franchise_prefix, self.get_player_nickname(player)))
+            except discord.Forbidden:
+                await ctx.send("Chaning nickname forbidden for user: {0}".format(player.name))
+
+        await ctx.send("Done.")
+
+    
+    @commands.command()
+    @commands.guild_only()
     async def franchises(self, ctx):
         """Provides a list of all the franchises set up in the server 
         including the name of the GM for each franchise"""
@@ -248,18 +287,11 @@ class TeamManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTeam(self, ctx, team_name: str):
         """Removes team from the file system. Team roles will be cleared as well"""
-        teams = await self._teams(ctx)
-        team_roles = await self._team_roles(ctx)
-        try:
-            teams.remove(team_name)
-            del team_roles[team_name]
-        except ValueError:
-            await ctx.send(
-                "{0} does not seem to be a team.".format(team_name))
-            return
-        await self._save_teams(ctx, teams)
-        await self._save_team_roles(ctx, team_roles)
-        await ctx.send("Done.")
+        teamRemoved = await self._remove_team(ctx, team_name)
+        if teamRemoved:
+            await ctx.send("Done.")
+        else:
+            await ctx.send("Error removing team: {0}".format(team_name))
 
     @commands.command()
     @commands.guild_only()
@@ -467,6 +499,19 @@ class TeamManager(commands.Cog):
             team_data["Franchise Role"] = franchise_role.id
             team_data["Tier Role"] = tier_role.id
         except:
+            return False
+        await self._save_teams(ctx, teams)
+        await self._save_team_roles(ctx, team_roles)
+        return True
+    
+    async def _remove_team(self, ctx, team_name: str):
+        teams = await self._teams(ctx)
+        team_roles = await self._team_roles(ctx)
+        try:
+            teams.remove(team_name)
+            del team_roles[team_name]
+        except ValueError:
+            await ctx.send("{0} does not seem to be a team.".format(team_name))
             return False
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
