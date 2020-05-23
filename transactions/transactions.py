@@ -145,24 +145,36 @@ class Transactions(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
     async def sub(self, ctx, user: discord.Member, team_name: str):
-        """Adds the team roles to the user and posts to the assigned channel"""
+        """
+        Adds the team roles to the user and posts to the assigned transaction channel
+        
+        This command is also used to end substitution periods"""
         trans_channel = await self._trans_channel(ctx)
+        free_agent_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
         if trans_channel is not None:
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
-                franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-                free_agent_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
-                if franchise_role in user.roles and tier_role in user.roles:
+                franchise_role, team_tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+                if franchise_role in user.roles and team_tier_role in user.roles:
                     if free_agent_role in user.roles:
                         await user.remove_roles(franchise_role)
+                        fa_tier_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(team_tier_role))
+                        if not fa_tier_role in user.roles:
+                            player_tier = await self.get_tier_role_for_fa(ctx, user)
+                            await user.remove_roles(team_tier_role)
+                            await user.add_roles(player_tier)
+
                     else:
-                        await user.remove_roles(tier_role)
+                        await user.remove_roles(team_tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
-                    message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, tier_role.name)
+                    message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, team_tier_role.name)
                 else:
-                    await user.add_roles(franchise_role, tier_role, leagueRole)
+                    player_tier = await self.get_tier_role_for_fa(ctx, user)
+                    if free_agent_role in user.roles:
+                        await user.remove_roles(player_tier)
+                    await user.add_roles(franchise_role, team_tier_role, leagueRole)
                     gm = self._get_gm_name(ctx, franchise_role)
-                    message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, tier_role.name)
+                    message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, team_tier_role.name)
                 await trans_channel.send(message)
                 await ctx.send("Done")
 
@@ -265,6 +277,13 @@ class Transactions(commands.Cog):
 
     def get_player_nickname(self, user : discord.Member):
         return self.team_manager_cog.get_player_nickname()
+
+    async def get_tier_role_for_fa(self, ctx, user : discord.Member):
+        fa_roles = await self.find_user_free_agent_roles(ctx, user)
+        fa_roles.remove(self.team_manager_cog._find_role_by_name(ctx, "Free Agent"))
+        tier_role_name = fa_roles[0].name[:-2]
+        tier_role = self.team_manager_cog._find_role_by_name(ctx, tier_role_name)
+        return tier_role
 
     def _get_gm_name(self, ctx, franchise_role, returnNameAsString=False):
         gm = self.team_manager_cog._get_gm(ctx, franchise_role)
