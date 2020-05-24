@@ -85,11 +85,11 @@ class TeamManager(commands.Cog):
         new_franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, new_franchise_role)
         old_franchise_role, tier_role = await self._roles_for_team(ctx, old_team_name)
         old_gm, team_players = self.gm_and_members_from_team(ctx, old_franchise_role, tier_role)
-        # remove team tier role from GM, add to new gm (Should be done in add/remove team functions)
+        # TODO: remove team tier role from GM, add to new gm (Should be done in add/remove team functions)
         
         # make sure new_gm doesn't already have a team at that tier
         if tier_role in new_gm.roles:
-            await ctx.send(":x: {0} already has a team in the {1} tier.")
+            await ctx.send(":x: {0} already has a team in the {1} tier.".format(new_gm, tier_role.name))
             return
 
         # Move Team from old to new franchise/gm ownership
