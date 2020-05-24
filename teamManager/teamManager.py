@@ -235,14 +235,22 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def freeAgents(self, ctx, tier: str):
-        """Gets a list of all free agents in a specific tier"""
+    async def freeAgents(self, ctx, tier: str, filter=None):
+        """
+        Gets a list of all free agents in a specific tier
+        Filters may be applied to show only signable FAs, or permaFAs
+        - Filters for PermFA: perm, permfa, restricted, r, rfa, permanent
+        - Filters for signable FAs: non-perm, unrestricted, u, ufa, signable
+        """
         tiers = await self._tiers(ctx)
         tier_name = None
         for _tier in tiers:
             if tier.lower() == _tier.lower():
                 tier_name = _tier
                 break
+        
+        perm_fa_filters = ['perm', 'permfa', 'restricted', 'r', 'rfa', 'permanent']
+        signable_fa_filters = ['nonperm', 'non-perm', 'unrestricted', 'u', 'ufa', 'signable']
         
         if tier_name is None:
             await ctx.send("No tier with name: {0}".format(tier))
@@ -258,9 +266,17 @@ class TeamManager(commands.Cog):
         message = "```"
         for member in ctx.message.guild.members:
             if fa_role in member.roles:
-                message += "\n{0}".format(member.display_name)
-                if perm_fa_role is not None and perm_fa_role in member.roles:
-                    message += " (Permanent FA)"
+                if filter: # Optional filter for PermFA and signable FAs
+                    if filter.lower() in perm_fa_filters:
+                        if perm_fa_role is not None and perm_fa_role in member.roles:
+                            message += "\n{0} {1}".format(member.display_name, ("(Permanent FA)"))
+                    elif filter.lower() in signable_fa_filters:
+                        if perm_fa_role is not None and perm_fa_role not in member.roles:
+                            message += "\n{0}".format(member.display_name)
+                else:
+                    message += "\n{0}".format(member.display_name)
+                    if perm_fa_role is not None and perm_fa_role in member.roles:
+                        message += " (Permanent FA)"
         message += "```"
 
         color = discord.Colour.blue()
