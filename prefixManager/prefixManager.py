@@ -77,11 +77,11 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Remove a single prefix. The GM will no longer have a prefix in the dictionary"""
-        prefixRemoved = await self._remove_prefix(ctx, gm_name)
-        if prefixRemoved:
+        prefixRemoved = await self.remove_prefix(ctx, gm_name)
+        if(prefixRemoved):
             await ctx.send("Done.")
         else:
-            await ctx.send("Error removing prefix for GM: {0}".format(gm_name))
+            await ctx.send("Error removing prefix for {0}".format(gm_name))
 
     @commands.command()
     @commands.guild_only()
