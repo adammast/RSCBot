@@ -199,7 +199,7 @@ class PrefixManager(commands.Cog):
         except:
             return None
 
-    async def get_franchise_prefix(self, ctx, franchise_role):
+    async def _get_franchise_prefix(self, ctx, franchise_role):
         prefixes = await self._prefixes(ctx)
         try:
             gm_name = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]

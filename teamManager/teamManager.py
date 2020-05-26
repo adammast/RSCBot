@@ -26,7 +26,7 @@ class TeamManager(commands.Cog):
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
 
-    
+
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -49,7 +49,7 @@ class TeamManager(commands.Cog):
         
         # rename franchise
         franchise_name = self.get_franchise_name_from_role(franchise_role)
-        franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, franchise_role)
+        franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
         new_franchise_name = "{0} ({1})".format(franchise_name, new_gm.name)
         await franchise_role.edit(name=new_franchise_name)
 
@@ -82,10 +82,9 @@ class TeamManager(commands.Cog):
             return False
 
         new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
-        new_franchise_prefix = await self.prefix_cog.get_franchise_prefix(ctx, new_franchise_role)
+        new_franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, new_franchise_role)
         old_franchise_role, tier_role = await self._roles_for_team(ctx, old_team_name)
         old_gm, team_players = self.gm_and_members_from_team(ctx, old_franchise_role, tier_role)
-        # TODO: remove team tier role from GM, add to new gm (Should be done in add/remove team functions)
         
         # make sure new_gm doesn't already have a team at that tier
         if tier_role in new_gm.roles:
@@ -98,8 +97,8 @@ class TeamManager(commands.Cog):
 
         # for each player, replace franchise role, change nickname
         for player in team_players:
-            player.remove_roles(old_franchise_role)
-            player.add_roles(new_franchise_name)
+            await player.remove_roles(old_franchise_role)
+            await player.add_roles(new_franchise_role)
             try:
                 await player.edit(nick="{0} | {1}".format(new_franchise_prefix, self.get_player_nickname(player)))
             except discord.Forbidden:
@@ -107,7 +106,6 @@ class TeamManager(commands.Cog):
 
         await ctx.send("Done.")
 
-    
     async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *franchise_name: str):
         """Add a single franchise and prefix
         
@@ -735,7 +733,7 @@ class TeamManager(commands.Cog):
         return teams_in_tier
 
     async def _get_franchise_emoji(self, ctx, franchise_role):
-        prefix = await self.prefix_cog.get_franchise_prefix(ctx, franchise_role)
+        prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
         gm_name = self._get_gm_name(franchise_role)
         if prefix:
             emojis = ctx.guild.emojis
@@ -762,13 +760,3 @@ class TeamManager(commands.Cog):
             if tier_role in user.roles:
                 user_tier_roles.append(tier_role)
         return user_tier_roles
-
-    def get_player_nickname(self, user: discord.Member):
-        if user.nick is not None:
-            array = user.nick.split(' | ', 1)
-            if len(array) == 2:
-                currentNickname = array[1].strip()
-            else:
-                currentNickname = array[0]
-            return currentNickname
-        return user.name
