@@ -276,7 +276,7 @@ class Transactions(commands.Cog):
         return free_agent_roles
 
     def get_player_nickname(self, user : discord.Member):
-        return self.team_manager_cog.get_player_nickname()
+        return self.team_manager_cog.get_player_nickname(user)
 
     async def get_tier_role_for_fa(self, ctx, user : discord.Member):
         fa_roles = await self.find_user_free_agent_roles(ctx, user)
