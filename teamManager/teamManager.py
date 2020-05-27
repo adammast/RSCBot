@@ -64,6 +64,7 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, *, new_team_name: str):
         """Transfers ownership of a franchise to a new GM"""
         if not self.is_gm(old_gm):
@@ -98,6 +99,9 @@ class TeamManager(commands.Cog):
 
         await ctx.send("Done.")
 
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *, franchise_name: str):
         """Add a single franchise and prefix
         This will also create the franchise role in the format: <franchise name> (GM name)
