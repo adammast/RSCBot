@@ -74,11 +74,16 @@ class TeamManager(commands.Cog):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(new_gm.name))
             return False
 
+        tier_role = self._get_tier_role(ctx, tier)
+        old_franchise_role = self._get_franchise_role(ctx, old_gm.name)
+        old_team_name = await self._get_franchise_tier_team(ctx, old_franchise_role, tier_role)
         new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
         new_franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, new_franchise_role)
-        tier_role = self._get_tier_role(ctx, tier)
         if not tier_role:
             await ctx.send("\"{0}\" does not appear to be a tier.".format(tier))
+            return
+        if not old_team_name:
+            await ctx.send("{0} does not appear to have a {1} team.".format(old_gm.name, tier))
             return
         old_gm, team_players = self.gm_and_members_from_team(ctx, old_franchise_role, tier_role)
         
@@ -650,6 +655,17 @@ class TeamManager(commands.Cog):
                 franchise_teams.append(team)
         return franchise_teams
 
+    async def _get_franchise_tier_team(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
+        teams = await self._teams(ctx)
+        print(">>")
+        print(">>> {0} - {1}".format(franchise_role.name, tier_role.name))
+        print(">>")
+        for team in teams:
+            print(">> {0} - {1}".format((await self._roles_for_team(ctx, team))[0].name, (await self._roles_for_team(ctx, team))[1].name))
+            if (await self._roles_for_team(ctx, team)) == (franchise_role, tier_role):
+                return team
+        return None
+    
     def get_current_franchise_role(self, user: discord.Member):
         for role in user.roles:
             try:
