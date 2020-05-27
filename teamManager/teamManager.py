@@ -73,6 +73,7 @@ class TeamManager(commands.Cog):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(new_gm.name))
             return False
 
+        new_team_name = " ".join(new_team_name)
         new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
         new_franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, new_franchise_role)
         tier_role = self._get_tier_role(ctx, tier)
