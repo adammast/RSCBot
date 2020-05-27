@@ -58,15 +58,8 @@ class TeamManager(commands.Cog):
         await self.prefix_cog.add_prefix(ctx, new_gm.name, franchise_prefix)
 
         # change nicknames
-        try:
-            await new_gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(new_gm)))
-        except discord.Forbidden:
-            await ctx.send("Chaning nickname forbidden for user: {0}".format(new_gm.name))
-        try:
-            await old_gm.edit(nick="{0}".format(self.get_player_nickname(old_gm)))
-        except discord.Forbidden:
-            await ctx.send("Chaning nickname forbidden for user: {0}".format(old_gm.name))
-
+        await self._set_user_nickname_prefix(ctx, franchise_prefix, new_gm)
+        await self._set_user_nickname_prefix(ctx, None, old_gm)
         await ctx.send("Done.")
 
     @commands.command()
@@ -101,7 +94,7 @@ class TeamManager(commands.Cog):
         for player in team_players:
             await player.remove_roles(old_franchise_role)
             await player.add_roles(new_franchise_role)
-            await 
+            # await self._set_user_nickname_prefix(ctx, new_franchise_prefix, player)
             try:
                 await player.edit(nick="{0} | {1}".format(new_franchise_prefix, self.get_player_nickname(player)))
             except discord.Forbidden:
@@ -111,9 +104,7 @@ class TeamManager(commands.Cog):
 
     async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *franchise_name: str):
         """Add a single franchise and prefix
-        
         This will also create the franchise role in the format: <franchise name> (GM name)
-        
         Afterwards it will assign this role and the General Manager role to the new GM and modify their nickname
         """
         franchise_name = ' '.join(franchise_name)
@@ -124,10 +115,7 @@ class TeamManager(commands.Cog):
         if franchise_role and not self.is_gm(gm):
             await gm.add_roles(gm_role, franchise_role)
             await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
-            try:
-                await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
-            except discord.Forbidden:
-                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
+            await self._set_user_nickname_prefix(ctx, franchise_prefix, gm)
             await ctx.send("Done.")
         else:
             if self.is_gm(gm):
@@ -147,10 +135,7 @@ class TeamManager(commands.Cog):
             await gm.remove_roles(gm_role)
             await franchise_role.delete()
             await self.prefix_cog.remove_prefix(ctx, gm.name)
-            try: 
-                await gm.edit(nick=self.get_player_nickname(gm))
-            except:
-                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
+            await self._set_user_nickname_prefix(ctx, None, gm)
             await ctx.send("Done.")
 
     @commands.command()
@@ -696,6 +681,15 @@ class TeamManager(commands.Cog):
             return currentNickname
         return user.name
 
+    async def _set_user_nickname_prefix(self, ctx, prefix: str, user: discord.member):
+        try:
+            if prefix:
+                await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
+            else:
+                await user.edit(nick=self.get_player_nickname(user))
+        except discord.Forbidden:
+            await ctx.send("Chaning nickname forbidden for user: {0}".format(user.name))
+
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
         for role in ctx.message.guild.roles:
             try:
@@ -763,3 +757,5 @@ class TeamManager(commands.Cog):
             if tier_role in user.roles:
                 user_tier_roles.append(tier_role)
         return user_tier_roles
+    
+    

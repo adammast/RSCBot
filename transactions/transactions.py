@@ -241,6 +241,7 @@ class Transactions(commands.Cog):
                 if currentTier is not None and currentTier != tier_role:
                     await user.remove_roles(currentTier)
                 await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
+                await 
                 await user.add_roles(tier_role, leagueRole, franchise_role)
 
 
@@ -276,7 +277,10 @@ class Transactions(commands.Cog):
         return free_agent_roles
 
     def get_player_nickname(self, user : discord.Member):
-        return self.team_manager_cog.get_player_nickname()
+        return self.team_manager_cog.get_player_nickname(user)
+    
+    async def set_user_nickname_prefix(self, ctx, prefix: str, user: discord.member):
+        return self.team_manager_cog._set_user_nickname_prefix(ctx, prefix, user)
 
     async def get_tier_role_for_fa(self, ctx, user : discord.Member):
         fa_roles = await self.find_user_free_agent_roles(ctx, user)
