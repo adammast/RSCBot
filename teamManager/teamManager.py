@@ -657,11 +657,7 @@ class TeamManager(commands.Cog):
 
     async def _get_franchise_tier_team(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
         teams = await self._teams(ctx)
-        print(">>")
-        print(">>> {0} - {1}".format(franchise_role.name, tier_role.name))
-        print(">>")
         for team in teams:
-            print(">> {0} - {1}".format((await self._roles_for_team(ctx, team))[0].name, (await self._roles_for_team(ctx, team))[1].name))
             if (await self._roles_for_team(ctx, team)) == (franchise_role, tier_role):
                 return team
         return None
