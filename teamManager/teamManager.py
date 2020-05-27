@@ -64,7 +64,7 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, *new_team_name: str):
+    async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, *, new_team_name: str):
         """Transfers ownership of a franchise to a new GM"""
         if not self.is_gm(old_gm):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
@@ -73,7 +73,6 @@ class TeamManager(commands.Cog):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(new_gm.name))
             return False
 
-        new_team_name = " ".join(new_team_name)
         new_franchise_role = self._get_franchise_role(ctx, new_gm.name)
         new_franchise_prefix = await self.prefix_cog._get_franchise_prefix(ctx, new_franchise_role)
         tier_role = self._get_tier_role(ctx, tier)
@@ -99,7 +98,7 @@ class TeamManager(commands.Cog):
 
         await ctx.send("Done.")
 
-    async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *franchise_name: str):
+    async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *, franchise_name: str):
         """Add a single franchise and prefix
         This will also create the franchise role in the format: <franchise name> (GM name)
         Afterwards it will assign this role and the General Manager role to the new GM and modify their nickname
