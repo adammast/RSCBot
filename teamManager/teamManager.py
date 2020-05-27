@@ -64,7 +64,7 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, new_team_name: str):
+    async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, *new_team_name: str):
         """Transfers ownership of a franchise to a new GM"""
         if not self.is_gm(old_gm):
             await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
@@ -94,11 +94,7 @@ class TeamManager(commands.Cog):
         for player in team_players:
             await player.remove_roles(old_franchise_role)
             await player.add_roles(new_franchise_role)
-            # await self._set_user_nickname_prefix(ctx, new_franchise_prefix, player)
-            try:
-                await player.edit(nick="{0} | {1}".format(new_franchise_prefix, self.get_player_nickname(player)))
-            except discord.Forbidden:
-                await ctx.send("Chaning nickname forbidden for user: {0}".format(player.name))
+            await self._set_user_nickname_prefix(ctx, new_franchise_prefix, player)
 
         await ctx.send("Done.")
 
