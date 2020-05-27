@@ -68,10 +68,10 @@ class TeamManager(commands.Cog):
     async def transferTeam(self, ctx, old_gm: discord.Member, tier: str, new_gm: discord.Member, *, new_team_name: str):
         """Transfers ownership of a franchise to a new GM"""
         if not self.is_gm(old_gm):
-            await ctx.send("{0} does not have the \"General Manager\" role.".format(old_gm.name))
+            await ctx.send(":x: {0} does not have the \"General Manager\" role.".format(old_gm.name))
             return False
         if not self.is_gm(new_gm):
-            await ctx.send("{0} does not have the \"General Manager\" role.".format(new_gm.name))
+            await ctx.send(":x: {0} does not have the \"General Manager\" role.".format(new_gm.name))
             return False
 
         tier_role = self._get_tier_role(ctx, tier)
@@ -89,12 +89,12 @@ class TeamManager(commands.Cog):
         
         # make sure new_gm doesn't already have a team at that tier
         if tier_role in new_gm.roles:
-            await ctx.send(":x: {0} already has a team in the {1} tier.".format(new_gm, tier_role.name))
+            await ctx.send(":x: {0} already has a team in the {1} tier.".format(new_gm.name, tier_role.name))
             return
 
         # Move Team from old to new franchise/gm ownership
         await self._remove_team(ctx, old_team_name)
-        await self._add_team(ctx, new_team_name, new_gm.name, tier_role.name)
+        await self._add_team(ctx, new_gm.name, tier_role.name, new_team_name)
 
         # for each player, replace franchise role, change nickname
         for player in team_players:
@@ -296,14 +296,14 @@ class TeamManager(commands.Cog):
 
         teams_to_add -- One or more teams in the following format:
         ```
-        "['<team_name>','<gm_name>','<tier>']"
+        "['<gm_name>','<tier>','<team_name>']"
         ```
         Each team should be separated by a space.
 
         Examples:
         ```
-        [p]addTeams "['Derechos','Shamu','Challenger']"
-        [p]addTeams "['Derechos','Shamu','Challenger']" "['Barbarians','Snipe','Challenger']"
+        [p]addTeams "['Shamu','Challenger','Derechos']"
+        [p]addTeams "['Shamu','Challenger','Derechos']" "['Snipe','Challenger','Barbarians']"
         ```
         """
         addedCount = 0
@@ -321,9 +321,9 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
+    async def addTeam(self, ctx, gm_name: str, tier: str, *, team_name: str):
         """Add a single team and it's corresponding roles to the file system to be used for transactions and match info"""
-        teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
+        teamAdded = await self._add_team(ctx, gm_name, tier, team_name)
         if(teamAdded):
             await ctx.send("Done.")
         else:
@@ -332,7 +332,7 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def removeTeam(self, ctx, team_name: str):
+    async def removeTeam(self, ctx, *, team_name: str):
         """Removes team from the file system. Team roles will be cleared as well"""
         teamRemoved = await self._remove_team(ctx, team_name)
         if teamRemoved:
@@ -523,7 +523,8 @@ class TeamManager(commands.Cog):
         tier_matches = re.findall(r'\w*\b(?=\))', team_role.name)
         return None if not tier_matches else tier_matches[0]
 
-    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: str):
+    async def _add_team(self, ctx, gm_name: str, tier: str, *team_name: str):
+        team_name = " ".join(team_name)
         teams = await self._teams(ctx)
         team_roles = await self._team_roles(ctx)
 
