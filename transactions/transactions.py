@@ -163,7 +163,6 @@ class Transactions(commands.Cog):
                             player_tier = await self.get_tier_role_for_fa(ctx, user)
                             await user.remove_roles(team_tier_role)
                             await user.add_roles(player_tier)
-
                     else:
                         await user.remove_roles(team_tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
@@ -280,7 +279,9 @@ class Transactions(commands.Cog):
 
     async def get_tier_role_for_fa(self, ctx, user : discord.Member):
         fa_roles = await self.find_user_free_agent_roles(ctx, user)
-        fa_roles.remove(self.team_manager_cog._find_role_by_name(ctx, "Free Agent"))
+        standard_fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
+        if standard_fa_role in fa_roles:
+            fa_roles.remove(standard_fa_role)
         tier_role_name = fa_roles[0].name[:-2]
         tier_role = self.team_manager_cog._find_role_by_name(ctx, tier_role_name)
         return tier_role
