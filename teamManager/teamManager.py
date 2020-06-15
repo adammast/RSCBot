@@ -296,7 +296,7 @@ class TeamManager(commands.Cog):
         await self._save_team_roles(ctx, team_roles)
         await ctx.send("Done.")
 
-    @commands.command()
+    @commands.command(aliases=["fa"])
     @commands.guild_only()
     async def freeAgents(self, ctx, tier: str):
         """Gets a list of all free agents in a specific tier"""
