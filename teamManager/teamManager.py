@@ -290,14 +290,14 @@ class TeamManager(commands.Cog):
 
         teams_to_add -- One or more teams in the following format:
         ```
-        "['<gm_name>','<tier>','<team_name>']"
+        "['<team_name>','<gm_name>','<tier>']"
         ```
         Each team should be separated by a space.
 
         Examples:
         ```
-        [p]addTeams "['Shamu','Challenger','Derechos']"
-        [p]addTeams "['Shamu','Challenger','Derechos']" "['Snipe','Challenger','Barbarians']"
+        [p]addTeams "['Derechos','Shamu','Challenger']"
+        [p]addTeams "['Derechos','Shamu','Challenger']" "['Barbarians','Snipe','Challenger']"
         ```
         """
         addedCount = 0
@@ -315,9 +315,9 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addTeam(self, ctx, gm_name: str, tier: str, *, team_name: str):
+    async def addTeam(self, ctx, team_name: str, gm_name: str, tier: str):
         """Add a single team and it's corresponding roles to the file system to be used for transactions and match info"""
-        teamAdded = await self._add_team(ctx, gm_name, tier, team_name)
+        teamAdded = await self._add_team(ctx, team_name, gm_name, tier)
         if(teamAdded):
             await ctx.send("Done.")
         else:
@@ -517,8 +517,7 @@ class TeamManager(commands.Cog):
         tier_matches = re.findall(r'\w*\b(?=\))', team_role.name)
         return None if not tier_matches else tier_matches[0]
 
-    async def _add_team(self, ctx, gm_name: str, tier: str, *team_name: str):
-        team_name = " ".join(team_name)
+    async def _add_team(self, ctx, team_name: str, gm_name: str, tier: str):
         teams = await self._teams(ctx)
         team_roles = await self._team_roles(ctx)
 
