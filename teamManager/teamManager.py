@@ -96,12 +96,6 @@ class TeamManager(commands.Cog):
         await self._remove_team(ctx, old_team_name)
         await self._add_team(ctx, new_gm.name, tier_role.name, new_team_name)
 
-        # for each player, replace franchise role, change nickname
-        for player in team_players:
-            await player.remove_roles(old_franchise_role)
-            await player.add_roles(new_franchise_role)
-            await self._set_user_nickname_prefix(ctx, new_franchise_prefix, player)
-
         await ctx.send("Done.")
 
     @commands.command()
