@@ -105,7 +105,7 @@ class FaCheckIn(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAllAvailability(self, ctx):
-        self._save_data(ctx, {})
+        await self._save_check_ins(ctx, {})
         await ctx.send("Done.")
 
     async def _send_check_in_message(self, ctx, user, match_day, tier):

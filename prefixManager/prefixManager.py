@@ -51,7 +51,7 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addPrefix(self, ctx, gm_name: str, prefix: str):
         """Add a single prefix and corresponding GM name."""
-        prefixAdded = await self._add_prefix(ctx, gm_name, prefix)
+        prefixAdded = await self.add_prefix(ctx, gm_name, prefix)
         if(prefixAdded):
             await ctx.send("Done.")
         else:
@@ -77,14 +77,11 @@ class PrefixManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removePrefix(self, ctx, gm_name: str):
         """Remove a single prefix. The GM will no longer have a prefix in the dictionary"""
-        prefixes = await self._prefixes(ctx)
-        try:
-            del prefixes[gm_name]
-        except ValueError:
-            await ctx.send("{0} does not have a prefix.".format(gm_name))
-            return
-        await self._save_prefixes(ctx, prefixes)
-        await ctx.send("Done.")
+        prefixRemoved = await self.remove_prefix(ctx, gm_name)
+        if(prefixRemoved):
+            await ctx.send("Done.")
+        else:
+            await ctx.send("Error removing prefix for {0}".format(gm_name))
 
     @commands.command()
     @commands.guild_only()
@@ -149,7 +146,7 @@ class PrefixManager(commands.Cog):
             message += ". {0} user(s) had their nickname removed".format(removed)
         await ctx.send(message)
 
-    async def _add_prefix(self, ctx, gm_name: str, prefix: str):
+    async def add_prefix(self, ctx, gm_name: str, prefix: str):
         prefixes = await self._prefixes(ctx)
 
         proper_gm_name = self._get_proper_gm_name(ctx, gm_name)
@@ -171,6 +168,16 @@ class PrefixManager(commands.Cog):
             prefixes[proper_gm_name] = prefix
         except:
             return False
+        await self._save_prefixes(ctx, prefixes)
+        return True
+
+    async def remove_prefix(self, ctx, gm_name: str):
+        prefixes = await self._prefixes(ctx)
+        try:
+            del prefixes[gm_name]
+        except ValueError:
+            await ctx.send("{0} does not have a prefix.".format(gm_name))
+            return
         await self._save_prefixes(ctx, prefixes)
         return True
 
