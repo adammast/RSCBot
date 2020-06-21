@@ -301,7 +301,7 @@ class TeamManager(commands.Cog):
     async def freeAgents(self, ctx, tier: str, filter=None):
         """
         Gets a list of all free agents in a specific tier
-         - Filters for PermFA: perm, permfa, restricted, r, rfa, permanent
+         - Filters for PermFA: perm, permfa, restricted, p, r, rfa, permanent
          - Filters for signable FAs: non-perm, unrestricted, u, ufa, signable
         """
         tiers = await self._tiers(ctx)
