@@ -155,6 +155,8 @@ class Transactions(commands.Cog):
             leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
             if leagueRole is not None:
                 franchise_role, team_tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+                
+                # End Substitution
                 if franchise_role in user.roles and team_tier_role in user.roles:
                     if free_agent_role in user.roles:
                         await user.remove_roles(franchise_role)
@@ -167,9 +169,11 @@ class Transactions(commands.Cog):
                         await user.remove_roles(team_tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
                     message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, team_tier_role.name)
+                
+                # Begin Substitution:
                 else:
-                    player_tier = await self.get_tier_role_for_fa(ctx, user)
                     if free_agent_role in user.roles:
+                        player_tier = await self.get_tier_role_for_fa(ctx, user)
                         await user.remove_roles(player_tier)
                     await user.add_roles(franchise_role, team_tier_role, leagueRole)
                     gm = self._get_gm_name(ctx, franchise_role)
@@ -201,17 +205,17 @@ class Transactions(commands.Cog):
             await ctx.send("Either {0} isn't on a team right now or his current team can't be found".format(user.name))
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["setTransChannel"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def setTransChannel(self, ctx, trans_channel: discord.TextChannel):
+    async def setTransactionChannel(self, ctx, trans_channel: discord.TextChannel):
         """Sets the channel where all transaction messages will be posted"""
         await self._save_trans_channel(ctx, trans_channel.id)
         await ctx.send("Done")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["getTransChannel"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def getTransChannel(self, ctx):
+    async def getTransactionChannel(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
             await ctx.send("Transaction log channel set to: {0}".format((await self._trans_channel(ctx)).mention))
@@ -219,9 +223,9 @@ class Transactions(commands.Cog):
             await ctx.send(":x: Transaction log channel not set")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["unsetTransChannel"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def unsetTransChannel(self, ctx):
+    async def unsetTransactionChannel(self, ctx):
         """Unsets the transaction channel. Transactions will not be performed if no transaction channel is set"""
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
