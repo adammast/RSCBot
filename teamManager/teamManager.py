@@ -173,13 +173,11 @@ class TeamManager(commands.Cog):
         tiers = await self._tiers(ctx)
         for tier in tiers:
             if tier.lower() == franchise_tier_prefix.lower():
-                pass
-                # found = True
+                found = True
+                await ctx.send(embed=await self._format_tier_captains(ctx, tier))
+                return
         
-        if not found:
-            await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
-
-        
+        await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
 
     @commands.command()
@@ -477,6 +475,18 @@ class TeamManager(commands.Cog):
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
+        return embed
+
+    async def _format_tier_captains(self, ctx, tier: str):
+        tier_role = self._get_tier_role(ctx, tier)
+        teams = await self._find_teams_for_tier(ctx, tier)
+        message = ""
+        for team in teams:
+            franchise_role, tier_role = await self._roles_for_team(ctx, team)
+            captain = await self._get_team_captain(ctx, franchise_role, tier_role)
+            message += "\n{0} = {1}".format(team, captain)
+
+        embed = discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
         return embed
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
