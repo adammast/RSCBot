@@ -485,9 +485,8 @@ class TeamManager(commands.Cog):
             franchise_role, tier_role = await self._roles_for_team(ctx, team)
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
             captains.append((captain, team))
+        captains.sort(key=lambda captain_team: captain_team[0].name.casefold())  # dumb.
         
-        captains.sort(key=lambda captain_team: captain_team[0].name)  # is this bugged, or am I dumb?
-
         message = ""
         for captain, team in captains:
             message += "{0} ({1})\n".format(captain.mention, team)
