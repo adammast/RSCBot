@@ -465,17 +465,29 @@ class TeamManager(commands.Cog):
             message += "  {0}\n".format(
                 self._format_team_member_for_message(member, *role_tags))
         if not team_members:
-            message += "No known members."
+            message += "\nNo other members found."
         message += "```"
         return message
 
     async def _format_franchise_captains(self, ctx, franchise_role: discord.Role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)
+        captainless_teams = []
         message = ""
         for team in teams:
             f_role, tier_role = await self._roles_for_team(ctx, team) # TODO: maybe improve this
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-            message += "\n{0} ({1})".format(captain.mention, team)
+            if captain:
+                message += "{0} ({1})\n".format(captain.mention, team)
+            else:
+                captainless_teams.append(team)
+        
+        if not message:
+            message = "No captains registered."
+
+        elif captainless_teams:
+            message += "No captains found for the following teams:\n"
+            for team in captainless_teams:
+                message += "{0}\n".format(team)
 
         embed = discord.Embed(title="Captains for {0}:".format(franchise_role.name), color=discord.Colour.blue(), description=message)
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
