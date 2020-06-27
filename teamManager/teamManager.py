@@ -467,9 +467,9 @@ class TeamManager(commands.Cog):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)
         message = ""
         for team in teams:
-            f_role, tier_role = await self._roles_for_team(ctx, team) # TODO: improve this
+            f_role, tier_role = await self._roles_for_team(ctx, team) # TODO: maybe improve this
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-            message += "\n{0} = {1}".format(team, captain)
+            message += "\n{0} ({1})".format(captain.mention, team)
 
         embed = discord.Embed(title="Captains for {0}:".format(franchise_role.name), color=discord.Colour.blue(), description=message)
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
@@ -480,14 +480,15 @@ class TeamManager(commands.Cog):
     async def _format_tier_captains(self, ctx, tier: str):
         tier_role = self._get_tier_role(ctx, tier)
         teams = await self._find_teams_for_tier(ctx, tier)
-        message = ""
+        captains = []
         for team in teams:
             franchise_role, tier_role = await self._roles_for_team(ctx, team)
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-            message += "\n{0} = {1}".format(team, captain)
+            captains.append("{0} ({1})".format(captain.mention, team))
+        captains.sort()
+        message = '\n'.join(captains)
 
-        embed = discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
-        return embed
+        return discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
         captain_role = self._find_role_by_name(ctx, "Captain")
