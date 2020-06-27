@@ -137,7 +137,7 @@ class TeamManager(commands.Cog):
                     message += " `{0}`".format(possible_team)
             await ctx.send(message)
 
-    @commands.command(aliases=["captain", "cptn"])
+    @commands.command(aliases=["captain", "cptn", "cptns"])
     @commands.guild_only()
     async def captains(self, ctx, *, franchise_tier_prefix: str):
         """Returns a list of team captains under a tier or franchise based on the input. 
