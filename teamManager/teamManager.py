@@ -450,14 +450,20 @@ class TeamManager(commands.Cog):
     async def format_roster_info(self, ctx, team_name: str):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        captain = await self._get_team_captain(ctx, franchise_role, tier_role)
 
         message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
         if gm:
-            message += "  {0}\n".format(
-                self._format_team_member_for_message(gm, "GM"))
+            if gm == captain:
+                message += "  {0}\n".format(
+                    self._format_team_member_for_message(gm, "C"))
+            else:
+                message += "  {0}\n".format(
+                    self._format_team_member_for_message(gm))
         for member in team_members:
+            role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(
-                self._format_team_member_for_message(member))
+                self._format_team_member_for_message(member, *role_tags))
         if not team_members:
             message += "No known members."
         message += "```"
@@ -510,9 +516,8 @@ class TeamManager(commands.Cog):
 
     def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
-
-        if self.is_captain(member):
-            extraRoles.append("C")
+        if self.is_gm(member):
+            extraRoles.insert(0, "GM")
         if self.is_IR(member):
             extraRoles.append("IR")
         roleString = ""
