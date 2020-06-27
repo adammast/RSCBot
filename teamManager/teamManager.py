@@ -140,8 +140,8 @@ class TeamManager(commands.Cog):
     @commands.command(aliases=["captain", "cptn"])
     @commands.guild_only()
     async def captains(self, ctx, *, franchise_tier_prefix: str):
-        """Returns a list of team captains under a franchise based on the input. 
-        You can either give it the name of a franchise, a tier, or the prefix for a franchise.
+        """Returns a list of team captains under a tier or franchise based on the input. 
+        You can either give it the name of a tier, or a franchise identifier (prefix, name, or GM name).
         
         Examples:
         \t[p]captains The Ocean
@@ -242,7 +242,7 @@ class TeamManager(commands.Cog):
                 if len(message) > 1900:
                     messages.append(message)
                     message = ""
-            if message is not "":
+            if message:
                 messages.append(message)
             for msg in messages:
                 await ctx.send("{0}{1}{0}".format("```", msg))
@@ -483,9 +483,8 @@ class TeamManager(commands.Cog):
         
         if not message:
             message = "No captains registered."
-
         elif captainless_teams:
-            message += "No captains found for the following teams:\n"
+            message += "\nNo captains found for the following teams:\n"
             for team in captainless_teams:
                 message += "{0}\n".format(team)
 
