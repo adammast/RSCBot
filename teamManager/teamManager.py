@@ -487,15 +487,29 @@ class TeamManager(commands.Cog):
         tier_role = self._get_tier_role(ctx, tier)
         teams = await self._find_teams_for_tier(ctx, tier)
         captains = []
+        captainless_teams = []
         for team in teams:
             franchise_role, tier_role = await self._roles_for_team(ctx, team)
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-            captains.append((captain, team))
+            if captain:
+                captains.append((captain, team))
+            else:
+                gm = self._get_gm(ctx, franchise_role)
+                captainless_teams.append((gm, team))
         captains.sort(key=lambda captain_team: captain_team[0].name.casefold())  # dumb.
+        captainless_teams.sort(key=lambda gm_team: gm_team[0].name.casefold())
         
         message = ""
-        for captain, team in captains:
-            message += "{0} ({1})\n".format(captain.mention, team)
+        if captains:
+            for captain, team in captains:
+                message += "{0} ({1})\n".format(captain.mention, team)
+        else:
+            message += "No Captains found in this tier.\n"
+        if captainless_teams:
+            message += "\nTeams without registered captains:\n"
+            for gm, team in captainless_teams:
+                message += "{0} ({1})\n".format(gm.mention, team)
+
         return discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
@@ -504,7 +518,9 @@ class TeamManager(commands.Cog):
         for member in members:
             if captain_role in member.roles:
                 return member
-        return gm
+        if captain_role in gm.roles:
+            return gm
+        return None
             
     async def _create_role(self, ctx, role_name: str):
         """Creates and returns a new Guild Role"""
