@@ -474,7 +474,7 @@ class TeamManager(commands.Cog):
         captainless_teams = []
         message = ""
         for team in teams:
-            f_role, tier_role = await self._roles_for_team(ctx, team) # TODO: maybe improve this
+            f_role, tier_role = await self._roles_for_team(ctx, team)
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
             if captain:
                 message += "{0} ({1})\n".format(captain.mention, team)
