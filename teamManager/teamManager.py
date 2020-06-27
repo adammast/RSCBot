@@ -484,10 +484,13 @@ class TeamManager(commands.Cog):
         for team in teams:
             franchise_role, tier_role = await self._roles_for_team(ctx, team)
             captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-            captains.append("{0} ({1})".format(captain.mention, team))
-        captains.sort()
-        message = '\n'.join(captains)
+            captains.append((captain, team))
+        
+        captains.sort(key=lambda captain_team: captain_team[0].name)  # is this bugged, or am I dumb?
 
+        message = ""
+        for captain, team in captains:
+            message += "{0} ({1})\n".format(captain.mention, team)
         return discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
@@ -498,7 +501,6 @@ class TeamManager(commands.Cog):
                 return member
         return gm
             
-
     async def _create_role(self, ctx, role_name: str):
         """Creates and returns a new Guild Role"""
         for role in ctx.guild.roles:
@@ -544,7 +546,6 @@ class TeamManager(commands.Cog):
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
         return embed
-
 
     async def _format_teams_for_tier(self, ctx, tier):
         teams = await self._find_teams_for_tier(ctx, tier)
