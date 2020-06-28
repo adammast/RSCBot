@@ -471,27 +471,37 @@ class TeamManager(commands.Cog):
 
     async def _format_franchise_captains(self, ctx, franchise_role: discord.Role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)
-        captains = []
-        teams_display = []
+        captains_mentioned = []
+        captains_username = []
+        team_names = []
+        team_tiers = []
+
         gm = self._get_gm(ctx, franchise_role)
         message = "**General Manager:** {0}".format(gm.mention)
         if teams:
             for team in teams:
                 f_role, tier_role = await self._roles_for_team(ctx, team)
                 captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-                teams_display.append("{0} ({1})".format(team, tier_role.name))
+                #team_names.append(team)
+                team_names.append("{0} ({1})".format(team, tier_role.name))
+                team_tiers.append(tier_role.name)
+
                 if captain:
-                    captains.append(captain.mention)
+                    captains_mentioned.append(captain.mention)
+                    captains_username.append(str(captain))
                 else:
-                    captains.append("(No captain)")
+                    captains_mentioned.append("(No captain)")
+                    captains_username.append("N/A")
         else:
             message += "\nNo teams have been made."
 
         franchise_name = self._extract_franchise_name_from_role(franchise_role)
         embed = discord.Embed(title="{0} Captains:".format(franchise_name), color=discord.Colour.blue(), description=message)
-        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains)), inline=True)
-        embed.add_field(name="Team", value="{}\n".format("\n".join(teams_display)), inline=True)
-
+        embed.add_field(name="Team", value="{}\n".format("\n".join(team_names)), inline=True)
+        # embed.add_field(name="Tier", value="{}\n".format("\n".join(team_tiers)), inline=True)
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned)), inline=True)
+        embed.add_field(name="Username", value="{}\n".format("\n".join(captains_username)), inline=True)
+        
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
