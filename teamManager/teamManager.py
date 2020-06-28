@@ -510,18 +510,24 @@ class TeamManager(commands.Cog):
         captains.sort(key=lambda captain_team: captain_team[0].name.casefold())  # dumb.
         captainless_teams.sort(key=lambda gm_team: gm_team[0].name.casefold())
         
-        message = ""
+        embed = discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color)
+
+        captains_formatted = []
+        teams_formatted = []
         if captains:
             for captain, team in captains:
-                message += "{0} ({1})\n".format(captain.mention, team)
-        else:
-            message += "No Captains found in this tier.\n"
+                captains_formatted.append(captain.mention)
+                teams_formatted.append(team)
+                
         if captainless_teams:
-            message += "\nTeams without registered captains:\n"
             for gm, team in captainless_teams:
-                message += "{0} ({1})\n".format(gm.mention, team)
-
-        return discord.Embed(title="Captains for {0}:".format(tier_role.name), color=tier_role.color, description=message)
+                captains_formatted.append("(No Captain)")
+                teams_formatted.append(team)
+            
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_formatted)), inline=True)
+        embed.add_field(name="Team", value="{}\n".format("\n".join(teams_formatted)), inline=True)
+        
+        return embed
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
         captain_role = self._find_role_by_name(ctx, "Captain")
