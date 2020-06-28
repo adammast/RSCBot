@@ -521,19 +521,19 @@ class TeamManager(commands.Cog):
         teams_formatted = []
         if captains:
             for captain, team in captains:
-                captains_formatted.append(captain.name)
+                captains_formatted.append(str(captain))
                 captains_mentioned_formatted.append(captain.mention)
                 teams_formatted.append(team)
                 
         if captainless_teams:
             for gm, team in captainless_teams:
-                captains_formatted.append("(No Captain)")
-                captains_mentioned_formatted.append("N/A")
+                captains_formatted.append("N/A")
+                captains_mentioned_formatted.append("(No Captain)")
                 teams_formatted.append(team)
-            
-        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_formatted)), inline=True)
-        embed.add_field(name="Mentioned", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)
+        
         embed.add_field(name="Team", value="{}\n".format("\n".join(teams_formatted)), inline=True)
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)    
+        embed.add_field(name="Username", value="{}\n".format("\n".join(captains_formatted)), inline=True)
         return embed
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
