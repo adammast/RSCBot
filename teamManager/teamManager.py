@@ -578,19 +578,6 @@ class TeamManager(commands.Cog):
             embed.set_thumbnail(url=emoji.url)
         return embed
 
-    async def _format_captains_for_franchise(self, ctx, franchise_role: discord.Role):
-        teams = await self._find_teams_for_franchise(ctx, franchise_role)
-        teams_message = ""
-        for team in teams:
-            tier_role = (await self._roles_for_team(ctx, team))[1]
-            teams_message += "\n\t{0} ({1})".format(team, tier_role.name)
-
-        embed = discord.Embed(title="{0}:".format(franchise_role.name), color=discord.Colour.blue(), description=teams_message)
-        emoji = await self._get_franchise_emoji(ctx, franchise_role)
-        if(emoji):
-            embed.set_thumbnail(url=emoji.url)
-        return embed
-
     async def _format_teams_for_tier(self, ctx, tier):
         teams = await self._find_teams_for_tier(ctx, tier)
         teams_message = ""
