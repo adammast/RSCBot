@@ -4,13 +4,12 @@ import discord
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
-from collections import Counter
 
 
 defaults = {}
 
 class RankedRooms(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
 
@@ -23,7 +22,7 @@ class RankedRooms(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command(aliases=["setTransChannel"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def setTestChannel(self, ctx, trans_channel: discord.TextChannel):
         """Sets the channel where all test reponse messages will be posted"""
@@ -36,9 +35,9 @@ class RankedRooms(commands.Cog):
     async def getTestChannel(self, ctx):
         """Gets the channel currently assigned test response channel"""
         try:
-            await ctx.send("Transaction log channel set to: {0}".format((await self._trans_channel(ctx)).mention))
+            await ctx.send("Test log channel set to: {0}".format((await self._trans_channel(ctx)).mention))
         except:
-            await ctx.send(":x: Transaction log channel not set")
+            await ctx.send(":x: Test log channel not set")
 
     @commands.guild_only()
     @commands.command(aliases=["unsetTransChannel"])
@@ -50,3 +49,4 @@ class RankedRooms(commands.Cog):
 
     async def _save_test_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TestChannel.set(test_channel)
+    
