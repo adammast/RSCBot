@@ -6,7 +6,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 
-defaults = {}
+defaults = {"TestChannel": None}
 
 class RankedRooms(commands.Cog):
     def __init__(self, bot):
@@ -30,7 +30,7 @@ class RankedRooms(commands.Cog):
         await ctx.send("Done")
 
     @commands.guild_only()
-    @commands.command(aliases=["getTransChannel"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def getTestChannel(self, ctx):
         """Gets the channel currently assigned test response channel"""
@@ -40,13 +40,13 @@ class RankedRooms(commands.Cog):
             await ctx.send(":x: Test log channel not set")
 
     @commands.guild_only()
-    @commands.command(aliases=["unsetTransChannel"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetTestChannel(self, ctx):
         """Unsets the test response channel. Transactions will not be performed if no transaction channel is set"""
         await self._save_test_channel(ctx, None)
         await ctx.send("Done")
 
-    async def _save_test_channel(self, ctx, trans_channel):
+    async def _save_test_channel(self, ctx, test_channel):
         await self.config.guild(ctx.guild).TestChannel.set(test_channel)
     
