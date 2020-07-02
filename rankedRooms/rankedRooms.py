@@ -33,18 +33,28 @@ class RankedRooms(commands.Cog):
         [p]combines stop
         """
         if action in ["start", "create"]:
-            done = start_combines(ctx)
+            done = self._start_combines(ctx)
         elif action in ["stop", "teardown", "end"]:
-            done = stop_combines(ctx)
+            done = self._stop_combines(ctx)
         
         if done:
             await ctx.send("Done")
         return
     
-    async start_combines(self, ctx):
+    def _start_combines(self, ctx):
+        # check if combines are running already (maybe check config file)
+        # create combines category
+        # create DYNAMIC ROOMS for each rank
+            # name: <tier> combines: Octane (identifier?)
+            # permissions:
+                # <tier> voice visible by <tier, admin, mod, GM, AGM, scout>
+            # behavior: 
+                # (listener command) => if 5th joins room, send to waiting room/new room?
+                # allow 4 PLAYERS, but allow x scouts/GMs
         return True
 
-    async stop_combines(self, ctx):
+    def _stop_combines(self, ctx):
+        # remove combines channels, category
         return False
 
     def _get_channel_by_name(self, guild: discord.guild, name: str):
