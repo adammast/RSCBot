@@ -34,7 +34,7 @@ class RankedRooms(commands.Cog):
         """
         if action in ["start", "create"]:
             done = start_combines(ctx)
-        elif action in ["stop", "teardown", "end"]
+        elif action in ["stop", "teardown", "end"]:
             done = stop_combines(ctx)
         
         if done:
