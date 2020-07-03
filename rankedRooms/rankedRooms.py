@@ -5,21 +5,14 @@ from redbot.core import checks
 from collections import Counter
 
 
-defaults = {"room_size": 4, "combines_category": None}
+defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None}
 
 # TODO list:
 #   - team_manager_cog => don't hardcode tiers in for loop
 #   X- set/save/update combine details (i.e. room size, combines category while active)
 #   X- room permissions ("League" role, GM, AGM, scout, mod, or admins may join)
-#   X- listener behavior
-#       - player join
-#           X- maybe make new/move room (A: move player to new room, B: add 2nd room, move original)    
-#           X- increase room size (x/4)
-#       - player leave
-#           X- maybe remove room
-#           X- decrement room size (x/4)
 #
-#   - Probably reduce actions taken to avoid hitting the rate limit.
+#   X- Probably reduce actions taken to avoid hitting the rate limit.
 
 class RankedRooms(commands.Cog):
     def __init__(self, bot):
@@ -54,25 +47,40 @@ class RankedRooms(commands.Cog):
             await ctx.send("Done")
         return
     
-    @commands.command(aliases=["scrs", "setroomsize", "srs"])
+    @commands.command(aliases=["sppr"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def set_combine_room_size(self, ctx, size: int):
+    async def set_players_per_room(self, ctx, size: int):
         if size < 2:
             await ctx.send("No.")
             return False  
-        combines_cat = await self._save_room_size(ctx.guild, size)
-        if combines_cat:
+        combines_cat = await self._save_players_per_room(ctx.guild, size)
+        # DISABLED: room size in name
+        if combines_cat and False:
             for vc in combines_cat.voice_channels:
-                await self._adjust_room_tally(guild, vc)
+                pass # await self._adjust_room_tally(guild, vc)
         await ctx.send("Done")
         return True
     
-    @commands.command(aliases=["crs", "roomsize", "rs"])
+    @commands.command(aliases=["ppr"])
     @commands.guild_only()
-    async def get_combine_room_size(self, ctx):
-        size = await self._combines_room_size(ctx.guild)
+    async def get_players_per_room(self, ctx):
+        size = await self._players_per_room(ctx.guild)
         await ctx.send("Combines should have no more than {0} active players in them.".format(size))
+
+    @commands.command(aliases=["setroomcap", "src"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def set_room_capacity(self, ctx, size: int):
+        if size < 2:
+            await ctx.send("No.")
+            return False  
+        combines_cat = await self._save_room_capacity(ctx.guild, size)
+        if self._combines_category(ctx.guild):
+            await ctx.send("Done: Changes will not be applied to rooms that are already up.")
+        else:
+            await ctx.send("Done")
+        return True
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -147,17 +155,28 @@ class RankedRooms(commands.Cog):
             if tier in vc.name:
                 tier_voice_channels.append(vc)
         
-        if len(tier_voice_channels) > 2:
+        # Never remove the last room for a tier
+        if len(tier_voice_channels) == 1:
+            return False
+
+        # Always retain room 1 for tier:
+        # await voice_channel.delete()
+        i = voice_channel.name.index("room ") + 5
+        # DISABLED: active players in room name
+        # j = voice_channel.name.index(" (")
+        room_num = int(voice_channel.name[i:]) # j])
+        room_one_empty = (room_num == 1)
+
+        # if voice_channel was not room 1
+        if not room_one_empty:
             await voice_channel.delete()
             return True
         
-        tier_voice_channels.remove(voice_channel)
-        second_channel = tier_voice_channels[0]
-
-        if not second_channel.members:
-            max_size = await self._combines_room_size(guild)
-            rename = "{0} room 1 (0/{1})".format(tier, max_size)
-            await voice_channel.edit(name=rename)
+        # delete the other empty room (instead of room 1)
+        for vc in tier_voice_channels:
+            if not vc.members and vc != voice_channel:
+                await vc.delete()
+                return True
 
     async def _add_combines_voice(self, guild: discord.Guild, tier: str):
         # user_limit of 0 means there's no limit
@@ -175,19 +194,23 @@ class RankedRooms(commands.Cog):
             room_makeable = True
             for vc in tier_rooms:
                 i = vc.name.index("room ") + 5
-                j = vc.name.index(" (")
-                vc_room_num = int(vc.name[i:j])
+                # DISABLED: room count in name
+                # j = vc.name.index(" (")
+                vc_room_num = int(vc.name[i:])  # j])
                 if vc_room_num == new_room_number:
                     new_room_number += 1
                     new_position = vc.position
                     room_makeable = False
         
-        max_size = await self._combines_room_size(guild)
-        room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, max_size)
+        ppr = await self._players_per_room(guild)
+        capacity = await self._room_capacity(guild)
+        # DISABLED: room count in name
+        # room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, ppr)
+        room_name = "{0} room {1}".format(tier, new_room_number)
         if not new_position:
-            await category.create_voice_channel(room_name, permissions_synced=True, user_limit=max_size+4)
+            await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity)
         else:
-            await category.create_voice_channel(room_name, position=new_position)
+            await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity, position=new_position)
 
     async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
         if voice_channel in (await self._combines_category(member.guild)).voice_channels:
@@ -198,6 +221,7 @@ class RankedRooms(commands.Cog):
    
     async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
         if voice_channel in (await self._combines_category(member.guild)).voice_channels:
+            # DISABLED
             player_count = await self._adjust_room_tally(member.guild, voice_channel)
             if player_count == 0:
                 await self._maybe_remove_combines_voice(member.guild, voice_channel)
@@ -208,16 +232,21 @@ class RankedRooms(commands.Cog):
                 return category
         return None
     
+    # DISABLED :/ (currently only returns player count)
     async def _adjust_room_tally(self, guild: discord.Guild, voice_channel: discord.VoiceChannel):
         # possibility: only call this function when an active player triggers the call and/or make this an increment/decrement function
         fa_role = self._get_role_by_name(guild, "Free Agent")
         de_role = self._get_role_by_name(guild, "Draft Eligible")
+        scout_role = self._get_role_by_name(guild, "Combine Scout")
         player_count = 0
-        max_size = await self._combines_room_size(guild)
+        max_size = await self._players_per_room(guild)
         for member in voice_channel.members:
-            active_player = fa_role in member.roles or de_role in member.roles
+            active_player = (fa_role in member.roles or de_role in member.roles) and scout_role not in member.roles
             if active_player:
                 player_count += 1
+        
+        # DISABLED: channel renaming
+        return player_count
         
         name_base = voice_channel.name[:voice_channel.name.index(" (")]
         rename = "{0} ({1}/{2})".format(name_base, player_count, max_size)
@@ -243,9 +272,17 @@ class RankedRooms(commands.Cog):
     async def _save_combine_category(self, guild: discord.Guild, category: discord.CategoryChannel):
         await self.config.guild(guild).combines_category.set(category.id)
     
-    async def _combines_room_size(self, guild):
-        room_size = await self.config.guild(guild).room_size()
-        return room_size if room_size else None
+    async def _players_per_room(self, guild):
+        ppr = await self.config.guild(guild).players_per_room()
+        return ppr if ppr else None
 
-    async def _save_room_size(self, guild: discord.Guild, size: int):
-        await self.config.guild(guild).room_size.set(size)
+    async def _save_players_per_room(self, guild: discord.Guild, num_players: int):
+        await self.config.guild(guild).players_per_room.set(num_players)
+
+    async def _room_capacity(self, guild):
+        cap = await self.config.guild(guild).room_capacity()
+        return cap if cap else 0
+
+    async def _save_room_capacity(self, guild, capacity: int):
+        await self.config.guild(guild).room_capacity.set(capacity)
+
