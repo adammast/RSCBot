@@ -23,9 +23,10 @@ class RankedRooms(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def combines(self, ctx, action=None):
         """
-        Creates rooms for combines, or tears them down depending on the action parameter
+        Creates rooms for combines, or tears them down depending on the action parameter. If no parameter is given, it will behave as a switch.
         
         Examples:
+        [p]combines
         [p]combines start
         [p]combines stop
         """
@@ -55,7 +56,7 @@ class RankedRooms(commands.Cog):
         # DISABLED: room size in name
         if combines_cat and False:
             for vc in combines_cat.voice_channels:
-                pass # await self._adjust_room_tally(guild, vc)
+                pass # await self._adjust_room_(guild, vc)
         await ctx.send("Done")
         return True
     
@@ -164,6 +165,9 @@ class RankedRooms(commands.Cog):
 
         # if voice_channel was not room 1
         if not room_one_empty:
+            # No need to kick scouts. Let them hang out :)
+            if voice_channel.members:
+                return False
             await voice_channel.delete()
             return True
         
@@ -202,7 +206,7 @@ class RankedRooms(commands.Cog):
         # DISABLED: room count in name
         # room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, ppr)
         room_name = "{0} room {1}".format(tier, new_room_number)
-        
+
         if not new_position:
             await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity)
         else:
