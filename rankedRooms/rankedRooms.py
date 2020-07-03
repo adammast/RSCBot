@@ -7,6 +7,18 @@ from collections import Counter
 
 defaults = {"room_size": 4, "combines_category": None}
 
+# TODO list:
+#   - team_manager_cog
+#   - set/save/update combine details (i.e. room size, combines category while active)
+#   - room permissions ("League" role, GM, AGM, scout, mod, or admins may join)
+#   - listener behavior
+#       - player join
+#           - maybe make new/move room (A: move player to new room, B: add 2nd room, move original)    
+#           - increase room size (x/4)
+#       - player leave
+#           - maybe remove room
+#           - decrement room size (x/4)
+
 class RankedRooms(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
