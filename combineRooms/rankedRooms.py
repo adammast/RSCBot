@@ -2,16 +2,12 @@ import discord
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
-from collections import Counter
 
 
 defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None}
 
-# TODO list:
-#   - team_manager_cog => don't hardcode tiers in for loop
 
-
-class RankedRooms(commands.Cog):
+class combineRooms(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
@@ -95,20 +91,12 @@ class RankedRooms(commands.Cog):
         await self._member_leaves_voice(member, before.channel) # TODO: consider disconnected case #@me what does that even mean? this structure should cover everything
 
     async def _start_combines(self, ctx):
-        # check if combines are running already (maybe check config file)
-        # create combines category
+        # Creates combines category and rooms for each tier
         combines_category = await self._add_combines_category(ctx, self._combines_category_name)
         await self._save_combine_category(ctx.guild, combines_category)
-        # create DYNAMIC ROOMS for each rank
         if combines_category:
-            for tier in ["Minor", "Major"]:  # self.team_manager_cog.tiers(ctx): # TODO: Make sure this cog works
+            for tier in await (self.team_manager_cog).tiers(ctx):
                 await self._add_combines_voice(ctx.guild, tier)
-                # name: <tier> combines: Octane (identifier?)
-                # permissions:
-                    # <tier> voice visible by <tier, admin, mod, GM, AGM, scout>
-                # behavior: 
-                    # (listener command) => if 5th joins room, send to waiting room/new room?
-                    # allow 4 PLAYERS, but allow x scouts/GMs
             return True
         return False
 

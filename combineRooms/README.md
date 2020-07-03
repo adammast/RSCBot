@@ -1,13 +1,13 @@
-# RSCBot: rankedRooms
+# RSCBot: combineRooms
 
-The `rankedRooms` cog is primarily responsible for managing combines for RSC. This involves dynamically creating and deleting voice channels under a "Combine Rooms" category. This cog uses discord events to keep rooms open for each tier that has been established.
+The `combineRooms` cog is primarily responsible for managing combines for RSC. This involves dynamically creating and deleting voice channels under a "Combine Rooms" category. This cog uses discord events to keep rooms open for each tier that has been established.
 
 ## Installation
 
-The `rankedRooms` cog depends on the `teamManager` cog. Install `teamManager` as well as its dependencies before installing `rankedRooms`.
+The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` as well as its dependencies before installing `combineRooms`.
 
 ```
-<p>cog install RSCBot rankedRooms
+<p>cog install RSCBot combineRooms
 ```
 
 ## Usage
