@@ -9,10 +9,7 @@ defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": Non
 
 # TODO list:
 #   - team_manager_cog => don't hardcode tiers in for loop
-#   X- set/save/update combine details (i.e. room size, combines category while active)
-#   X- room permissions ("League" role, GM, AGM, scout, mod, or admins may join)
-#
-#   X- Probably reduce actions taken to avoid hitting the rate limit.
+
 
 class RankedRooms(commands.Cog):
     def __init__(self, bot):
@@ -139,10 +136,8 @@ class RankedRooms(commands.Cog):
         
         league_role = self._get_role_by_name(ctx.guild, "League")
         overwrites = {
-            ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False), # not working?
-            ctx.guild.default_role: discord.PermissionOverwrite(connect=False),
-            league_role: discord.PermissionOverwrite(view_channel=True), # not working?
-            league_role: discord.PermissionOverwrite(connect=True),
+            ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
+            league_role: discord.PermissionOverwrite(view_channel=True, connect=True)
         }
         category = await ctx.guild.create_category(name, overwrites=overwrites)
         return category
@@ -207,6 +202,7 @@ class RankedRooms(commands.Cog):
         # DISABLED: room count in name
         # room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, ppr)
         room_name = "{0} room {1}".format(tier, new_room_number)
+        
         if not new_position:
             await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity)
         else:
