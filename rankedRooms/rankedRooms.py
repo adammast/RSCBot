@@ -10,7 +10,7 @@ defaults = {"room_size": 4, "combines_category": None}
 # TODO list:
 #   - team_manager_cog => don't hardcode tiers in for loop
 #   X- set/save/update combine details (i.e. room size, combines category while active)
-#   - room permissions ("League" role, GM, AGM, scout, mod, or admins may join)
+#   X- room permissions ("League" role, GM, AGM, scout, mod, or admins may join)
 #   X- listener behavior
 #       - player join
 #           X- maybe make new/move room (A: move player to new room, B: add 2nd room, move original)    
@@ -18,6 +18,8 @@ defaults = {"room_size": 4, "combines_category": None}
 #       - player leave
 #           X- maybe remove room
 #           X- decrement room size (x/4)
+#
+#   - Probably reduce actions taken to avoid hitting the rate limit.
 
 class RankedRooms(commands.Cog):
     def __init__(self, bot):
@@ -42,7 +44,11 @@ class RankedRooms(commands.Cog):
         elif action in ["stop", "teardown", "end"]:
             done = await self._stop_combines(ctx)
         else:
-            done = await self._start_combines(ctx) # TODO: make parameter optional, should behave as a switch.
+            combines_ongoing = await self._combines_category(ctx.guild)
+            if combines_ongoing:
+                done = await self._stop_combines(ctx)
+            else:
+                done = await self._start_combines(ctx)
         
         if done:
             await ctx.send("Done")
@@ -70,11 +76,10 @@ class RankedRooms(commands.Cog):
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
-        response_channel = self._get_channel_by_name(member.guild, "tests")
-        # await response_channel.send("VOICE ACTIVITY DETECTED")
+        combines_ongoing = await self._combines_category(member.guild)
 
-        # ignore when activity is within the same room
-        if before.channel == after.channel:
+        # ignore when combines are not ongoing, or when voice activity is within the same room
+        if not combines_ongoing or before.channel == after.channel:
             return
         
         # Room joined:
@@ -86,7 +91,7 @@ class RankedRooms(commands.Cog):
     async def _start_combines(self, ctx):
         # check if combines are running already (maybe check config file)
         # create combines category
-        combines_category = await self._add_category(ctx, self._combines_category_name)
+        combines_category = await self._add_combines_category(ctx, self._combines_category_name)
         await self._save_combine_category(ctx.guild, combines_category)
         # create DYNAMIC ROOMS for each rank
         if combines_category:
@@ -109,7 +114,7 @@ class RankedRooms(commands.Cog):
                 await channel.delete()
             await combines_category.delete()
             return True
-        await ctx.send("Could not find combine rooms.")
+        await ctx.send("could not find combine rooms.")
         return False
 
     def _get_channel_by_name(self, guild: discord.Guild, name: str):
@@ -117,12 +122,21 @@ class RankedRooms(commands.Cog):
             if channel.name == name:
                 return channel
     
-    async def _add_category(self, ctx, name: str):
+    async def _add_combines_category(self, ctx, name: str):
         category = await self._get_category_by_name(ctx.guild, name)
+        
         if category:
             await ctx.send("A category with the name \"{0}\" already exists".format(name))
             return None
-        category = await ctx.guild.create_category(name)
+        
+        league_role = self._get_role_by_name(ctx.guild, "League")
+        overwrites = {
+            ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False), # not working?
+            ctx.guild.default_role: discord.PermissionOverwrite(connect=False),
+            league_role: discord.PermissionOverwrite(view_channel=True), # not working?
+            league_role: discord.PermissionOverwrite(connect=True),
+        }
+        category = await ctx.guild.create_category(name, overwrites=overwrites)
         return category
 
     async def _maybe_remove_combines_voice(self, guild: discord.Guild, voice_channel: discord.VoiceChannel):
@@ -133,12 +147,17 @@ class RankedRooms(commands.Cog):
             if tier in vc.name:
                 tier_voice_channels.append(vc)
         
-        if len(tier_voice_channels) > 1:
+        if len(tier_voice_channels) > 2:
             await voice_channel.delete()
             return True
-        max_size = self._combines_room_size(guild)
-        rename = "{0} room 1 (0/{1})".format(tier, max_size)
-        await voice_channel.edit(name=rename)
+        
+        tier_voice_channels.remove(voice_channel)
+        second_channel = tier_voice_channels[0]
+
+        if not second_channel.members:
+            max_size = await self._combines_room_size(guild)
+            rename = "{0} room 1 (0/{1})".format(tier, max_size)
+            await voice_channel.edit(name=rename)
 
     async def _add_combines_voice(self, guild: discord.Guild, tier: str):
         # user_limit of 0 means there's no limit
@@ -160,13 +179,13 @@ class RankedRooms(commands.Cog):
                 vc_room_num = int(vc.name[i:j])
                 if vc_room_num == new_room_number:
                     new_room_number += 1
-                    new_position = vc.position + 1
+                    new_position = vc.position
                     room_makeable = False
         
         max_size = await self._combines_room_size(guild)
         room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, max_size)
         if not new_position:
-            await category.create_voice_channel(room_name)
+            await category.create_voice_channel(room_name, permissions_synced=True, user_limit=max_size+4)
         else:
             await category.create_voice_channel(room_name, position=new_position)
 
@@ -179,7 +198,6 @@ class RankedRooms(commands.Cog):
    
     async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
         if voice_channel in (await self._combines_category(member.guild)).voice_channels:
-            test_channel = self._get_channel_by_name(member.guild, "tests")
             player_count = await self._adjust_room_tally(member.guild, voice_channel)
             if player_count == 0:
                 await self._maybe_remove_combines_voice(member.guild, voice_channel)
