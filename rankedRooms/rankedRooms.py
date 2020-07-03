@@ -24,15 +24,7 @@ class RankedRooms(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("teamManager")
-        self.combines_category_name = "Combine Rooms"
-
-    @commands.Cog.listener("on_voice_state_update")
-    async def on_voice_state_update(self, member, before, after):
-        response_channel = self._get_channel_by_name(member.guild, "tests")
-        await response_channel.send("VOICE ACTIVITY DETECTED")
-
-        if before.channel == after.channel:
-            return
+        self._combines_category_name = "Combine Rooms"
 
     @commands.command(aliases=["startcombines", "stopcombines"])
     @commands.guild_only()
@@ -56,14 +48,30 @@ class RankedRooms(commands.Cog):
             await ctx.send("Done")
         return
     
+    @commands.Cog.listener("on_voice_state_update")
+    async def on_voice_state_update(self, member, before, after):
+        response_channel = self._get_channel_by_name(member.guild, "tests")
+        # await response_channel.send("VOICE ACTIVITY DETECTED")
+
+        # ignore when activity is within the same room
+        if before.channel == after.channel:
+            return
+
+        # Room left:
+        await self._member_leaves_voice(member, before.channel) # TODO: consider disconnected case
+
+        # Room joined:
+        await self._member_joins_voice(member, after.channel)
+
     async def _start_combines(self, ctx):
         # check if combines are running already (maybe check config file)
         # create combines category
-        combines_category = await self._add_category(ctx, self.combines_category_name)
+        combines_category = await self._add_category(ctx, self._combines_category_name)
+        await self._save_combine_category(ctx.guild, combines_category)
         # create DYNAMIC ROOMS for each rank
         if combines_category:
             for tier in ["Minor", "Major"]:  # self.team_manager_cog.tiers(ctx): # TODO: Make sure this cog works
-                await self.add_combines_voice(combines_category, tier)
+                await self._add_combines_voice(combines_category, tier)
                 # name: <tier> combines: Octane (identifier?)
                 # permissions:
                     # <tier> voice visible by <tier, admin, mod, GM, AGM, scout>
@@ -75,7 +83,7 @@ class RankedRooms(commands.Cog):
 
     async def _stop_combines(self, ctx):
         # remove combines channels, category
-        combines_category = await self._get_category_by_name(ctx.guild, self.combines_category_name)
+        combines_category = await self._combines_category(ctx.guild)
         if combines_category:
             for channel in combines_category.channels:
                 await channel.delete()
@@ -84,7 +92,7 @@ class RankedRooms(commands.Cog):
         await ctx.send("Could not find combine rooms.")
         return False
 
-    def _get_channel_by_name(self, guild: discord.guild, name: str):
+    def _get_channel_by_name(self, guild: discord.Guild, name: str):
         for channel in guild.channels:
             if channel.name == name:
                 return channel
@@ -97,7 +105,7 @@ class RankedRooms(commands.Cog):
         category = await ctx.guild.create_category(name)
         return category
 
-    async def add_combines_voice(self, category: discord.CategoryChannel, tier: str):
+    async def _add_combines_voice(self, category: discord.CategoryChannel, tier: str):
         # user_limit of 0 means there's no limit
         # determine position with same name +1
         
@@ -126,9 +134,32 @@ class RankedRooms(commands.Cog):
         else:
             await category.create_voice_channel(room_name, position=new_position)
 
-    async def _get_category_by_name(self, guild: discord.guild, name: str):
+    async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
+        print(voice_channel)
+        if voice_channel in (await self._combines_category(member.guild)).voice_channels:
+            test_channel = self._get_channel_by_name(member.guild, "tests")
+            await test_channel.send("{0} has joined {1}".format(member.name, voice_channel.name))
+    
+    async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
+        print(voice_channel)
+        if voice_channel in (await self._combines_category(member.guild)).voice_channels:
+            test_channel = self._get_channel_by_name(member.guild, "tests")
+            await test_channel.send("{0} has left {1}".format(member.name, voice_channel.name))
+        
+    async def _get_category_by_name(self, guild: discord.Guild, name: str): 
         for category in guild.categories:
             if category.name == name:
                 return category
         return None
-        
+    
+    # last 2 functions don't really do anything yet...
+    async def _combines_category(self, guild: discord.Guild):
+        saved_combine_cat = await self.config.guild(guild).combines_category()
+        for category in guild.categories:
+            if category.id == saved_combine_cat:
+                return category
+        return None
+    
+    async def _save_combine_category(self, guild: discord.Guild, category: discord.CategoryChannel):
+        await self.config.guild(guild).combines_category.set(category.id)
+    
