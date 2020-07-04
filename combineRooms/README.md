@@ -22,7 +22,7 @@ The `keywords` parameter can be used to force the start/stop behavior with the f
 
 ## Customization
 
-- `<p>set_players_per_room` (Default 6)
+- `<p>setPlayersPerRoom` (Default 6)
     - Sets the reccomended concurrent FA/DE limit in a room.
     - (Disabled) The room name will reflect the number of FA/DE players in them
         - Naming format: `<Rank> room <room number> (<player count>/<players_per_room>)`
@@ -30,6 +30,13 @@ The `keywords` parameter can be used to force the start/stop behavior with the f
         - 3v3 leagues should have no more than 6 Free Agent/Draft Eligible players combined.
         - 2v2 leagues should have no more than 4 Free Agent/Draft Eligible players combined.
         - Special case: RSC's 1v1 league will have rooms of 4 players, who will cycle through matches against each other player in the room.
-- `<p>set_room_capacity` (Default 10)
+- `<p>setRoomCapacity` (Default 10)
     - Sets the limit for discord members in room. This limit is role agnostic.
     - This is a limit for players and scouts in a single room.
+- `<p>togglePublicity` (Default Public)
+    - Toggles the combines between a Public and Private status.
+    - If combines are Public, any member may participate.
+    - If combines are Private, only members with the "League" role may particpate.
+- `<p>setAcronym` (Default: RSC)
+    - Sets the acronym used in the combines cog.
+    - This is used to tweak the default message in the #combine-details channel, such as rule reference, and room information.
