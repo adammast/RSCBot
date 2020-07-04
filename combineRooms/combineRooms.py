@@ -125,7 +125,7 @@ class CombineRooms(commands.Cog):
         If combines are **Public**, any member may participate.
         If combines are **Private**, only members with the "League" role may particpate.
         """
-        public_str = "public" if await self._is_publc_combine(ctx.guild) else "private"
+        public_str = "public" if await self._is_public_combine(ctx.guild) else "private"
         response = "Combines are currently **{0}**.".format(public_str)
         await ctx.send(response)
 
@@ -189,7 +189,7 @@ class CombineRooms(commands.Cog):
     
     async def _update_combine_permissions(self, guild: discord.Guild):
         combines_category = await self._combines_category(guild)
-        is_public = await self._is_publc_combine(guild)
+        is_public = await self._is_public_combine(guild)
 
         if combines_category:
             league_role = self._get_role_by_name(guild, "League")
@@ -207,7 +207,7 @@ class CombineRooms(commands.Cog):
             await ctx.send("A category with the name \"{0}\" already exists".format(name))
             return None
         
-        if not await self._is_publc_combine(ctx.guild):
+        if not await self._is_public_combine(ctx.guild):
             league_role = self._get_role_by_name(ctx.guild, "League")
             overwrites = {
                 ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False, send_messages=False),
@@ -358,7 +358,7 @@ class CombineRooms(commands.Cog):
         player_count = 0
         max_size = await self._players_per_room(guild)
         for member in voice_channel.members:
-            if not await self.public_combines(guild):
+            if not await self._is_public_combine(guild):
                 active_player = (fa_role in member.roles or de_role in member.roles) and scout_role not in member.roles
             else:
                 active_player = scout_role not in member.roles
@@ -407,11 +407,11 @@ class CombineRooms(commands.Cog):
         await self.config.guild(guild).room_capacity.set(capacity)
 
     async def _toggle_public_combine(self, guild):
-        was_public = await self._is_publc_combine(guild)
+        was_public = await self._is_public_combine(guild)
         await self.config.guild(guild).public_combines.set(not was_public)
         return not was_public # is_public (after call)
 
-    async def _is_publc_combine(self, guild):
+    async def _is_public_combine(self, guild):
         return await self.config.guild(guild).public_combines()
 
     async def _save_acronym(self, guild, acronym: str):
