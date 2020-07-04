@@ -74,7 +74,7 @@ class TeamManager(commands.Cog):
                 await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
             await ctx.send("Done.")
 
-    @commands.command()
+    @commands.command(aliases=["getFranchises", "listFranchises"])
     @commands.guild_only()
     async def franchises(self, ctx):
         """Provides a list of all the franchises set up in the server 
@@ -180,7 +180,7 @@ class TeamManager(commands.Cog):
         await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
 
-    @commands.command()
+    @commands.command(aliases=["tiers", "getTiers"])
     @commands.guild_only()
     async def listTiers(self, ctx):
         """Provides a list of all the tiers set up in the server"""
@@ -229,7 +229,7 @@ class TeamManager(commands.Cog):
             await self._save_tiers(ctx, tiers)
             await ctx.send("Done.")
 
-    @commands.command()
+    @commands.command(aliases=["getTeams"])
     @commands.guild_only()
     async def listTeams(self, ctx):
         """Provides a list of all the teams set up in the server"""

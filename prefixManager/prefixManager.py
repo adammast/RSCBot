@@ -59,7 +59,7 @@ class PrefixManager(commands.Cog):
         else:
             await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.command()
+    @commands.command(aliases=["listPrefixes", "prefixes"])
     @commands.guild_only()
     async def getPrefixes(self, ctx):
         """Get all prefixes in the prefix dictionary"""
