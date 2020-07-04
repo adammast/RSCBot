@@ -1,6 +1,8 @@
 import re
 import ast
 
+import discord
+
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
@@ -57,7 +59,7 @@ class PrefixManager(commands.Cog):
         else:
             await ctx.send("Error adding prefix: {0}".format(prefix))
 
-    @commands.command()
+    @commands.command(aliases=["listPrefixes", "prefixes"])
     @commands.guild_only()
     async def getPrefixes(self, ctx):
         """Get all prefixes in the prefix dictionary"""
