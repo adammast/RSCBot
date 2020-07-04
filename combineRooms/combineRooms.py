@@ -160,7 +160,6 @@ class CombineRooms(commands.Cog):
         
         # Room joined:
         await self._member_joins_voice(member, after.channel)
-        
         # Room left:
         await self._member_leaves_voice(member, before.channel) # TODO: consider disconnected case #@me what does that even mean? this structure should cover everything
 
@@ -170,9 +169,9 @@ class CombineRooms(commands.Cog):
         await self._save_combine_category(ctx.guild, combines_category)
 
         if combines_category:
-            await self._add_combines_info_channel(ctx.guild, "Combines Details")
+            await self._add_combines_info_channel(ctx.guild, combines_category, "Combines Details")
             for tier in await self.team_manager_cog.tiers(ctx):
-                await self._add_combines_voice(ctx.guild, tier)
+                await self._add_combines_voice(ctx.guild, combines_category, tier)
             return True
         return False
 
@@ -201,8 +200,8 @@ class CombineRooms(commands.Cog):
             await combines_category.set_permissions(league_role, view_channel=True, connect=True, send_messages=False)
     
     async def _add_combines_category(self, ctx, name: str):
-        category = await self._get_category_by_name(ctx.guild, name)
-        
+        category = await self._combines_category(ctx.guild)
+        # check if category exists already
         if category:
             await ctx.send("A category with the name \"{0}\" already exists".format(name))
             return None
@@ -253,8 +252,7 @@ class CombineRooms(commands.Cog):
                 await vc.delete()
                 return True
 
-    async def _add_combines_info_channel(self, guild: discord.Guild, name: str):
-        category = await self._combines_category(guild)
+    async def _add_combines_info_channel(self, guild: discord.Guild, category: discord.CategoryChannel, name: str):
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(send_messages=False)
         }
@@ -294,10 +292,9 @@ class CombineRooms(commands.Cog):
         ).format(guild.name, acronym.lower(), acronym)
         await tc.send(info_message)
     
-    async def _add_combines_voice(self, guild: discord.Guild, tier: str):
+    async def _add_combines_voice(self, guild: discord.Guild, category: discord.CategoryChannel, tier: str):
         # user_limit of 0 means there's no limit
         # determine position with same name +1
-        category = await self._combines_category(guild)
         tier_rooms = []
         for vc in category.voice_channels:
             if tier in vc.name:
@@ -318,9 +315,9 @@ class CombineRooms(commands.Cog):
                     new_position = vc.position
                     room_makeable = False
         
-        ppr = await self._players_per_room(guild)
-        capacity = await self._room_capacity(guild)
         # DISABLED: room count in name
+        # ppr = await self._players_per_room(guild)
+        capacity = await self._room_capacity(guild)
         # room_name = "{0} room {1} (0/{2})".format(tier, new_room_number, ppr)
         room_name = "{0} room {1}".format(tier, new_room_number)
 
@@ -330,11 +327,12 @@ class CombineRooms(commands.Cog):
             await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity, position=new_position)
 
     async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
+        combines_category = await self._combines_category(member.guild)
         if voice_channel in (await self._combines_category(member.guild)).voice_channels:
             player_count = await self._adjust_room_tally(member.guild, voice_channel)
             if player_count == 1:
                 tier = self._get_voice_tier(voice_channel)
-                await self._add_combines_voice(member.guild, tier)
+                await self._add_combines_voice(member.guild, combines_category, tier)
    
     async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
         if voice_channel in (await self._combines_category(member.guild)).voice_channels:
@@ -356,7 +354,7 @@ class CombineRooms(commands.Cog):
         de_role = self._get_role_by_name(guild, "Draft Eligible")
         scout_role = self._get_role_by_name(guild, "Combine Scout")
         player_count = 0
-        max_size = await self._players_per_room(guild)
+        # max_size = await self._players_per_room(guild)
         for member in voice_channel.members:
             if not await self._is_public_combine(guild):
                 active_player = (fa_role in member.roles or de_role in member.roles) and scout_role not in member.roles
@@ -366,11 +364,9 @@ class CombineRooms(commands.Cog):
                     player_count += 1
         
         # DISABLED: channel renaming
-        return player_count
-        
-        name_base = voice_channel.name[:voice_channel.name.index(" (")]
-        rename = "{0} ({1}/{2})".format(name_base, player_count, max_size)
-        await voice_channel.edit(name=rename)
+        # name_base = voice_channel.name[:voice_channel.name.index(" (")]
+        # rename = "{0} ({1}/{2})".format(name_base, player_count, max_size)
+        # await voice_channel.edit(name=rename)
         return player_count
 
     def _get_role_by_name(self, guild: discord.Guild, name: str):
@@ -392,9 +388,10 @@ class CombineRooms(commands.Cog):
     async def _save_combine_category(self, guild: discord.Guild, category: discord.CategoryChannel):
         await self.config.guild(guild).combines_category.set(category.id)
     
-    async def _players_per_room(self, guild):
-        ppr = await self.config.guild(guild).players_per_room()
-        return ppr if ppr else None
+    # DISABLED: channel renaming
+    # async def _players_per_room(self, guild):
+    #     ppr = await self.config.guild(guild).players_per_room()
+    #     return ppr if ppr else None
 
     async def _save_players_per_room(self, guild: discord.Guild, num_players: int):
         await self.config.guild(guild).players_per_room.set(num_players)
