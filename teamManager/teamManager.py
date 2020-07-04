@@ -105,7 +105,7 @@ class TeamManager(commands.Cog):
                     return
 
         # Tier
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         for tier in tiers:
             if tier.lower() == franchise_tier_prefix.lower():
                 await ctx.send(embed=await self._format_teams_for_tier(ctx, tier))
@@ -170,7 +170,7 @@ class TeamManager(commands.Cog):
             return
 
         # Tier
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         for tier in tiers:
             if tier.lower() == franchise_tier_prefix.lower():
                 found = True
@@ -184,7 +184,7 @@ class TeamManager(commands.Cog):
     @commands.guild_only()
     async def listTiers(self, ctx):
         """Provides a list of all the tiers set up in the server"""
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         if tiers:
             await ctx.send(
                 "Tiers set up in this server: {0}".format(", ".join(tiers)))
@@ -199,7 +199,7 @@ class TeamManager(commands.Cog):
         This will need to be done before any transactions can be done for players in this tier"""
         await self._create_role(ctx, tier_name)
         await self._create_role(ctx, "{0}FA".format(tier_name))
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         tiers.append(tier_name)
         await self._save_tiers(ctx, tiers)
         await ctx.send("Done.")
@@ -219,7 +219,7 @@ class TeamManager(commands.Cog):
                 await tier_role.delete()
             if tier_fa_role:
                 await tier_fa_role.delete()
-            tiers = await self._tiers(ctx)
+            tiers = await self.tiers(ctx)
             try:
                 tiers.remove(tier_name)
             except ValueError:
@@ -347,7 +347,7 @@ class TeamManager(commands.Cog):
          - Filters for PermFA: perm, permfa, restricted, p, r, rfa, permanent
          - Filters for signable FAs: non-perm, unrestricted, u, ufa, signable
         """
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         tier_name = None
         for _tier in tiers:
             if tier.lower() == _tier.lower():
@@ -413,7 +413,7 @@ class TeamManager(commands.Cog):
         return False
 
     async def teams_for_user(self, ctx, user):
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         teams = []
         franchise_role = self.get_current_franchise_role(user)
         for role in user.roles:
@@ -482,16 +482,15 @@ class TeamManager(commands.Cog):
             for team in teams:
                 f_role, tier_role = await self._roles_for_team(ctx, team)
                 captain = await self._get_team_captain(ctx, franchise_role, tier_role)
-                #team_names.append(team)
                 team_names.append("{0} ({1})".format(team, tier_role.name))
                 team_tiers.append(tier_role.name)
 
                 if captain:
-                    captains_mentioned.append(captain.mention)
+                    # captains_mentioned.append(captain.mention) # mention disabled
                     captains_username.append(str(captain))
                 else:
                     captains_mentioned.append("(No captain)")
-                    captains_username.append("N/A")
+                    # captains_username.append("N/A") # mention disabled
         else:
             message += "\nNo teams have been made."
 
@@ -499,8 +498,8 @@ class TeamManager(commands.Cog):
         embed = discord.Embed(title="{0} Captains:".format(franchise_name), color=discord.Colour.blue(), description=message)
         embed.add_field(name="Team", value="{}\n".format("\n".join(team_names)), inline=True)
         # embed.add_field(name="Tier", value="{}\n".format("\n".join(team_tiers)), inline=True)
-        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned)), inline=True)
-        embed.add_field(name="Username", value="{}\n".format("\n".join(captains_username)), inline=True)
+        # embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned)), inline=True)  # name = Captain
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_username)), inline=True)     # name = Username
         
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
@@ -542,8 +541,8 @@ class TeamManager(commands.Cog):
                 teams_formatted.append(team)
         
         embed.add_field(name="Team", value="{}\n".format("\n".join(teams_formatted)), inline=True)
-        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)    
-        embed.add_field(name="Username", value="{}\n".format("\n".join(captains_formatted)), inline=True)
+        # embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)    # mention disabled
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_formatted)), inline=True)                # name="Username"
         return embed
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
@@ -604,7 +603,7 @@ class TeamManager(commands.Cog):
         embed = discord.Embed(title="{0} teams:".format(tier), color=color, description=teams_message)
         return embed
 
-    async def _tiers(self, ctx):
+    async def tiers(self, ctx):
         return await self.config.guild(ctx.guild).Tiers()
 
     async def _save_tiers(self, ctx, tiers):
@@ -745,7 +744,7 @@ class TeamManager(commands.Cog):
                 continue
 
     async def get_current_tier_role(self, ctx, user: discord.Member):
-        tierList = await self._tiers(ctx)
+        tierList = await self.tiers(ctx)
         for role in user.roles:
             if role.name in tierList:
                 return role
@@ -783,7 +782,7 @@ class TeamManager(commands.Cog):
         return difflib.get_close_matches(team_name, teams, n=3, cutoff=0.4), False
 
     async def _match_tier_name(self, ctx, tier_name):
-        tiers = await self._tiers(ctx)
+        tiers = await self.tiers(ctx)
         for tier in tiers:
             if tier_name.lower() == tier.lower():
                 return tier
