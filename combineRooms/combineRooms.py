@@ -90,6 +90,14 @@ class CombineRooms(commands.Cog):
         response = "Combines are now **{0}**.".format(public_str)
         await ctx.send(response)
 
+    @commands.command(aliases=["checkCombinePublicity", "ccp", "combineStatus", "checkCombineStatus", "ccs"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def combinePublicity(self, ctx):
+        public_str = "public" if await self._is_publc_combine(ctx.guild) else "private"
+        response = "Combines are currently **{0}**.".format(public_str)
+        await ctx.send(response)
+
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
         combines_ongoing = await self._combines_category(member.guild)
