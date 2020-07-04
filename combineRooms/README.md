@@ -27,7 +27,7 @@ The `action` parameter can be used to force the start/stop behavior with the fol
     - (Disabled) The room name will reflect the number of FA/DE players in them
         - Naming format: `<Rank> room <room number> (<player count>/<players_per_room>)`
     - Examples:
-        - 3v3 leagues should have no more than 4 Free Agent/Draft Eligible players combined.
+        - 3v3 leagues should have no more than 6 Free Agent/Draft Eligible players combined.
         - 2v2 leagues should have no more than 4 Free Agent/Draft Eligible players combined.
         - Special case: RSC's 1v1 league will have rooms of 4 players, who will cycle through matches against each other player in the room.
 - `<p>set_room_capacity` (Default 10)

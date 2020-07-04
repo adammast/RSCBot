@@ -14,7 +14,6 @@ class CombineRooms(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("TeamManager")
-        self._combines_category_name = "Combine Rooms"
 
     @commands.command(aliases=["startcombines", "stopcombines"])
     @commands.guild_only()
@@ -48,13 +47,13 @@ class CombineRooms(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def set_players_per_room(self, ctx, size: int):
         if size < 2:
-            await ctx.send("No.")
+            await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
         combines_cat = await self._save_players_per_room(ctx.guild, size)
         # DISABLED: room size in name
-        if combines_cat and False:
-            for vc in combines_cat.voice_channels:
-                pass # await self._adjust_room_(guild, vc)
+        # if combines_cat and False:
+        #     for vc in combines_cat.voice_channels:
+        #         await self._adjust_room_(guild, vc)
         await ctx.send("Done")
         return True
     
@@ -69,7 +68,7 @@ class CombineRooms(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def set_room_capacity(self, ctx, size: int):
         if size < 2:
-            await ctx.send("No.")
+            await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
         combines_cat = await self._save_room_capacity(ctx.guild, size)
         if self._combines_category(ctx.guild):
@@ -94,7 +93,7 @@ class CombineRooms(commands.Cog):
 
     async def _start_combines(self, ctx):
         # Creates combines category and rooms for each tier
-        combines_category = await self._add_combines_category(ctx, self._combines_category_name)
+        combines_category = await self._add_combines_category(ctx, "Combine Rooms")
         await self._save_combine_category(ctx.guild, combines_category)
 
         if combines_category:
@@ -105,20 +104,6 @@ class CombineRooms(commands.Cog):
         return False
 
     async def _stop_combines(self, ctx):
-        # remove combines channels, category
-        combines_category = await self._combines_category(ctx.guild)
-        if combines_category:
-            for channel in combines_category.channels:
-                await channel.delete()
-            await combines_category.delete()
-            return True
-        await ctx.send("could not find combine rooms.")
-        return False
-
-    def _get_channel_by_name(self, guild: discord.Guild, name: str):
-        for channel in guild.channels:
-            if channel.name == name:
-                return channel
     
     async def _add_combines_category(self, ctx, name: str):
         category = await self._get_category_by_name(ctx.guild, name)
