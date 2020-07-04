@@ -5,8 +5,8 @@ from redbot.core import checks
 
 # TODO:
 # - custom combines_info message
-# - set league acronym (default = RSC)
-defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True}
+# X- set league acronym (default = RSC)
+defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True, "acronym": "RSC"}
 
 
 class CombineRooms(commands.Cog):
@@ -48,6 +48,10 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setPlayersPerRoom(self, ctx, size: int):
+        """
+        Sets the recommended amount of concurrent players in combine rooms. (Default: 6)
+        """
+
         if size < 2:
             await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
@@ -62,6 +66,9 @@ class CombineRooms(commands.Cog):
     @commands.command(aliases=["ppr"])
     @commands.guild_only()
     async def getPlayersPerRoom(self, ctx):
+        """
+        Gets the recommended amount of concurrent players in combine rooms.
+        """
         size = await self._players_per_room(ctx.guild)
         await ctx.send("Combines should have no more than {0} active players in them.".format(size))
 
@@ -69,6 +76,9 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setRoomCapacity(self, ctx, size: int):
+        """
+        Sets the maximum number of members allowed in combine voice channels. (Default: 10)
+        """
         if size < 2:
             await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
@@ -79,10 +89,27 @@ class CombineRooms(commands.Cog):
             await ctx.send("Done")
         return True
 
+    @commands.command(aliases=["roomcap", "grc"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getRoomCapacity(self, ctx):
+        """
+        Gets the current capacity of combine voice rooms (Default: 10)
+        This capacity is for all members, players and scouts combined.
+        """
+        cap = await self._room_capacity(ctx.guild)
+        await ctx.send("Combines currently have a maximum size of {0} members.".format(cap))
+        return
+
     @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def togglePublicity(self, ctx):
+        """
+        Toggles the status (public/private) of the combines. (Default: Public)
+        If combines are **Public**, any member may participate.
+        If combines are **Private**, only members with the "League" role may particpate.
+        """
         is_public = await self._toggle_public_combine(ctx.guild)
         await self._update_combine_permissions(ctx.guild)
 
@@ -94,9 +121,35 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def combinePublicity(self, ctx):
+        """
+        Gets the current status (public/private) of the combines.
+        If combines are **Public**, any member may participate.
+        If combines are **Private**, only members with the "League" role may particpate.
+        """
         public_str = "public" if await self._is_publc_combine(ctx.guild) else "private"
         response = "Combines are currently **{0}**.".format(public_str)
         await ctx.send(response)
+
+    @commands.command(aliases=["getAcronym"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def acronym(self, ctx):
+        """
+        Gets the acronym registered for combines. (Default: RSC)
+        """
+        acronym = await self._get_acronym(ctx.guild)
+        await ctx.send("The acronym registered for the combines cog is **{0}**.".format(acronym))
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setAcronym(self, ctx):
+        """
+        Sets the server acronym used in the combines category. (Default: RSC)
+        This is mostly used in #combine-details message
+        """
+        acronym = await self._get_acronym(ctx.guild)
+        await ctx.send("The acronym has been registered as **{0}**.".format(acronym))
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -208,6 +261,7 @@ class CombineRooms(commands.Cog):
         }
         tc = await category.create_text_channel(name, position=0, permissions_synced=True, overwrites=overwrites)
 
+        acronym = await self._get_acronym(guild)
         info_message = (
             "Welcome to the {0} combines! Combine rooms will be available to all players who are Free Agents or Draft Eligible. "
             "During combines, you are welcome to spend as much or as little time playing as you'd like. Your participation in combines "
@@ -218,12 +272,12 @@ class CombineRooms(commands.Cog):
             "\nServers can be made by anybody in the combine room. We do ask that the lobbies are made with the following naming convention:"
             "\n\n**Lobby Info:**"
             "\n - Name: **<tier><room number>**"
-            "\n - Password: **rsc<room number>**"
+            "\n - Password: **{1}<room number>**"
             
             "\n\n**Example:**"
             "\n - Voice Channel Name: **Challenger room 4**"
             "\n - Name: **Challenger4**"
-            "\n - Password: **rsc4**"
+            "\n - Password: **{1}4**"
 
             "\n\n__The Role of Scouts__"
             "\n - For lack of a better phrase, scouts are \"in charge\" of running combines."
@@ -236,9 +290,9 @@ class CombineRooms(commands.Cog):
             "by a scout, or asking permission of the other players in the combine room."
             "\n - Don't stress! All players have good and bad days. Scouts care more about _how you play_ than _how your perform_. If you have a "
             "rough game, or a bad night, you'll have plenty of opportunity to show your abilities in remaining combine games"
-            "\n - As per RSC rules, do not be toxic or hostile towards other players."
+            "\n - As per {2} rules, do not be toxic or hostile towards other players."
             "\n - GLHF!"
-        ).format(guild.name)
+        ).format(guild.name, acronym.lower(), acronym)
         await tc.send(info_message)
     
     async def _add_combines_voice(self, guild: discord.Guild, tier: str):
@@ -360,4 +414,10 @@ class CombineRooms(commands.Cog):
 
     async def _is_publc_combine(self, guild):
         return await self.config.guild(guild).public_combines()
+
+    async def _save_acronym(self, guild, acronym: str):
+        await self.config.guild(guild).public_combines.set(acronym)
+
+    async def _get_acronym(self, guild):
+        return await self.config.guild(guild).acronym()
 
