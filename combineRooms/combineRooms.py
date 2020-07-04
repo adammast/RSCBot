@@ -7,11 +7,11 @@ from redbot.core import checks
 defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None}
 
 
-class combineRooms(commands.Cog):
+class CombineRooms(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager_cog = bot.get_cog("teamManager")
+        self.team_manager_cog = bot.get_cog("TeamManager")
         self._combines_category_name = "Combine Rooms"
 
     @commands.command(aliases=["startcombines", "stopcombines"])
@@ -94,8 +94,9 @@ class combineRooms(commands.Cog):
         # Creates combines category and rooms for each tier
         combines_category = await self._add_combines_category(ctx, self._combines_category_name)
         await self._save_combine_category(ctx.guild, combines_category)
+
         if combines_category:
-            for tier in await (self.team_manager_cog).tiers(ctx):
+            for tier in await self.team_manager_cog.tiers(ctx):
                 await self._add_combines_voice(ctx.guild, tier)
             return True
         return False
