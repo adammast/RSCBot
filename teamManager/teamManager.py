@@ -481,7 +481,8 @@ class TeamManager(commands.Cog):
                 captain = await self._get_team_captain(ctx, franchise_role, tier_role)
                 teams_display.append("{0} ({1})".format(team, tier_role.name))
                 if captain:
-                    captains.append(captain.mention)
+                    # captains.append(captain.mention)
+                    captains.append(str(captain)) # mention disabled
                 else:
                     captains.append("(No captain)")
         else:
@@ -532,8 +533,8 @@ class TeamManager(commands.Cog):
                 teams_formatted.append(team)
         
         embed.add_field(name="Team", value="{}\n".format("\n".join(teams_formatted)), inline=True)
-        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)    
-        embed.add_field(name="Username", value="{}\n".format("\n".join(captains_formatted)), inline=True)
+        # embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_mentioned_formatted)), inline=True)    # mention disabled
+        embed.add_field(name="Captain", value="{}\n".format("\n".join(captains_formatted)), inline=True)                # name="Username"
         return embed
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
