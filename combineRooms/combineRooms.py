@@ -3,7 +3,9 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-
+# TODO:
+# - custom combines_info message
+# - set league acronym (default = RSC)
 defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None}
 
 
@@ -96,6 +98,7 @@ class CombineRooms(commands.Cog):
         await self._save_combine_category(ctx.guild, combines_category)
 
         if combines_category:
+            await self._add_combines_info_channel(ctx.guild, "Combines Details")
             for tier in await self.team_manager_cog.tiers(ctx):
                 await self._add_combines_voice(ctx.guild, tier)
             return True
@@ -166,6 +169,46 @@ class CombineRooms(commands.Cog):
                 await vc.delete()
                 return True
 
+    async def _add_combines_info_channel(self, guild: discord.Guild, name: str):
+        category = await self._combines_category(guild)
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(send_messages=False)
+        }
+        tc = await category.create_text_channel(name, position=0, permissions_synced=True, overwrites=overwrites)
+
+        info_message = (
+            "Welcome to the {0} combines! Combine rooms will be available to all players who are Free Agents or Draft Eligible. "
+            "During combines, you are welcome to spend as much or as little time playing as you'd like. Your participation in combines "
+            "gives franchise scouts an opportunity to see how you play. No pressure though! The primary goal for combines is to give "
+            "everybody an opportunity to get introduced to gameplay at their respective tiers."
+
+            "\n\n__Server Information__"
+            "\nServers can be made by anybody in the combine room. We do ask that the lobbies are made with the following naming convention:"
+            "\n\n**Lobby Info:**"
+            "\n - Name: **<tier><room number>**"
+            "\n - Password: **rsc<room number>**"
+            
+            "\n\n**Example:**"
+            "\n - Voice Channel Name: **Challenger room 4**"
+            "\n - Name: **Challenger4**"
+            "\n - Password: **rsc4**"
+
+            "\n\n__The Role of Scouts__"
+            "\n - For lack of a better phrase, scouts are \"in charge\" of running combines."
+            "\n - If a scout requests a lineup, please respect this request."
+            "\n - If a scout requests for mutator settings such as adjusted time length, or a goal limit, please respect this request."
+            "\n - If you have concerns with how combines are being run, contact a mod or an admin."
+
+            "\n\n__Other Notes__"
+            "\n - Please try to curb your particpation in combines towards your own tier. Do not play outside of your tier without being requested "
+            "by a scout, or asking permission of the other players in the combine room."
+            "\n - Don't stress! All players have good and bad days. Scouts care more about _how you play_ than _how your perform_. If you have a "
+            "rough game, or a bad night, you'll have plenty of opportunity to show your abilities in remaining combine games"
+            "\n - As per RSC rules, do not be toxic or hostile towards other players."
+            "\n - GLHF!"
+        ).format(guild.name)
+        await tc.send(info_message)
+    
     async def _add_combines_voice(self, guild: discord.Guild, tier: str):
         # user_limit of 0 means there's no limit
         # determine position with same name +1
