@@ -15,8 +15,8 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 - `<p>combines`
 Its that simple! This command behaves as a switch. If a combines category exists, it will run a teardown of all the rooms. If there is not a combines category established, it will create one, and add a voice channel for each tier.
 
-- `<p>combines [action]`
-The `action` parameter can be used to force the start/stop behavior with the following keywords:
+- `<p>combines [keywords]`
+The `keywords` parameter can be used to force the start/stop behavior with the following keywords:
 - Start combines keywords: start, create
 - Stop combines keywords: stop, teardown, end
 

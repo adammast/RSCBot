@@ -6,7 +6,7 @@ from redbot.core import checks
 # TODO:
 # - custom combines_info message
 # - set league acronym (default = RSC)
-defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None}
+defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True}
 
 
 class CombineRooms(commands.Cog):
@@ -18,7 +18,7 @@ class CombineRooms(commands.Cog):
     @commands.command(aliases=["startcombines", "stopcombines"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def combines(self, ctx, action=None):
+    async def combines(self, ctx, *keywords):
         """
         Creates rooms for combines, or tears them down depending on the action parameter. If no parameter is given, it will behave as a switch.
         
@@ -27,9 +27,12 @@ class CombineRooms(commands.Cog):
         [p]combines start
         [p]combines stop
         """
-        if action in ["start", "create"]:
+        keywords = set(keywords)
+        # is_public = not bool(keywords & set(["private"]))
+
+        if bool(keywords & set(["start", "create"])):
             done = await self._start_combines(ctx)
-        elif action in ["stop", "teardown", "end"]:
+        elif bool(keywords & set(["start", "create"])):
             done = await self._stop_combines(ctx)
         else:
             combines_ongoing = await self._combines_category(ctx.guild)
@@ -37,7 +40,6 @@ class CombineRooms(commands.Cog):
                 done = await self._stop_combines(ctx)
             else:
                 done = await self._start_combines(ctx)
-        
         if done:
             await ctx.send("Done")
         return
@@ -45,7 +47,7 @@ class CombineRooms(commands.Cog):
     @commands.command(aliases=["sppr"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def set_players_per_room(self, ctx, size: int):
+    async def setPlayersPerRoom(self, ctx, size: int):
         if size < 2:
             await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
@@ -59,14 +61,14 @@ class CombineRooms(commands.Cog):
     
     @commands.command(aliases=["ppr"])
     @commands.guild_only()
-    async def get_players_per_room(self, ctx):
+    async def getPlayersPerRoom(self, ctx):
         size = await self._players_per_room(ctx.guild)
         await ctx.send("Combines should have no more than {0} active players in them.".format(size))
 
     @commands.command(aliases=["setroomcap", "src"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def set_room_capacity(self, ctx, size: int):
+    async def setRoomCapacity(self, ctx, size: int):
         if size < 2:
             await ctx.send(":x: There is a minimum of 2 players per voice channel.")
             return False  
@@ -76,6 +78,17 @@ class CombineRooms(commands.Cog):
         else:
             await ctx.send("Done")
         return True
+
+    @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def togglePublicity(self, ctx):
+        is_public = await self._toggle_public_combine(ctx.guild)
+        await self._update_combine_permissions(ctx.guild)
+
+        public_str = "public" if is_public else "private"
+        response = "Combines are now **{0}**.".format(public_str)
+        await ctx.send(response)
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -104,6 +117,28 @@ class CombineRooms(commands.Cog):
         return False
 
     async def _stop_combines(self, ctx):
+        # remove combines channels, category
+        combines_category = await self._combines_category(ctx.guild)
+        if combines_category:
+            for channel in combines_category.channels:
+                await channel.delete()
+            await combines_category.delete()
+            return True
+        await ctx.send("could not find combine rooms.")
+        return False
+    
+    async def _update_combine_permissions(self, guild: discord.Guild):
+        combines_category = await self._combines_category(guild)
+        is_public = await self._is_publc_combine(guild)
+
+        if combines_category:
+            league_role = self._get_role_by_name(guild, "League")
+            overwrites = {
+                guild.default_role: discord.PermissionOverwrite(view_channel=is_public, connect=is_public, send_messages=False),
+                league_role: discord.PermissionOverwrite(view_channel=True, connect=True)
+            }
+            await combines_category.set_permissions(guild.default_role, view_channel=is_public, connect=is_public, send_messages=False)
+            await combines_category.set_permissions(league_role, view_channel=True, connect=True, send_messages=False)
     
     async def _add_combines_category(self, ctx, name: str):
         category = await self._get_category_by_name(ctx.guild, name)
@@ -112,11 +147,15 @@ class CombineRooms(commands.Cog):
             await ctx.send("A category with the name \"{0}\" already exists".format(name))
             return None
         
-        league_role = self._get_role_by_name(ctx.guild, "League")
-        overwrites = {
-            ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False),
-            league_role: discord.PermissionOverwrite(view_channel=True, connect=True)
-        }
+        if not await self._is_publc_combine(ctx.guild):
+            league_role = self._get_role_by_name(ctx.guild, "League")
+            overwrites = {
+                ctx.guild.default_role: discord.PermissionOverwrite(view_channel=False, connect=False, send_messages=False),
+                league_role: discord.PermissionOverwrite(view_channel=True, connect=True, send_messages=False)
+            }
+        else:
+            overwrites=None
+
         category = await ctx.guild.create_category(name, overwrites=overwrites)
         return category
 
@@ -258,9 +297,12 @@ class CombineRooms(commands.Cog):
         player_count = 0
         max_size = await self._players_per_room(guild)
         for member in voice_channel.members:
-            active_player = (fa_role in member.roles or de_role in member.roles) and scout_role not in member.roles
+            if not await self.public_combines(guild):
+                active_player = (fa_role in member.roles or de_role in member.roles) and scout_role not in member.roles
+            else:
+                active_player = scout_role not in member.roles
             if active_player:
-                player_count += 1
+                    player_count += 1
         
         # DISABLED: channel renaming
         return player_count
@@ -302,4 +344,12 @@ class CombineRooms(commands.Cog):
 
     async def _save_room_capacity(self, guild, capacity: int):
         await self.config.guild(guild).room_capacity.set(capacity)
+
+    async def _toggle_public_combine(self, guild):
+        was_public = await self._is_publc_combine(guild)
+        await self.config.guild(guild).public_combines.set(not was_public)
+        return not was_public # is_public (after call)
+
+    async def _is_publc_combine(self, guild):
+        return await self.config.guild(guild).public_combines()
 
