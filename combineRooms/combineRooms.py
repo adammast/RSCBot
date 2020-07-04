@@ -5,7 +5,6 @@ from redbot.core import checks
 
 # TODO:
 # - custom combines_info message
-# X- set league acronym (default = RSC)
 defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True, "acronym": "RSC"}
 
 
@@ -143,13 +142,13 @@ class CombineRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setAcronym(self, ctx):
+    async def setAcronym(self, ctx, new_acronym: str):
         """
         Sets the server acronym used in the combines category. (Default: RSC)
         This is mostly used in #combine-details message
         """
-        acronym = await self._get_acronym(ctx.guild)
-        await ctx.send("The acronym has been registered as **{0}**.".format(acronym))
+        await self._save_acronym(ctx.guild, new_acronym)
+        await ctx.send("The acronym has been registered as **{0}**.".format(new_acronym))
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -416,7 +415,7 @@ class CombineRooms(commands.Cog):
         return await self.config.guild(guild).public_combines()
 
     async def _save_acronym(self, guild, acronym: str):
-        await self.config.guild(guild).public_combines.set(acronym)
+        await self.config.guild(guild).acronym.set(acronym)
 
     async def _get_acronym(self, guild):
         return await self.config.guild(guild).acronym()
