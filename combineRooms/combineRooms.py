@@ -31,16 +31,23 @@ class CombineRooms(commands.Cog):
 
         if bool(keywords & set(["start", "create"])):
             done = await self._start_combines(ctx)
+            started = True
         elif bool(keywords & set(["start", "create"])):
             done = await self._stop_combines(ctx)
+            started = False
         else:
             combines_ongoing = await self._combines_category(ctx.guild)
             if combines_ongoing:
                 done = await self._stop_combines(ctx)
+                started = False
             else:
                 done = await self._start_combines(ctx)
+                started = True
         if done:
-            await ctx.send("Done")
+            if started:
+                await ctx.send("Combine Rooms have been created.")
+            else:
+                await ctx.send("Combine Rooms have been removed.")
         return
     
     @commands.command(aliases=["sppr"])
