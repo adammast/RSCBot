@@ -132,6 +132,25 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role removed".format(removed)
         await ctx.send(message)
 
+    @commands.command(aliases=["addMissingServerRoles"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_roles=True)
+    async def addRequiredServerRoles(self, ctx):
+        """Adds any missing roles required for the bulkRoleManager cog to function properly."""
+        required_roles = ["Draft Eligible", "League", "Spectator", "Former Player"]
+        found = []
+        for role in ctx.guild.roles:
+            if role.name in required_roles:
+                found.append(role.name)
+                required_roles.remove(role.name)
+        
+        if required_roles:
+            for role_name in required_roles:
+                await ctx.guild.create_role(name=role_name)
+            await ctx.send("The following roles have been added: {0}".format(", ".join(required_roles)))
+            return
+        await ctx.send("All required roles already exist in the server.")
+
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -159,7 +178,8 @@ class BulkRoleManager(commands.Cog):
                 break
 
         if deRole is None or leagueRole is None or spectatorRole is None or formerPlayerRole is None:
-            await ctx.send("Couldn't find either the Draft Eligible, League, Spectator, or Former Player role in the server")
+            prefix = '[p]'
+            await ctx.send("Couldn't find either the Draft Eligible, League, Spectator, or Former Player role in the server. Use `{0}addRequiredServerRoles` to add these roles.".format(prefix))
             return
 
         for user in userList:
@@ -189,7 +209,8 @@ class BulkRoleManager(commands.Cog):
                 await member.remove_roles(spectatorRole, formerPlayerRole)
                 deMessage = await self._draft_eligible_message(ctx)
                 if deMessage:
-                    await member.send(deMessage)
+                    # await member.send(deMessage)
+                    await self._send_member_message(ctx, member, deMessage)
                     
                 empty = False
             
@@ -324,3 +345,10 @@ class BulkRoleManager(commands.Cog):
 
     async def _save_draft_eligible_message(self, ctx, message):
         await self.config.guild(ctx.guild).DraftEligibleMessage.set(message)
+
+    async def _send_member_message(self, ctx, member, message):
+        message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
+        message = message_title + message
+        await member.send(message)
+
+    
