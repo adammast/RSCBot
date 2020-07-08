@@ -279,12 +279,11 @@ class BulkRoleManager(commands.Cog):
                         old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
                         rm_roles = [old_tier_role, old_tier_fa_role]
                         await member.remove_roles(*rm_roles)
-                        prefix = await self._get_command_prefix(ctx)
                         tier_change_msg = ("Congrats! Due to your recent ranks you've been promoted to our {0} tier! "
                         "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
                         "season. If you have any questions please let an admin know."
-                        "\n\nIf you checked in already for the next match day, please use the commands `{1}co` to check "
-                        "out and then `{1}ci` check in again for your new tier.").format(tier, prefix)
+                        "\n\nIf you checked in already for the next match day, please use the commands `[p]co` to check "
+                        "out and then `[p]ci` check in again for your new tier.").format(tier)
                         await self._send_member_message(ctx, member, tier_change_msg)
                     
                     if member.nick[:5] != "FA | ":  # this would theoretically not work if someone's actual name had that as their prefix
@@ -428,6 +427,8 @@ class BulkRoleManager(commands.Cog):
 
     async def _send_member_message(self, ctx, member, message):
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
+        command_prefix = self._get_command_prefix(ctx)
+        message = message.replace('[p]', command_prefix)
         message = message_title + message
         await member.send(message)
 
