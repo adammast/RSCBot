@@ -63,7 +63,6 @@ class Transactions(commands.Cog):
                 await ctx.send(":x: Free agent role not found in server")
             return
 
-
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
