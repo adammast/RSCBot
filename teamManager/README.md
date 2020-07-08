@@ -1,6 +1,6 @@
 # RSCBot: teamManager
 
-The `teamManager` cog is primarily responsible for ...
+The `teamManager` cog is primarily responsible for managing franchises, thier teams, and tiers.
 
 ## Installation
 
