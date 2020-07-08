@@ -13,7 +13,7 @@ The `teamManager` cog depends on the `prefixManager` cog. Install `prefixManager
 
 ## Usage
 
-Franchises and tiers must be created before any teams may be added. 
+Franchises and tiers must be created before any teams may be added. The `transactions` cog is responsible for adding and removing players from teams.
 
 - `<p>addFranchise <gm> <franchise_prefix> <franchise name>`
   - Creates a new franchise in the discord server:
