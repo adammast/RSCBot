@@ -230,6 +230,7 @@ class Transactions(commands.Cog):
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
 
+
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         # if franchise_role in user.roles and tier_role in user.roles:
@@ -245,7 +246,6 @@ class Transactions(commands.Cog):
                     await user.remove_roles(currentTier)
                 await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
                 await user.add_roles(tier_role, leagueRole, franchise_role)
-
 
     async def remove_player_from_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
