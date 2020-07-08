@@ -1,4 +1,4 @@
-# RSCBot: combineRooms
+# RSCBot: prefixManager
 
 The `prefixManager` cog is primarily responsible for creating and managing prefixes for RSC franchises. Prefixes are an essential piece of the RSCBot codebase.
 
