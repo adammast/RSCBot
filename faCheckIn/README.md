@@ -14,7 +14,13 @@ The `faCheckIn` cog depends on the `match` and `teamManager` cogs. Install `matc
 ## Usage
 
 - `<p>checkIn` (alias: `<p>ci`)
+  - Sets the invoker as being available for substitution
 - `<p>checkOut` (alias: `<p>co`)
+  - Sets the invoker as being unavailable for substitution
 - `<p>checkAvailability <tier_name> [match_day]` (alias: `<p>ca`)
+  - Checks availability for a tier on a particular match day. If `match_day` is not provided, it will default to the current match day.
 - `<p>clearAvailaibility [tier] [match_day]`
+  - Removes availaibility for a given tier/match day.
 - `<p>clearAllAvailability`
+  - Clears the full log of match availability.
+  
