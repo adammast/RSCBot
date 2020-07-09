@@ -269,7 +269,7 @@ class Transactions(commands.Cog):
 
     async def get_free_agent_roles(self, ctx):
         free_agent_roles = []
-        tiers = await self.team_manager_cog._tiers(ctx)
+        tiers = await self.team_manager_cog.tiers(ctx)
         for tier in tiers:
             role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier))
             if role is not None:
