@@ -123,10 +123,10 @@ class CombineRooms(commands.Cog):
         response = "Combines are now **{0}**.".format(public_str)
         await ctx.send(response)
 
-    @commands.command(aliases=["checkCombinePublicity", "ccp", "combineStatus", "checkCombineStatus", "ccs"])
+    @commands.command(aliases=["combinePublicity", "checkCombinePublicity", "ccp", "combineStatus", "checkCombineStatus", "ccs"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def combinePublicity(self, ctx):
+    async def getCombinePublicity(self, ctx):
         """
         Gets the current status (public/private) of the combines.
         If combines are **Public**, any member may participate.
@@ -136,10 +136,10 @@ class CombineRooms(commands.Cog):
         response = "Combines are currently **{0}**.".format(public_str)
         await ctx.send(response)
 
-    @commands.command(aliases=["getAcronym"])
+    @commands.command(aliases=["acronym"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def acronym(self, ctx):
+    async def getAcronym(self, ctx):
         """
         Gets the acronym registered for combines. (Default: RSC)
         """

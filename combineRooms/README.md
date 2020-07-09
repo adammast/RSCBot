@@ -41,3 +41,11 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 - `<p>setAcronym` (Default: RSC)
   - Sets the acronym used in the combines cog.
   - This is used to tweak the default message in the #combine-details channel, such as rule reference, and room information.
+
+## Other commands
+
+The following commands can be used to check current properties of the server:
+- `<p>getPlayersPerRoom`
+- `<p>getRoomCapacity`
+- `<p>getCombinePublicity`
+- `<p>getAcronym`
