@@ -263,22 +263,20 @@ class BulkRoleManager(commands.Cog):
                 empty = False
                 if leagueRole in member.roles:
                     tier_changed = False
-                    for tier_name in tiers:
-                        tier_role = self.team_manager_cog._get_tier_role(ctx, tier_name)
-                        # If tier changed:
-                        if tier_role in member.roles and (not tier_role in roles_to_add):
-                            tier_changed = True
-                            old_tier_role = tier_role
-                            break
-                        elif tier_role in member.roles and tier_role in roles_to_add:
-                            had += 1
-                            added -= 1  # remove double count of had/added
-                            break
+                    old_tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
+                    
+                    if (old_tier_role in member.roles and (not tier_role in roles_to_add)) or not old_tier_role:
+                        tier_changed = True
+                    elif tier_role in member.roles and tier_role in roles_to_add:
+                        had += 1
+                        added -= 1  # remove double count of had/added
+                        
 
                     if tier_changed:
-                        old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
-                        rm_roles = [old_tier_role, old_tier_fa_role]
-                        await member.remove_roles(*rm_roles)
+                        if old_tier_role:
+                            old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
+                            rm_roles = [old_tier_role, old_tier_fa_role]
+                            await member.remove_roles(*rm_roles)
                         tier_change_msg = ("Congrats! Due to your recent ranks you've been promoted to our {0} tier! "
                         "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
                         "season. If you have any questions please let an admin know."
@@ -427,7 +425,7 @@ class BulkRoleManager(commands.Cog):
 
     async def _send_member_message(self, ctx, member, message):
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
-        command_prefix = self._get_command_prefix(ctx)
+        command_prefix = await self._get_command_prefix(ctx)
         message = message.replace('[p]', command_prefix)
         message = message_title + message
         await member.send(message)
