@@ -265,27 +265,33 @@ class BulkRoleManager(commands.Cog):
                     tier_changed = False
                     old_tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
                     
-                    if (old_tier_role in member.roles and (not tier_role in roles_to_add)) or not old_tier_role:
+                    if (old_tier_role in member.roles and (not old_tier_role in roles_to_add)) or not old_tier_role:
                         tier_changed = True
-                    elif tier_role in member.roles and tier_role in roles_to_add:
+                    elif old_tier_role in member.roles and old_tier_role in roles_to_add:
                         had += 1
                         added -= 1  # remove double count of had/added
                         
 
                     if tier_changed:
+                        action = "assigned"
                         if old_tier_role:
                             old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
                             rm_roles = [old_tier_role, old_tier_fa_role]
                             await member.remove_roles(*rm_roles)
-                        tier_change_msg = ("Congrats! Due to your recent ranks you've been promoted to our {0} tier! "
+                            action = "promoted"
+                        tier_change_msg = ("Congrats! Due to your recent ranks you've been {0} to our {1} tier! "
                         "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
                         "season. If you have any questions please let an admin know."
                         "\n\nIf you checked in already for the next match day, please use the commands `[p]co` to check "
-                        "out and then `[p]ci` check in again for your new tier.").format(tier)
+                        "out and then `[p]ci` check in again for your new tier.").format(action, tier)
                         await self._send_member_message(ctx, member, tier_change_msg)
                     
                     if member.nick[:5] != "FA | ":  # this would theoretically not work if someone's actual name had that as their prefix
-                        await member.edit(nick="{0} | {1}".format("FA", self.get_player_nickname(member)))
+                        try: 
+                            await member.edit(nick="{0} | {1}".format("FA", self.get_player_nickname(member)))
+                        except discord.errors.Forbidden:
+                            await ctx.send("Cannot set nickname for {0}".format(member.name))
+
                     await member.add_roles(*roles_to_add)
                     added += 1
                 empty = False
