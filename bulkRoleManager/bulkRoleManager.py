@@ -218,9 +218,6 @@ class BulkRoleManager(commands.Cog):
                 if member in ctx.guild.members:
                     nickname = self.get_player_nickname(member)
                     found.append("{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname))
-                # if len(message) > 1900:
-                #     messages.append(message)
-                #     message = ""
             except:
                 notFound.append(user)
                 found.append(None)
@@ -229,9 +226,11 @@ class BulkRoleManager(commands.Cog):
         for player in ctx.guild.members:
             player_nick = self.get_player_nickname(player)
             if player_nick in notFound:
-                notFound.remove(player_nick)
-                i = userList.index(player_nick)
-                found[i] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(player, player_nick)
+                while player_nick in notFound:
+                    notFound.remove(player_nick)
+                match_indicies = [i for i, x in enumerate(userList) if x == player_nick]
+                for match in match_indicies:
+                    found[match] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(player, player_nick)
         
         if len(notFound) > 0:
             notFoundMessage = ":x: Couldn't find:\n"
@@ -243,7 +242,7 @@ class BulkRoleManager(commands.Cog):
         if found:
             message = ""
             for member_line in found:
-                if len(message + member_line) < 2000:
+                if member_line and len(message + member_line) < 2000:
                     message += member_line
                 else:
                     messages.append(message)
