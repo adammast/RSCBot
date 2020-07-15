@@ -232,7 +232,7 @@ class BulkRoleManager(commands.Cog):
                 for match in match_indicies:
                     found[match] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(player, player_nick)
         
-        if len(notFound) > 0:
+        if notFound:
             notFoundMessage = ":x: Couldn't find:\n"
             for user in notFound:
                 notFoundMessage += "{0}\n".format(user)
@@ -249,7 +249,8 @@ class BulkRoleManager(commands.Cog):
                     message = ""
             messages.append(message)
         for msg in messages:
-            await ctx.send("{0}{1}{0}".format("```", msg))
+            if msg:
+                await ctx.send("{0}{1}{0}".format("```", msg))
 
     @commands.command()
     @commands.guild_only()
