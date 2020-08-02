@@ -316,7 +316,7 @@ class BulkRoleManager(commands.Cog):
     async def retire(self, ctx, *userList):
         """Removes league roles and adds 'Former Player' role for every member that can be found from the userList"""
         empty = True
-        added = 0
+        retired = 0
         notFound = 0
         message = ""
         former_player_str = "Former Player"
@@ -343,7 +343,11 @@ class BulkRoleManager(commands.Cog):
                 member = await commands.MemberConverter().convert(ctx, user)
                 if member in ctx.guild.members:
                     roles_to_remove.append(self.team_manager_cog.get_current_franchise_role(member))
-                    await member.remove_roles(*roles_to_remove)
+                    removable_roles = []
+                    for role in roles_to_remove:
+                        if role in member.roles:
+                            removable_roles.append(role)
+                    await member.remove_roles(*removable_roles)
                     await member.add_roles(former_player_role)
                     await member.edit(nick=(self.team_manager_cog.get_player_nickname(member)))
                     empty = False
@@ -358,8 +362,8 @@ class BulkRoleManager(commands.Cog):
            message += ":white_check_mark: everyone that was found from list is now a former player"
         if notFound > 0:
             message += ". {0} user(s) were not found".format(notFound)
-        if added > 0:
-            message += ". {0} user(s) have been set as former players.".format(added)
+        if retired > 0:
+            message += ". {0} user(s) have been set as former players.".format(retired)
         await ctx.send(message)
 
     @commands.command()
