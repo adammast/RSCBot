@@ -38,3 +38,9 @@ The `bulkRoleManager` cog depends on the `teamManager` cog. Install `teamManager
   - Gets the message that is sent to newly declared draft eligible players. (Default: None)
 - `<p>setDEMessage <message>`
   - Sets the message that is sent to newly declared draft eligible players.
+
+### Coming soon:
+
+- `<p>retire [userList]`
+  - Removes all league roles (franchise, tier, free agent, league) and assigns the "Former Player" role. This additionally will clear the user's nickname prefix.
+  
