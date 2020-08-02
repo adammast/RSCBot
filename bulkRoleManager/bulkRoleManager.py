@@ -310,6 +310,58 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)       
 
+    @commands.command(aliases=["retirePlayer", "retirePlayers", "setFormerPlayer"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_roles=True)
+    async def retire(self, ctx, *userList):
+        """Removes league roles and adds 'Former Player' role for every member that can be found from the userList"""
+        empty = True
+        added = 0
+        notFound = 0
+        message = ""
+        former_player_str = "Former Player"
+        former_player_role = self.team_manager_cog._find_role_by_name(ctx, former_player_str)
+
+        if not former_player_role:
+            former_player_role = await self.team_manager_cog.create_role(ctx, former_player_str)
+
+        roles_to_remove = [
+            self.team_manager_cog._find_role_by_name(ctx, "League"),
+            self.team_manager_cog._find_role_by_name(ctx, "Free Agent"),
+            self.team_manager_cog._find_role_by_name(ctx, "permFA")
+        ]
+        tiers = await self.team_manager_cog.tiers(ctx)
+        for tier in tiers:
+            tier_role = self.team_manager_cog._get_tier_role(ctx, tier)
+            if tier_role:
+                tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier))
+            roles_to_remove.append(tier_role)
+            roles_to_remove.append(tier_fa_role)
+
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    roles_to_remove.append(self.team_manager_cog.get_current_franchise_role(member))
+                    await member.remove_roles(*roles_to_remove)
+                    await member.add_roles(former_player_role)
+                    await member.edit(nick=(self.team_manager_cog.get_player_nickname(member)))
+                    empty = False
+            except:
+                if notFound == 0:
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody was set as a former player."
+        else:
+           message += ":white_check_mark: everyone that was found from list is now a former player"
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if added > 0:
+            message += ". {0} user(s) have been set as former players.".format(added)
+        await ctx.send(message)
+
     @commands.command()
     @commands.guild_only()
     async def getId(self, ctx, *userList):
