@@ -179,7 +179,6 @@ class TeamManager(commands.Cog):
         
         await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
 
-
     @commands.command(aliases=["tiers", "getTiers"])
     @commands.guild_only()
     async def listTiers(self, ctx):
