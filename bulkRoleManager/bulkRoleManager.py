@@ -451,16 +451,6 @@ class BulkRoleManager(commands.Cog):
                 message += ". {0} user(s) had the {1} role added to them".format(countGiven, roleToGive.name)
         await ctx.send(message)
 
-    def get_player_nickname(self, user: discord.Member):
-        if user.nick:
-            array = user.nick.split(' | ', 1)
-            if len(array) == 2:
-                currentNickname = array[1].strip()
-            else:
-                currentNickname = array[0]
-            return currentNickname
-        return user.name
-
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -479,6 +469,17 @@ class BulkRoleManager(commands.Cog):
         except:
             await ctx.send(":x: Draft eligible message not set")
 
+
+    def get_player_nickname(self, user: discord.Member):
+        if user.nick:
+            array = user.nick.split(' | ', 1)
+            if len(array) == 2:
+                currentNickname = array[1].strip()
+            else:
+                currentNickname = array[0]
+            return currentNickname
+        return user.name
+        
     async def _draft_eligible_message(self, ctx):
         return await self.config.guild(ctx.guild).DraftEligibleMessage()
 
