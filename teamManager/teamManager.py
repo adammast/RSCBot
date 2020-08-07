@@ -488,8 +488,8 @@ class TeamManager(commands.Cog):
                     # captains_mentioned.append(captain.mention) # mention disabled
                     captains_username.append(str(captain))
                 else:
-                    captains_mentioned.append("(No captain)")
-                    # captains_username.append("N/A") # mention disabled
+                    # captains_mentioned.append("(No captain)")
+                    captains_username.append("(No captain)")  #.append("N/A") # mention disabled
         else:
             message += "\nNo teams have been made."
 
@@ -535,8 +535,8 @@ class TeamManager(commands.Cog):
                 
         if captainless_teams:
             for gm, team in captainless_teams:
-                captains_formatted.append("N/A")
-                captains_mentioned_formatted.append("(No Captain)")
+                captains_formatted.append("(No captain)")  #.append("N/A")
+                # captains_mentioned_formatted.append("(No Captain)")
                 teams_formatted.append(team)
         
         embed.add_field(name="Team", value="{}\n".format("\n".join(teams_formatted)), inline=True)

@@ -163,7 +163,7 @@ class FaCheckIn(commands.Cog):
         await self._save_tier_data(ctx, match_day, tier, tier_list)
 
     async def _find_tier_from_fa_role(self, ctx, user: discord.Member):
-        tiers = await self.team_manager_cog._tiers(ctx)
+        tiers = await self.team_manager_cog.tiers(ctx)
         for tier in tiers:
             fa_role = self.team_manager_cog._find_role_by_name(ctx, tier + "FA")
             if fa_role in user.roles:

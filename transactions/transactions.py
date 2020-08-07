@@ -63,7 +63,6 @@ class Transactions(commands.Cog):
                 await ctx.send(":x: Free agent role not found in server")
             return
 
-
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
@@ -230,6 +229,7 @@ class Transactions(commands.Cog):
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
 
+
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         # if franchise_role in user.roles and tier_role in user.roles:
@@ -245,7 +245,6 @@ class Transactions(commands.Cog):
                     await user.remove_roles(currentTier)
                 await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
                 await user.add_roles(tier_role, leagueRole, franchise_role)
-
 
     async def remove_player_from_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
@@ -270,7 +269,7 @@ class Transactions(commands.Cog):
 
     async def get_free_agent_roles(self, ctx):
         free_agent_roles = []
-        tiers = await self.team_manager_cog._tiers(ctx)
+        tiers = await self.team_manager_cog.tiers(ctx)
         for tier in tiers:
             role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier))
             if role is not None:
