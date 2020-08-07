@@ -180,8 +180,7 @@ class BulkRoleManager(commands.Cog):
                 break
 
         if deRole is None or leagueRole is None or spectatorRole is None or formerPlayerRole is None:
-            prefix = await self._get_command_prefix(ctx)
-            await ctx.send(":x: Couldn't find either the Draft Eligible, League, Spectator, or Former Player role in the server. Use `{0}addRequiredServerRoles` to add these roles.".format(prefix))
+            await ctx.send(":x: Couldn't find either the Draft Eligible, League, Spectator, or Former Player role in the server. Use `{0}addRequiredServerRoles` to add these roles.".format(ctx.prefix))
             return
 
         for user in userList:
@@ -283,7 +282,7 @@ class BulkRoleManager(commands.Cog):
                         "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
                         "season. If you have any questions please let an admin know."
                         "\n\nIf you checked in already for the next match day, please use the commands `[p]co` to check "
-                        "out and then `[p]ci` check in again for your new tier.").format(action, tier)
+                        "out and then `[p]ci` to check in again for your new tier.").format(action, tier)
                         await self._send_member_message(ctx, member, tier_change_msg)
                     
                     if member.nick[:5] != "FA | ":  # this would theoretically not work if someone's actual name had that as their prefix
@@ -479,7 +478,7 @@ class BulkRoleManager(commands.Cog):
                 currentNickname = array[0]
             return currentNickname
         return user.name
-        
+    
     async def _draft_eligible_message(self, ctx):
         return await self.config.guild(ctx.guild).DraftEligibleMessage()
 
@@ -488,11 +487,8 @@ class BulkRoleManager(commands.Cog):
 
     async def _send_member_message(self, ctx, member, message):
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
-        command_prefix = await self._get_command_prefix(ctx)
+        command_prefix = ctx.prefix
         message = message.replace('[p]', command_prefix)
         message = message_title + message
         await member.send(message)
-
-    async def _get_command_prefix(self, ctx):
-        return (await self.discord_bot.get_valid_prefixes(ctx.guild))[0]
 
