@@ -147,11 +147,11 @@ class CombineRooms(commands.Cog):
     async def setCombinesMessage(self, ctx, *, message: str):
         """
         Sets a custom message that is sent to the #combines-details channel.
-        To change a custom message back to the default, run either of the following:
+        To change the combines message back to the default, run either of the following:
         \t - `[p]setCombinesMessage clear`
-        \t - `[p]setCombinesMessage none`
+        \t - `[p]setCombinesMessage reset`
         """
-        if message.lower() in ["clear", "none"]:
+        if message.lower() in ["clear", "reset"]:
             await self._set_custom_message(ctx.guild, None)
         else:
             await self._set_custom_message(ctx.guild, message)
