@@ -375,6 +375,24 @@ class Match(commands.Cog):
         message += self._create_additional_info(user_team_name, home, away)
         return message
 
+    await def get_match_from_day_team(self, ctx, match_day, team_name):
+        matches = await self._matches(ctx)
+        # Match format:
+        # match_data = {
+        #     'matchDay': match_day,
+        #     'matchDate': match_date,
+        #     'home': home,
+        #     'away': away,
+        #     'roomName': roomName,
+        #     'roomPass': roomPass
+        # }
+        for match in matches:
+            if not match['matchDay'] == match_day:
+                break 
+            if match['home'] == team_name or match['away'] == team_name:
+                return match
+        return None
+
     def _create_additional_info(self, user_team_name, home, away):
         additional_info = ""
         if user_team_name and user_team_name == home:
