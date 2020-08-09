@@ -13,13 +13,11 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 
 ## Usage
 
-- `<p>combines`
-  Its that simple! This command behaves as a switch. If a combines category exists, it will run a teardown of all the rooms. If there is not a combines category established, it will create one, and add a voice channel for each tier.
+- `<p>startcombines`
+  Creates a Combine Rooms channel category with all associated text and voice channels.
 
-- `<p>combines [keywords]`
-  The `keywords` parameter can be used to force the start/stop behavior with the following keywords:
-- Start combines keywords: start, create
-- Stop combines keywords: stop, teardown, end
+- `<p>stopcombines`
+  Runs a teardown for all combine channels. This will remove all channels under the "Combine Rooms" categorty as well as the category itself.
 
 ## Customization
 
@@ -41,6 +39,11 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 - `<p>setAcronym` (Default: RSC)
   - Sets the acronym used in the combines cog.
   - This is used to tweak the default message in the #combine-details channel, such as rule reference, and room information.
+- `<p>setCombinesMessage <message>`
+  - Sets a custom message that is sent to the #combines-details channel.
+  - To change the combines message back to the default, run either of the following:
+    - `<p>setCombinesMessage clear`
+    - `<p>setCombinesMessage reset`
 
 ## Other commands
 
@@ -49,3 +52,4 @@ The following commands can be used to check current properties of the server:
 - `<p>getRoomCapacity`
 - `<p>getCombinePublicity`
 - `<p>getAcronym`
+- `<p>getCombinesMessage`

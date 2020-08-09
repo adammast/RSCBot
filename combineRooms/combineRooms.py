@@ -5,7 +5,7 @@ from redbot.core import checks
 
 # TODO:
 # - custom combines_info message
-defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True, "acronym": "RSC"}
+defaults = {"players_per_room": 6, "room_capacity": 10, "combines_category": None, "public_combines": True, "acronym": "RSC", "CustomMessage": None}
 
 
 class CombineRooms(commands.Cog):
@@ -14,41 +14,25 @@ class CombineRooms(commands.Cog):
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("TeamManager")
 
-    @commands.command(aliases=["startcombines", "stopcombines"])
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def combines(self, ctx, *keywords):
-        """
-        Creates rooms for combines, or tears them down depending on the action parameter. If no parameter is given, it will behave as a switch.
-        
-        Examples:
-        [p]combines
-        [p]combines start
-        [p]combines stop
-        """
-        keywords = set(keywords)
-        # is_public = not bool(keywords & set(["private"]))
-
-        if bool(keywords & set(["start", "create"])):
-            done = await self._start_combines(ctx)
-            started = True
-        elif bool(keywords & set(["start", "create"])):
-            done = await self._stop_combines(ctx)
-            started = False
-        else:
-            combines_ongoing = await self._combines_category(ctx.guild)
-            if combines_ongoing:
-                done = await self._stop_combines(ctx)
-                started = False
-            else:
-                done = await self._start_combines(ctx)
-                started = True
-        if done:
-            if started:
-                await ctx.send("Combine Rooms have been created.")
-            else:
-                await ctx.send("Combine Rooms have been removed.")
-        return
+    async def startcombines(self, ctx):
+        if not await self._combines_category(ctx.guild):
+            await self._start_combines(ctx)
+            await ctx.send("Combine Rooms have been created.")
+            return True
+        await ctx.send("Combine Rooms have already been created.")
+    
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def stopcombines(self, ctx):
+        if await self._combines_category(ctx.guild):
+            await self._stop_combines(ctx)
+            await ctx.send("Combine Rooms have been removed.")
+            return True
+        await ctx.send("No Combine Rooms found.")
     
     @commands.command(aliases=["sppr"])
     @commands.guild_only()
@@ -152,10 +136,39 @@ class CombineRooms(commands.Cog):
     async def setAcronym(self, ctx, new_acronym: str):
         """
         Sets the server acronym used in the combines category. (Default: RSC)
-        This is mostly used in #combine-details message
+        This is primarily used in #combine-details message
         """
         await self._save_acronym(ctx.guild, new_acronym)
         await ctx.send("The acronym has been registered as **{0}**.".format(new_acronym))
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setCombinesMessage(self, ctx, *, message: str):
+        """
+        Sets a custom message that is sent to the #combines-details channel.
+        To change the combines message back to the default, run either of the following:
+        \t - `[p]setCombinesMessage clear`
+        \t - `[p]setCombinesMessage reset`
+        """
+        if message.lower() in ["clear", "reset"]:
+            await self._set_custom_message(ctx.guild, None)
+        else:
+            await self._set_custom_message(ctx.guild, message)
+        await ctx.send("Done.")
+    
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getCombinesMessage(self, ctx):
+        """
+        Gets the currently set information message for the #combines-details channel.
+        """
+        info_message = await self._get_custom_message(ctx.guild)
+        if not info_message:
+            await ctx.send("No custom message has been set. Your default message is...")
+            info_message = await self._get_default_message(ctx)
+        await ctx.send(info_message)
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -266,37 +279,9 @@ class CombineRooms(commands.Cog):
         tc = await category.create_text_channel(name, position=0, permissions_synced=True, overwrites=overwrites)
 
         acronym = await self._get_acronym(guild)
-        info_message = (
-            "Welcome to the {0} combines! Combine rooms will be available to all players who are Free Agents or Draft Eligible. "
-            "During combines, you are welcome to spend as much or as little time playing as you'd like. Your participation in combines "
-            "gives franchise scouts an opportunity to see how you play. No pressure though! The primary goal for combines is to give "
-            "everybody an opportunity to get introduced to gameplay at their respective tiers."
-
-            "\n\n__Server Information__"
-            "\nServers can be made by anybody in the combine room. We do ask that the lobbies are made with the following naming convention:"
-            "\n\n**Lobby Info:**"
-            "\n - Name: **<tier><room number>**"
-            "\n - Password: **{1}<room number>**"
-            
-            "\n\n**Example:**"
-            "\n - Voice Channel Name: **Challenger room 4**"
-            "\n - Name: **Challenger4**"
-            "\n - Password: **{1}4**"
-
-            "\n\n__The Role of Scouts__"
-            "\n - For lack of a better phrase, scouts are \"in charge\" of running combines."
-            "\n - If a scout requests a lineup, please respect this request."
-            "\n - If a scout requests for mutator settings such as adjusted time length, or a goal limit, please respect this request."
-            "\n - If you have concerns with how combines are being run, contact a mod or an admin."
-
-            "\n\n__Other Notes__"
-            "\n - Please try to curb your particpation in combines towards your own tier. Do not play outside of your tier without being requested "
-            "by a scout, or asking permission of the other players in the combine room."
-            "\n - Don't stress! All players have good and bad days. Scouts care more about _how you play_ than _how your perform_. If you have a "
-            "rough game, or a bad night, you'll have plenty of opportunity to show your abilities in remaining combine games"
-            "\n - As per {2} rules, do not be toxic or hostile towards other players."
-            "\n - GLHF!"
-        ).format(guild.name, acronym.lower(), acronym)
+        info_message = await self._get_custom_message(guild)
+        if not info_message:
+            info_message = await self._get_default_message(ctx)
         await tc.send(info_message)
     
     async def _add_combines_voice(self, guild: discord.Guild, category: discord.CategoryChannel, tier: str):
@@ -423,4 +408,46 @@ class CombineRooms(commands.Cog):
 
     async def _get_acronym(self, guild):
         return await self.config.guild(guild).acronym()
+
+    async def _set_custom_message(self, guild, message):
+        await self.config.guild(guild).CustomMessage.set(message)
+
+    async def _get_custom_message(self, guild):
+        return await self.config.guild(guild).CustomMessage()
+
+    async def _get_default_message(self, ctx):
+        acronym = await self._get_acronym(ctx.guild)
+        info_message = (
+            "Welcome to the {0} combines! Combine rooms will be available to all players who are Free Agents or Draft Eligible. "
+            "During combines, you are welcome to spend as much or as little time playing as you'd like. Your participation in combines "
+            "gives franchise scouts an opportunity to see how you play. No pressure though! The primary goal for combines is to give "
+            "everybody an opportunity to get introduced to gameplay at their respective tiers."
+
+            "\n\n__Server Information__"
+            "\nServers can be made by anybody in the combine room. We do ask that the lobbies are made with the following naming convention:"
+            "\n\n**Lobby Info:**"
+            "\n - Name: **<tier>**"
+            "\n - Password: **{1}<room number>**"
+            
+            "\n\n**Example:**"
+            "\n - Voice Channel Name: **Challenger room 4**"
+            "\n - Name: **Challenger**"
+            "\n - Password: **{1}4**"
+
+            "\n\n__The Role of Scouts__"
+            "\n - For lack of a better phrase, scouts are \"in charge\" of running combines."
+            "\n - If a scout requests a lineup, please respect this request."
+            "\n - If a scout requests for mutator settings such as adjusted time length, or a goal limit, please respect this request."
+            "\n - If you have concerns with how combines are being run, contact a mod or an admin."
+
+            "\n\n__Other Notes__"
+            "\n - Please try to curb your particpation in combines towards your own tier. Do not play outside of your tier without being requested "
+            "by a scout, or asking permission of the other players in the combine room."
+            "\n - Don't stress! All players have good and bad days. Scouts care more about _how you play_ than _how your perform_. If you have a "
+            "rough game, or a bad night, you'll have plenty of opportunity to show your abilities in remaining combine games"
+            "\n - As per {2} rules, do not be toxic or hostile towards other players."
+            "\n - GLHF!"
+        ).format(ctx.guild.name, acronym.lower(), acronym)
+        return info_message
+
 

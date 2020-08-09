@@ -227,7 +227,7 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
     
-    @commands.command()
+    @commands.command(aliases=["getID", "getid"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def makePermFA(self, ctx, tier: str, *userList):
@@ -369,29 +369,48 @@ class BulkRoleManager(commands.Cog):
     @commands.guild_only()
     async def getId(self, ctx, *userList):
         """Gets the id for any user that can be found from the userList"""
+        found = []
         notFound = []
-        messages = []
-        message = ""
+        # message = ""
         for user in userList:
             try:
                 member = await commands.MemberConverter().convert(ctx, user)
                 if member in ctx.guild.members:
                     nickname = self.get_player_nickname(member)
-                    message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname)
-                if len(message) > 1900:
-                    messages.append(message)
-                    message = ""
+                    found.append("{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname))
             except:
                 notFound.append(user)
-        if len(notFound) > 0:
+                found.append(None)
+        
+        # Double Check not found (search by nickname without prefix):
+        for player in ctx.guild.members:
+            player_nick = self.get_player_nickname(player)
+            if player_nick in notFound:
+                while player_nick in notFound:
+                    notFound.remove(player_nick)
+                match_indicies = [i for i, x in enumerate(userList) if x == player_nick]
+                for match in match_indicies:
+                    found[match] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(player, player_nick)
+        
+        if notFound:
             notFoundMessage = ":x: Couldn't find:\n"
             for user in notFound:
                 notFoundMessage += "{0}\n".format(user)
             await ctx.send(notFoundMessage)
-        if message:
+            
+        messages = []
+        if found:
+            message = ""
+            for member_line in found:
+                if member_line and len(message + member_line) < 2000:
+                    message += member_line
+                else:
+                    messages.append(message)
+                    message = ""
             messages.append(message)
         for msg in messages:
-            await ctx.send("{0}{1}{0}".format("```", msg))
+            if msg:
+                await ctx.send("{0}{1}{0}".format("```", msg))
 
     @commands.command()
     @commands.guild_only()
