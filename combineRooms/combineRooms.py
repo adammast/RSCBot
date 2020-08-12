@@ -3,7 +3,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"players_per_room": 6, "room_capacity": 10, "Categories": [], "public_combines": True, "acronym": "RSC", "CustomMessage": None}
+defaults = {"room_capacity": 10, "Categories": [], "public_combines": True, "acronym": "RSC"}
 
 
 class CombineRooms(commands.Cog):
