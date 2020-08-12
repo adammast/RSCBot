@@ -39,6 +39,20 @@ class CombineRooms(commands.Cog):
         await self._save_combines_categories(ctx.guild, [])
         await ctx.send("Done.")
 
+
+    @commands.Cog.listener("on_voice_state_update")
+    async def on_voice_state_update(self, member, before, after):
+        # ignore when voice activity is within the same room
+        if before.channel == after.channel:
+            return
+        
+        # Room joined:
+        await self._member_joins_voice(member, after.channel)
+        # Room left:
+        await self._member_leaves_voice(member, before.channel)
+
+    
+
     async def _start_combines(self, ctx):
         # Creates a combines category and room for each tier
         # await self._add_combines_info_channel(ctx.guild, combines_category, "Combines Details")
@@ -85,9 +99,18 @@ class CombineRooms(commands.Cog):
         new_room_number = 1
         acronym = await self._get_acronym(guild)
         capacity = await self._room_capacity(guild)
-        room_name = "{0} // {1}{2}".format(tier, acronym, new_room_number)
+        room_name = "{0} // {1}{2}".format(tier, acronym.lower(), new_room_number)
 
         await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity, position=new_position)
+
+    async def _maybe_remove_combines_voice(self, guild: discord.Guild, tier: str, category: discord.CategoryChannel=None):
+        empty_vcs = []
+        for vc in category.voice_channels:
+            if len(vc.members) ==  0 and "{0} // rsc".format(tier) in vc.name:
+                empty_vcs.append(vc)
+
+        for vc in empty_vcs[1:]:
+            await vc.delete()
 
     async def _get_tier_category(guild: discord.Guild, tier: str):
         categories = await self._combines_categories(guild)
@@ -96,20 +119,57 @@ class CombineRooms(commands.Cog):
                 return tier_cat
         return None
 
+    async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
+        return False
+
+
+        categories = await self._combines_categories(member.guild)
+        if not categories:
+            return False
+        
+        if voice_channel.category_id in categories and len(voice_channel.members) == 1:
+            tier_cat = self._get_category_by_id(member.guild, voice_channel.id)
+            tier_str = self._get_category_tier(tier_cat)
+            await self._add_combines_voice(member.guild, tier_str, tier_cat)
+            return True
+        return False
+
+    async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
+        categories = await self._combines_categories(member.guild)
+        if not categories:
+            return False
+        
+        if voice_channel.category_id in categories and len(voice_channel.members) == 0:
+            tier_cat = self._get_category_by_id(member.guild, voice_channel.category_id)
+            tier_str = self._get_category_tier(tier_cat)
+            await self._maybe_remove_combines_voice(member.guild, tier_str, tier_cat)
+            return True
+        return False
+     
+
     def _get_role_by_name(self, guild: discord.Guild, name: str):
         for role in guild.roles:
             if role.name == name:
                 return role
         return None
 
-    async def _save_combines_categories(self, guild, categories: discord.CategoryChannel):
+    async def _save_combines_categories(self, guild, categories):
         if categories:
             return await self.config.guild(guild).Categories.set(categories)
         return await self.config.guild(guild).Categories.set([])
-   
+
     async def _combines_categories(self, guild):
         return await self.config.guild(guild).Categories()
    
+    def _get_category_by_id(self, guild, category_id):
+        for category in guild.categories:
+            if category.id == category_id:
+                return category
+        return None
+
+    def _get_category_tier(self, category: discord.CategoryChannel):
+        return category.name[:category.name.index(" ")]
+
     async def _room_capacity(self, guild):
         cap = await self.config.guild(guild).room_capacity()
         return cap if cap else 0
