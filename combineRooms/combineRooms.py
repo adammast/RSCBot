@@ -47,9 +47,11 @@ class CombineRooms(commands.Cog):
             return
         
         # Room joined:
-        await self._member_joins_voice(member, after.channel)
+        if after.channel:
+            await self._member_joins_voice(member, after.channel)
         # Room left:
-        await self._member_leaves_voice(member, before.channel)
+        if before.channel:
+            await self._member_leaves_voice(member, before.channel)
 
     
 
@@ -95,13 +97,27 @@ class CombineRooms(commands.Cog):
                 return False
         # user_limit of 0 means there's no limit
         # determine position with same name +1
-        new_position = 0
-        new_room_number = 1
+        previous_position = 0
+        previous_number = 0
         acronym = await self._get_acronym(guild)
         capacity = await self._room_capacity(guild)
-        room_name = "{0} // {1}{2}".format(tier, acronym.lower(), new_room_number)
+        
+        for vc in category.voice_channels:
+            vc_name_substring = "{0} // {1}".format(tier, acronym.lower())
+            if vc_name_substring in vc.name:
+                this_number = int(vc.name[len(vc_name_substring):])
+                print(this_number)
+                if this_number == previous_number + 1:
+                    previous_number = this_number
+                    previous_position = vc.position
+                else:
+                    break
 
-        await category.create_voice_channel(room_name, permissions_synced=True, user_limit=capacity, position=new_position)
+        new_position = previous_position + 1
+        new_room_number = previous_number + 1 
+        new_room_name = "{0} // {1}{2}".format(tier, acronym.lower(), new_room_number)
+
+        await category.create_voice_channel(new_room_name, permissions_synced=True, user_limit=capacity, position=new_position)
 
     async def _maybe_remove_combines_voice(self, guild: discord.Guild, tier: str, category: discord.CategoryChannel=None):
         empty_vcs = []
@@ -120,15 +136,12 @@ class CombineRooms(commands.Cog):
         return None
 
     async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
-        return False
-
-
         categories = await self._combines_categories(member.guild)
         if not categories:
             return False
         
         if voice_channel.category_id in categories and len(voice_channel.members) == 1:
-            tier_cat = self._get_category_by_id(member.guild, voice_channel.id)
+            tier_cat = self._get_category_by_id(member.guild, voice_channel.category_id)
             tier_str = self._get_category_tier(tier_cat)
             await self._add_combines_voice(member.guild, tier_str, tier_cat)
             return True
@@ -138,7 +151,7 @@ class CombineRooms(commands.Cog):
         categories = await self._combines_categories(member.guild)
         if not categories:
             return False
-        
+
         if voice_channel.category_id in categories and len(voice_channel.members) == 0:
             tier_cat = self._get_category_by_id(member.guild, voice_channel.category_id)
             tier_str = self._get_category_tier(tier_cat)
@@ -146,7 +159,6 @@ class CombineRooms(commands.Cog):
             return True
         return False
      
-
     def _get_role_by_name(self, guild: discord.Guild, name: str):
         for role in guild.roles:
             if role.name == name:
