@@ -19,8 +19,9 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 - `<p>stopcombines`
   Runs a teardown for all combine channels. This will remove all channels under the "Combine Rooms" categorty as well as the category itself.
 
-### Roles involved:
+#### Roles involved:
 - League
+- Muted
 
 ## Customization
 
