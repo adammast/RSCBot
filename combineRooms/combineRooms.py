@@ -117,6 +117,7 @@ class CombineRooms(commands.Cog):
         response = "Combines are now **{0}**.".format(public_str)
         await ctx.send(response)
 
+
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
         # ignore when voice activity is within the same room
