@@ -52,6 +52,27 @@ class CombineRooms(commands.Cog):
         response = "Combines are currently **{0}**.".format(public_str)
         await ctx.send(response)
 
+    @commands.command(aliases=["acronym"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getAcronym(self, ctx):
+        """
+        Gets the acronym registered for combines. (Default: RSC)
+        """
+        acronym = await self._get_acronym(ctx.guild)
+        await ctx.send("The acronym registered for the combines cog is **{0}**.".format(acronym))
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setAcronym(self, ctx, new_acronym: str):
+        """
+        Sets the server acronym used in the combines category. (Default: RSC)
+        This is primarily used in #combine-details message
+        """
+        await self._save_acronym(ctx.guild, new_acronym)
+        await ctx.send("The acronym has been registered as **{0}**.".format(new_acronym))
+
     @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
