@@ -39,6 +39,34 @@ class CombineRooms(commands.Cog):
         await self._save_combine_category_ids(ctx.guild, [])
         await ctx.send("Done.")
 
+    @commands.command(aliases=["setroomcap", "src"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setRoomCapacity(self, ctx, size: int):
+        """
+        Sets the maximum number of members allowed in combine voice channels. (Default: 10)
+        """
+        if size < 2:
+            await ctx.send(":x: There is a minimum of 2 players per voice channel.")
+            return False
+
+        await self._update_combine_rooms(ctx, capacity=size)
+        await self._save_room_capacity(ctx.guild, size)
+        await ctx.send("Done")
+        return True
+
+    @commands.command(aliases=["roomcap", "grc"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getRoomCapacity(self, ctx):
+        """
+        Gets the current capacity of combine voice rooms (Default: 10)
+        This capacity is for all members, players and scouts combined.
+        """
+        cap = await self._room_capacity(ctx.guild)
+        await ctx.send("Combines currently have a maximum size of {0} members.".format(cap))
+        return
+
     @commands.command(aliases=["combinePublicity", "checkCombinePublicity", "ccp", "combineStatus", "checkCombineStatus", "ccs"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -70,9 +98,8 @@ class CombineRooms(commands.Cog):
         Sets the server acronym used in the combines category. (Default: RSC)
         This is primarily used in #combine-details message
         """
-        old_acronym = await self._get_acronym(ctx.guild)
+        await self._update_combine_rooms(ctx, acronym=new_acronym)
         await self._save_acronym(ctx.guild, new_acronym)
-        await self._update_combine_room_names(ctx, old_acronym, new_acronym)
         await ctx.send("The acronym has been registered as **{0}**.".format(new_acronym))
 
     @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
@@ -167,19 +194,23 @@ class CombineRooms(commands.Cog):
 
         await category.create_voice_channel(new_room_name, permissions_synced=True, user_limit=capacity, position=new_position)
 
-    async def _update_combine_room_names(self, ctx, old_acronym, new_acronym):
+    async def _update_combine_rooms(self, ctx, acronym:str=None, capacity:int=None):
         categories = await self._combine_categories(ctx.guild)
+        old_acronym = await self._get_acronym(ctx.guild)
         for tier_cat in categories:
             for vc in tier_cat.voice_channels:
                 tier = self._get_category_tier(tier_cat)
                 vc_name_substring = "{0} // {1}".format(tier, old_acronym.lower())
                 if vc_name_substring in vc.name:
-                    room_num = int(vc.name[len(vc_name_substring):])
-                    new_room_name = "{0} // {1}{2}".format(tier, new_acronym.lower(), room_num)
-                    await vc.edit(name=new_room_name)
+                    if acronym:
+                        room_num = int(vc.name[len(vc_name_substring):])
+                        new_room_name = "{0} // {1}{2}".format(tier, acronym.lower(), room_num)
+                        await vc.edit(name=new_room_name)
+                    if capacity:
+                        await vc.edit(user_limit=capacity)
 
     async def _maybe_remove_combines_voice(self, guild: discord.Guild, tier: str, category: discord.CategoryChannel=None):
-        acronym = self._get_acronym(guild)
+        acronym = await self._get_acronym(guild)
         empty_vcs = []
         for vc in category.voice_channels:
             if len(vc.members) ==  0 and "{0} // {1}".format(tier, acronym.lower()) in vc.name:
