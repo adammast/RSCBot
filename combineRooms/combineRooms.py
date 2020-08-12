@@ -70,7 +70,9 @@ class CombineRooms(commands.Cog):
         Sets the server acronym used in the combines category. (Default: RSC)
         This is primarily used in #combine-details message
         """
+        old_acronym = await self._get_acronym(ctx.guild)
         await self._save_acronym(ctx.guild, new_acronym)
+        await self._update_combine_room_names(ctx, old_acronym, new_acronym)
         await ctx.send("The acronym has been registered as **{0}**.".format(new_acronym))
 
     @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
@@ -153,7 +155,6 @@ class CombineRooms(commands.Cog):
             vc_name_substring = "{0} // {1}".format(tier, acronym.lower())
             if vc_name_substring in vc.name:
                 this_number = int(vc.name[len(vc_name_substring):])
-                print(this_number)
                 if this_number == previous_number + 1:
                     previous_number = this_number
                     previous_position = vc.position
@@ -166,10 +167,22 @@ class CombineRooms(commands.Cog):
 
         await category.create_voice_channel(new_room_name, permissions_synced=True, user_limit=capacity, position=new_position)
 
+    async def _update_combine_room_names(self, ctx, old_acronym, new_acronym):
+        categories = await self._combine_categories(ctx.guild)
+        for tier_cat in categories:
+            for vc in tier_cat.voice_channels:
+                tier = self._get_category_tier(tier_cat)
+                vc_name_substring = "{0} // {1}".format(tier, old_acronym.lower())
+                if vc_name_substring in vc.name:
+                    room_num = int(vc.name[len(vc_name_substring):])
+                    new_room_name = "{0} // {1}{2}".format(tier, new_acronym.lower(), room_num)
+                    await vc.edit(name=new_room_name)
+
     async def _maybe_remove_combines_voice(self, guild: discord.Guild, tier: str, category: discord.CategoryChannel=None):
+        acronym = self._get_acronym(guild)
         empty_vcs = []
         for vc in category.voice_channels:
-            if len(vc.members) ==  0 and "{0} // rsc".format(tier) in vc.name:
+            if len(vc.members) ==  0 and "{0} // {1}".format(tier, acronym.lower()) in vc.name:
                 empty_vcs.append(vc)
 
         for vc in empty_vcs[1:]:
