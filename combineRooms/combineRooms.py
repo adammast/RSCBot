@@ -104,16 +104,16 @@ class CombineRooms(commands.Cog):
 
     async def _add_combines_category(self, ctx, name: str):
         # check if category exists already
-        overwrites = {}
+        league_role = self._get_role_by_name(ctx.guild, "League")
+        is_public = await self._is_public_combine(ctx.guild)
+        overwrites = {
+            league_role: discord.PermissionOverwrite(view_channel=True, connect=True, send_messages=False),
+            ctx.guild.default_role: discord.PermissionOverwrite(view_channel=is_public, connect=is_public, send_messages=False)
+        }
         muted_role = self._get_role_by_name(ctx.guild, "Muted")
         if muted_role:
             overwrites[muted_role] = discord.PermissionOverwrite(connect=False)
         
-        if not await self._is_public_combine(ctx.guild):
-            league_role = self._get_role_by_name(ctx.guild, "League")
-            overwrites[ctx.guild.default_role] = discord.PermissionOverwrite(view_channel=False, connect=False, send_messages=False)
-            overwrites[league_role] = discord.PermissionOverwrite(view_channel=True, connect=True, send_messages=False)
-
         return await ctx.guild.create_category(name, overwrites=overwrites)
 
     async def _add_combines_voice(self, guild: discord.Guild, tier: str, category: discord.CategoryChannel=None):
