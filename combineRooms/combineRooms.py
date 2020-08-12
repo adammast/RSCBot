@@ -12,20 +12,20 @@ class CombineRooms(commands.Cog):
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("TeamManager")
     
-    @commands.command()
+    @commands.command(aliases=["startcombines"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def startcombines(self, ctx):
+    async def startCombines(self, ctx):
         if not await self._combine_category_ids(ctx.guild):
             await self._start_combines(ctx)
             await ctx.send("Combine Rooms have been created.")
             return True
         await ctx.send("Combine Rooms have already been created.")
     
-    @commands.command()
+    @commands.command(aliases=["stopcombines"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def stopcombines(self, ctx):
+    async def stopCombines(self, ctx):
         if await self._combine_category_ids(ctx.guild):
             await self._stop_combines(ctx)
             await ctx.send("Combine Rooms have been removed.")

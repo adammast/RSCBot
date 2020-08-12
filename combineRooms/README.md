@@ -13,10 +13,10 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 
 ## Usage
 
-- `<p>startcombines`
+- `<p>startCombines`
   Creates a Combine Rooms channel category with all associated text and voice channels.
 
-- `<p>stopcombines`
+- `<p>stopCombines`
   Runs a teardown for all combine channels. This will remove all channels under the "Combine Rooms" categorty as well as the category itself.
 
 #### Roles involved:
