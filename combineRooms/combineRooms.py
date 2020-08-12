@@ -16,7 +16,7 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def startcombines(self, ctx):
-        if not await self._combines_categories(ctx.guild):
+        if not await self._combine_category_ids(ctx.guild):
             await self._start_combines(ctx)
             await ctx.send("Combine Rooms have been created.")
             return True
@@ -26,7 +26,7 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def stopcombines(self, ctx):
-        if await self._combines_categories(ctx.guild):
+        if await self._combine_category_ids(ctx.guild):
             await self._stop_combines(ctx)
             await ctx.send("Combine Rooms have been removed.")
             return True
@@ -36,9 +36,36 @@ class CombineRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearcombines(self, ctx):
-        await self._save_combines_categories(ctx.guild, [])
+        await self._save_combine_category_ids(ctx.guild, [])
         await ctx.send("Done.")
 
+    @commands.command(aliases=["combinePublicity", "checkCombinePublicity", "ccp", "combineStatus", "checkCombineStatus", "ccs"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getCombinePublicity(self, ctx):
+        """
+        Gets the current status (public/private) of the combines.
+        If combines are **Public**, any member may participate.
+        If combines are **Private**, only members with the "League" role may particpate.
+        """
+        public_str = "public" if await self._is_public_combine(ctx.guild) else "private"
+        response = "Combines are currently **{0}**.".format(public_str)
+        await ctx.send(response)
+
+    @commands.command(aliases=["togglePub", "toggleCombines", "togglePublicCombine", "tpc", "toggleCombinePermissions", "tcp"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def togglePublicity(self, ctx):
+        """
+        Toggles the status (public/private) of the combines. (Default: Public)
+        If combines are **Public**, any member may participate.
+        If combines are **Private**, only members with the "League" role may particpate.
+        """
+        is_public = await self._toggle_public_combine(ctx.guild)
+
+        public_str = "public" if is_public else "private"
+        response = "Combines are now **{0}**.".format(public_str)
+        await ctx.send(response)
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -53,7 +80,6 @@ class CombineRooms(commands.Cog):
         if before.channel:
             await self._member_leaves_voice(member, before.channel)
 
-    
 
     async def _start_combines(self, ctx):
         # Creates a combines category and room for each tier
@@ -63,18 +89,18 @@ class CombineRooms(commands.Cog):
             tier_category = await self._add_combines_category(ctx, "{0} Combines".format(tier))
             await self._add_combines_voice(ctx.guild, tier, tier_category)
             categories.append(tier_category.id)
-        await self._save_combines_categories(ctx.guild, categories)
+        await self._save_combine_category_ids(ctx.guild, categories)
         return True
         
     async def _stop_combines(self, ctx):
         # remove combines channels, category
-        saved_categories = await self._combines_categories(ctx.guild)
+        saved_categories = await self._combine_category_ids(ctx.guild)
         for category in ctx.guild.categories:
             if category.id in saved_categories:
                 for channel in category.channels:
                     await channel.delete()
                 await category.delete()
-        await self._save_combines_categories(ctx.guild, None)
+        await self._save_combine_category_ids(ctx.guild, None)
 
     async def _add_combines_category(self, ctx, name: str):
         # check if category exists already
@@ -129,14 +155,14 @@ class CombineRooms(commands.Cog):
             await vc.delete()
 
     async def _get_tier_category(guild: discord.Guild, tier: str):
-        categories = await self._combines_categories(guild)
+        categories = await self._combine_category_ids(guild)
         for tier_cat in categories:
             if tier == tier_cat.name:
                 return tier_cat
         return None
 
     async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
-        categories = await self._combines_categories(member.guild)
+        categories = await self._combine_category_ids(member.guild)
         if not categories:
             return False
         
@@ -148,7 +174,7 @@ class CombineRooms(commands.Cog):
         return False
 
     async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
-        categories = await self._combines_categories(member.guild)
+        categories = await self._combine_category_ids(member.guild)
         if not categories:
             return False
 
@@ -165,14 +191,22 @@ class CombineRooms(commands.Cog):
                 return role
         return None
 
-    async def _save_combines_categories(self, guild, categories):
+    async def _save_combine_category_ids(self, guild, categories):
         if categories:
             return await self.config.guild(guild).Categories.set(categories)
         return await self.config.guild(guild).Categories.set([])
 
-    async def _combines_categories(self, guild):
+    async def _combine_category_ids(self, guild):
         return await self.config.guild(guild).Categories()
    
+    async def _combine_categories(self, guild):
+        cat_ids = await self._combine_category_ids(guild)
+        combine_categories = []
+        for category in guild.categories:
+            if category.id in cat_ids:
+                combine_categories.append(category)
+        return combine_categories
+
     def _get_category_by_id(self, guild, category_id):
         for category in guild.categories:
             if category.id == category_id:
@@ -191,6 +225,13 @@ class CombineRooms(commands.Cog):
 
     async def _toggle_public_combine(self, guild):
         was_public = await self._is_public_combine(guild)
+        
+        #switch combine rooms publicity:
+        league_role = self._get_role_by_name(guild, "League")
+        for category in await self._combine_categories(guild):
+            await category.set_permissions(guild.default_role, view_channel=not was_public, connect=not was_public, send_messages=False)
+            await category.edit(sync_permissions=True)
+
         await self.config.guild(guild).public_combines.set(not was_public)
         return not was_public # is_public (after call)
 
