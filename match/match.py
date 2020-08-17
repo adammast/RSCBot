@@ -14,7 +14,7 @@ defaults = {"MatchDay": 0, "Schedule": {}}
 class Match(commands.Cog):
     """Used to get the match information"""
 
-    MATHCES_KEY = "Matches"
+    MATCHES_KEY = "Matches"
     TEAM_DAY_INDEX_KEY = "TeamDays"
 
     def __init__(self, bot):
@@ -256,11 +256,12 @@ class Match(commands.Cog):
             'home': home,
             'away': away,
             'roomName': roomName,
-            'roomPass': roomPass
+            'roomPass': roomPass,
+            'stream_info': None
         }
 
         # Append new match and create an index in "teamDays" for both teams.
-        matches = schedule.setdefault(self.MATHCES_KEY, [])
+        matches = schedule.setdefault(self.MATCHES_KEY, [])
         team_days = schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
 
         home_key = self._team_day_key(home, match_day)
@@ -278,6 +279,19 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
+    async def _set_match_on_stream(self, ctx, match_day, team, stream_slot, time_slot=None):
+        schedule = await self._schedule(ctx)
+        for match in schedule[self.MATCHES_KEY]:
+            if match['matchDay'] == match_day and (one_team == match['home'] or one_team == match['away']):
+                match['stream_details'] = {
+                    'on_stream': True,
+                    'slot': stream_slot
+                }
+                # match['time'] = time_slot ((if time is added to match info))
+                await self._save_schedule(ctx, schedule)
+                return True
+        return False
+
     async def _schedule(self, ctx):
         return await self.config.guild(ctx.guild).Schedule()
 
@@ -286,11 +300,11 @@ class Match(commands.Cog):
 
     async def _matches(self, ctx):
         schedule = await self._schedule(ctx)
-        return schedule.setdefault(self.MATHCES_KEY, {})
+        return schedule.setdefault(self.MATCHES_KEY, {})
 
     async def _save_matches(self, ctx, matches):
         schedule = await self._schedule(ctx)
-        schedule[self.MATHCES_KEY] = matches
+        schedule[self.MATCHES_KEY] = matches
         await self._save_schedule(ctx, schedule)
 
     async def _team_days_index(self, ctx):
@@ -329,7 +343,8 @@ class Match(commands.Cog):
         #     'home': home,
         #     'away': away,
         #     'roomName': roomName,
-        #     'roomPass': roomPass
+        #     'roomPass': roomPass,
+        #     'stream_details' : <stream details/None>
         # }
         home = match['home']
         away = match['away']
@@ -395,10 +410,18 @@ class Match(commands.Cog):
 
     def _create_additional_info(self, user_team_name, home, away):
         additional_info = ""
-        if user_team_name and user_team_name == home:
-            additional_info += home_info
-        elif user_team_name and user_team_name == away:
-            additional_info += away_info
+        if user_team_name:
+            on_stream = False
+            if on_stream:
+                if user_team_name == home:
+                    additional_info += home_info
+                elif user_team_name == away:
+                    additional_info += away_info
+            else:
+                if user_team_name == home:
+                    additional_info += stream_info.format("home")
+                elif user_team_name == away:
+                    additional_info += stream_info.format("away")
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
@@ -469,6 +492,14 @@ away_info = ("You are the **away** team. You will join the room "
             "using the above information once the other team "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
+
+stream_info = ("**This match will be scheduled on stream.** "
+            "You are the **{0}** team. You will join the room "
+            "using the above information once you have been contacted "
+            "by a member of the media committee. Do not join a team "
+            "until a stream host or caster has instructed you to do so."
+            "\nRemember to inform the stream committee what server "
+            "region your team would like to play on.")
 
 regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                 "and screenshots of the end-of-game scoreboard. Do not leave "

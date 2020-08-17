@@ -6,6 +6,8 @@ from redbot.core import checks
 
 defaults = {"Applications": []}
 
+# TODO: (All listed todos) +league approve applications, alert all game players when match has been updated, include which stream its on
+
 class StreamSignupManager(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
@@ -17,7 +19,7 @@ class StreamSignupManager(commands.Cog):
     @commands.command(aliases=["applications", "getapps", "listapps"])
     @commands.guild_only()
     async def viewapps(self, ctx):
-        applications = await self._get_applications(ctx.guild)
+        applications = await self._applications(ctx.guild)
         message = "Pending applications ({}):".format(len(applications))
         if applications:
             for app in applications:
@@ -25,7 +27,7 @@ class StreamSignupManager(commands.Cog):
                     app['match_day'],
                     app['requested_by'],
                     app['request_recipient'],
-                    app['time_slot'],
+                    app['stream_slot'],
                     app['status']
                 )
             await ctx.send(message)
@@ -36,21 +38,38 @@ class StreamSignupManager(commands.Cog):
 
     @commands.command(aliases=["streamapply", "afs"])
     @commands.guild_only()
-    async def applyForStream(self, ctx, match_day, time_slot):
+    async def applyForStream(self, ctx, match_day, stream_slot):
         requesting_member = ctx.message.author
-        other_captain = requesting_member # TODO: get actual other captain
-        await self._add_application(ctx.guild, requesting_member, other_captain, match_day, time_slot)
+        requesting_team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
+        match = await self.match_cog.get_match_from_day_team(ctx, match_day, other_team)
 
-        message = ("You have been asked to play **match day {0}** on stream at the **{1} time slot**. "
+        if match['home'] == requesting_team:
+            other_team = match['away']
+        elif match['away'] == requesting_team:
+            other_team = match['away']
+        else:
+            await ctx.send(":x: Opposing team not found.")
+            return False
+
+        other_franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, other_team)
+        other_captain = await self.team_manager_cog.get_team_captain(ctx, other_franchise_role, tier_role)
+        
+        # send request to GM if team has no captain
+        if not other_captain:
+            other_captain = self.team_manager_cog._get_gm(ctx, other_franchise_role)
+
+        await self._add_application(ctx.guild, requesting_member, match stream_slot)
+
+        message = ("You have been asked to play **match day {0}** ({} vs. {}) on stream at the **{1} time slot**. "
         "Please respond to this request in the **#{2}** channel in the **{3}** server with one of the following:"
         "\n\t - To accept: `[p]streamapp accept {0}`"
         "\n\t - To reject: `[p]streamapp reject {0}`"
-        "\nThis stream application will not be considered until you respond.").format(match_day, time_slot, ctx.channel, ctx.guild)
+        "\nThis stream application will not be considered until you respond.").format(match_day, stream_slot, ctx.channel, ctx.guild)
         await self._send_member_message(ctx, other_captain, message)
 
-    @commands.command(aliases=["streamApplications"])
+    @commands.command(aliases=["streamapp", "streamApplications", "streamapplications"])
     @commands.guild_only()
-    async def streamapp(self, ctx, action, match_day):
+    async def streamApp(self, ctx, action, match_day):
         # possible improvement: maybe make this central command
         if action not in ["accept", "reject"]:
             await ctx.send("\"{0}\" is not a recognized action. Please either _accept_ or _reject_ the stream application.".format(response))
@@ -65,8 +84,8 @@ class StreamSignupManager(commands.Cog):
             else:
                 await ctx.send("Your application to play match {0} on stream has been removed.".format(match_day))
                 return True
-        
-        await ctx.send("Stream Application not found.")
+        else:
+            await ctx.send(":x: Stream Application not found.")
 
     @commands.command(aliases=['clearapps', 'removeapps'])
     @commands.guild_only()
@@ -74,69 +93,9 @@ class StreamSignupManager(commands.Cog):
         await self._clear_applications(ctx.guild)
         await ctx.send("Done.")
 
-    # Possibly remove
-    @commands.Cog.listener("on_raw_reaction_add")
-    async def on_raw_reaction_add(self, payload):
-        return False
-        channel_id = payload.channel_id
-        member = payload.member
-        emoji = payload.emoji
-        user_id = payload.user_id
-        message_id = payload.message_id
-        event_type = payload.event_type
-
-        # status_updated = await self._maybe_update_app_status(message_id, "APPLICATION_CONFIRMED")
-        status_updated = False # TODO: update here
-        if status_updated:
-            application = await self._get_application(message_id)
-            requested_by = application['requested_by']
-            request_recipient = application['request_recipient']
-            message = "Your application to play match day {0} on stream has been confirmed by {1}.".format(
-                application['match_day'],
-                application['request_recipient']
-            )
-
-    # Possibly remove
-    @commands.Cog.listener("on_message")
-    async def on_message(self, message):
-        return False
-        if str(message.channel) == "Direct Message with {0}".format(message.author):  
-            messages = await message.channel.history(limit=2).flatten()
-            
-            for m in messages:
-                if m.id == message.id:
-                    messages.remove(m)
-            
-            
-            ##
-            guild = None
-            application = None
-            guild_ids = await self.config.all_guilds()
-            for guild_id in guild_ids:
-                print(guild_id)
-                guild = await self.config.guild_from_id(guild_id)
-                # application = self._get_application(guild, message_id)
-                # if application:
-                #     break
-            ##
-
-            if not application:
-                return False
-
-            verification = (
-                application['message_id'] == messages[0].id
-                and re.match(r'^((we|i)\saccept|accepted)', message.content.lower())
-            )
-
-            if verification:
-                await message.author.send("I see you've accepted. Very good.")
-                # self.config.member_from_ids(guild_id, member_id)
-                
-
-    async def _add_application(self, guild, requested_by, request_recipient, match_day, time_slot):
+    async def _add_application(self, guild, requested_by, match_data, stream_slot, time_slot=None):
         #TODO: avoid duplicate applications
-        applications = await self._get_applications(guild)
-        match = await self.match_cog.get_match_from_day_team(ctx, match_day, team_name):
+        applications = await self._applications(guild)
         # Match format:
         # match_data = {
         #     'matchDay': match_day,
@@ -150,43 +109,25 @@ class StreamSignupManager(commands.Cog):
             "status": "PENDING_OPP_CONFIRMATION", # pending opponent confirmation
             "requested_by": requested_by.id,
             "request_recipient": request_recipient.id,
-            "home_team": match['home'],
-            "away_team": match['away'],
+            "home_team": match_data['home'],
+            "away_team": match_data['away'],
             "match_day": match_day,
+            "stream_slot": stream_slot
             "time_slot": time_slot
         }
         #Possible improvement: Update match info instead of adding a new field/don't duplicate saved data/get match ID reference?
         applications.append(new_payload)
         await self._save_applications(guild, applications)
 
-    # Not used
-    async def _maybe_get_application(self, guild, message_id):
-        found = False
-        # if guild in self.config:
-        #     if guild == key:
-        #         found = True
-        #         break
-        if not found:
-            return None
-        return None
-
-
-
-        applications = await self.config.guild(guild).Applications
-        for application in applications:
-            if application.message_id == message_id:
-                return application
-        return None
-    
     async def _update_application(self, guild, recipient, match_day, is_accepted):
-        applications = self._get_applications(guild)
+        applications = self._applications(guild)
         for app in applications:
             if app['request_recipient'] == recipient.id and app['match_day'] == match_day:
                 if app['status'] == "PENDING_OPP_CONFIRMATION":
                     if is_accepted:
                         app['status'] == "PENDING_LEAGUE_APPROVAL"
                         await self._save_applications(guild, applications)
-                        # TODO: send update to requesting player
+                        # TODO: send update to requesting player, send alert to media channel feed
                         return True
                     else:
                         applications.remove(app)
@@ -195,17 +136,8 @@ class StreamSignupManager(commands.Cog):
                         return True
         return False
 
-    async def _get_applications(self, guild):
+    async def _applications(self, guild):
         return await self.config.guild(guild).Applications()
-
-    # TODO: remove this
-    async def _maybe_update_app_status(self, message_id, status):
-        applications = await self.config.guild(ctx.guild).Applications
-        for application in applications:
-            if application.message_id == message_id:
-                application['status'] = status
-                return True
-        return False
 
     async def _save_applications(self, guild, applications):
         await self.config.guild(guild).Applications.set(applications)
@@ -218,3 +150,9 @@ class StreamSignupManager(commands.Cog):
         message = message.replace('[p]', ctx.prefix)
         message = message_title + message
         return await member.send(message)
+
+    def _get_member_from_id(self, guild, member_id):
+        for member in guild.members:
+            if member.id == member_id:
+                return member
+        return None
