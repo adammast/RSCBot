@@ -279,15 +279,16 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
-    async def _set_match_on_stream(self, ctx, match_day, team, stream_slot, time_slot=None):
+    async def _set_match_on_stream(self, ctx, match_day, team, stream_slot, time=None, channel=None):
         schedule = await self._schedule(ctx)
         for match in schedule[self.MATCHES_KEY]:
             if match['matchDay'] == match_day and (one_team == match['home'] or one_team == match['away']):
                 match['stream_details'] = {
                     'on_stream': True,
+                    'channel': channel,
                     'slot': stream_slot
                 }
-                # match['time'] = time_slot ((if time is added to match info))
+                #match['time'] = time  # ((could add time param to match))
                 await self._save_schedule(ctx, schedule)
                 return True
         return False

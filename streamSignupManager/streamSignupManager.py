@@ -16,7 +16,7 @@ class StreamSignupManager(commands.Cog):
         self.team_manager_cog = bot.get_cog("TeamManager")
         self.bot = bot
     
-    @commands.command(aliases=["applications", "getapps", "listapps"])
+    @commands.command(aliases=["applications", "getapps", "listapps", "apps"])
     @commands.guild_only()
     async def viewapps(self, ctx):
         applications = await self._applications(ctx.guild)
@@ -34,49 +34,28 @@ class StreamSignupManager(commands.Cog):
             return True
         await ctx.send("\n{0}\n\t(None)".format(message))
         return False
-
-
-    @commands.command(aliases=["streamapply", "afs"])
-    @commands.guild_only()
-    async def applyForStream(self, ctx, match_day, stream_slot):
-        requesting_member = ctx.message.author
-        requesting_team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
-        match = await self.match_cog.get_match_from_day_team(ctx, match_day, other_team)
-
-        if match['home'] == requesting_team:
-            other_team = match['away']
-        elif match['away'] == requesting_team:
-            other_team = match['away']
-        else:
-            await ctx.send(":x: Opposing team not found.")
-            return False
-
-        other_franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, other_team)
-        other_captain = await self.team_manager_cog.get_team_captain(ctx, other_franchise_role, tier_role)
         
-        # send request to GM if team has no captain
-        if not other_captain:
-            other_captain = self.team_manager_cog._get_gm(ctx, other_franchise_role)
-
-        await self._add_application(ctx.guild, requesting_member, match stream_slot)
-
-        message = ("You have been asked to play **match day {0}** ({} vs. {}) on stream at the **{1} time slot**. "
-        "Please respond to this request in the **#{2}** channel in the **{3}** server with one of the following:"
-        "\n\t - To accept: `[p]streamapp accept {0}`"
-        "\n\t - To reject: `[p]streamapp reject {0}`"
-        "\nThis stream application will not be considered until you respond.").format(match_day, stream_slot, ctx.channel, ctx.guild)
-        await self._send_member_message(ctx, other_captain, message)
-
-    @commands.command(aliases=["streamapp", "streamApplications", "streamapplications"])
+    @commands.command(aliases=["streamapp", "streamapply", "streamApplications", "streamapplications"])
     @commands.guild_only()
-    async def streamApp(self, ctx, action, match_day):
-        # possible improvement: maybe make this central command
+    async def streamApp(self, ctx, action, match_day, stream_slot=None):
+        if action == "apply":
+            if not stream_slot:
+                await ctx.send(":x: stream slot must be included in an application.")
+                return False
+            requesting_member = ctx.message.author
+            requesting_team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
+            match = await self.match_cog.get_match_from_day_team(ctx, match_day, other_team)
+            
+            applied = await self._add_application(ctx.guild, requesting_member, match, stream_slot)
+            if applied:
+                await ctx.send("Done.")
+                return True
         if action not in ["accept", "reject"]:
             await ctx.send("\"{0}\" is not a recognized action. Please either _accept_ or _reject_ the stream application.".format(response))
             return False
 
         accepted = True if action == "accept" else False
-        updated = await self._update_application(ctx.guild, ctx.author, match_day, accepted)
+        updated = await self._accept_reject_application(ctx.guild, ctx.author, match_day, accepted)
         if updated:
             if accepted:
                 await ctx.send("Your application to play match {0} on stream has been updated.".format(match_day))
@@ -93,33 +72,46 @@ class StreamSignupManager(commands.Cog):
         await self._clear_applications(ctx.guild)
         await ctx.send("Done.")
 
-    async def _add_application(self, guild, requested_by, match_data, stream_slot, time_slot=None):
-        #TODO: avoid duplicate applications
-        applications = await self._applications(guild)
-        # Match format:
-        # match_data = {
-        #     'matchDay': match_day,
-        #     'matchDate': match_date,
-        #     'home': home,
-        #     'away': away,
-        #     'roomName': roomName,
-        #     'roomPass': roomPass
-        # }
+    async def _add_application(self, ctx, requested_by, match_data, stream_slot):
+        applications = await self._applications(ctx.guild)
+        if self._get_application(match_data):
+            await ctx.send(":x: Application is already in progress.")
+            return False
+            
+        requesting_team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
+        if match_data['home'] == requesting_team:
+            other_team = match_data['away']
+        else:
+            other_team = match_data['home']
+        other_franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, other_team)
+        other_captain = await self.team_manager_cog.get_team_captain(ctx, other_franchise_role, tier_role)
+        # send request to GM if team has no captain
+        if not other_captain:
+            other_captain = self.team_manager_cog._get_gm(ctx, other_franchise_role)
+
         new_payload = {
             "status": "PENDING_OPP_CONFIRMATION", # pending opponent confirmation
             "requested_by": requested_by.id,
-            "request_recipient": request_recipient.id,
+            "request_recipient": other_captain.id,
             "home_team": match_data['home'],
             "away_team": match_data['away'],
             "match_day": match_day,
-            "stream_slot": stream_slot
-            "time_slot": time_slot
+            "stream_slot": stream_slot,
+            "time_slot": None
         }
-        #Possible improvement: Update match info instead of adding a new field/don't duplicate saved data/get match ID reference?
+        
+        # Possible improvement: Update match info instead of adding a new field/don't duplicate saved data/get match ID reference?
+        # Add application
         applications.append(new_payload)
-        await self._save_applications(guild, applications)
+        await self._save_applications(ctx.guild, applications)
 
-    async def _update_application(self, guild, recipient, match_day, is_accepted):
+        # Challenge other team
+        message = challenged_message.format(match_day=match_day, home=home, away=away, stream_slot=stream_slot, channel=ctx.channel)
+        await self._send_member_message(ctx, other_captain, message)
+
+        return True
+
+    async def _accept_reject_application(self, guild, recipient, match_day, is_accepted):
         applications = self._applications(guild)
         for app in applications:
             if app['request_recipient'] == recipient.id and app['match_day'] == match_day:
@@ -139,6 +131,12 @@ class StreamSignupManager(commands.Cog):
     async def _applications(self, guild):
         return await self.config.guild(guild).Applications()
 
+    async def _get_application(self, guild, match):
+        for app in await self._applications(guild):
+            if app['home_team'] == match['home'] and app['match_day'] == match['matchDay']:
+                return app
+        return None
+
     async def _save_applications(self, guild, applications):
         await self.config.guild(guild).Applications.set(applications)
 
@@ -156,3 +154,24 @@ class StreamSignupManager(commands.Cog):
             if member.id == member_id:
                 return member
         return None
+
+challenged_msg = ("You have been asked to play **match day {match_day}** ({home} vs. {away}) on stream at the **{time_slot} time slot**. "
+    "Please respond to this request in the **#{channel}** channel with one of the following:"
+    "\n\t - To accept: `[p]streamapp accept {match_day}`"
+    "\n\t - To reject: `[p]streamapp reject {match_day}`"
+    "\nThis stream application will not be considered until you respond.")
+
+challenge_accepted_msg = (":white_check_mark: Your stream application for **match day {match_day}** ({home} vs. {away}) has been accepted by your opponents, and is "
+    "now pending league approval. An additional message will be sent when a decision is made regarding this application.")
+
+challenge_rejected_msg = (":x: Your stream application for **match day {match_day}** ({home} vs. {away}) has been rejected by your opponents, and will "
+    "not be considered moving forward.")
+
+#TODO: add stream channel (rsc vs rsc_2, etc)
+league_approved_msg = ("**Congratulations!** You have been selected to play **match day {match_day}** ({home} vs. {away}) on stream at "
+    "the **{3} time slot**. Feel free to use the `[p]match {match_day}` in your designated bot input channel see updated "
+    "details of this match. We look forward to seeing you on stream!")
+
+league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
+    "However, we will keep your application on file in case anything changes.")
+
