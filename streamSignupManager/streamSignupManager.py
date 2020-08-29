@@ -4,7 +4,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"Applications": []}
+defaults = {"Applications": {}, "Schedule": {}, "Time_Slots": {1: "11:00pm ET", 2: "11:30pm ET"}, "Stream_Channel": None}
 
 # TODO: (All listed todos) +league approve applications, alert all game players when match has been updated, include which stream its on
 
@@ -18,18 +18,19 @@ class StreamSignupManager(commands.Cog):
     
     @commands.command(aliases=["applications", "getapps", "listapps", "apps"])
     @commands.guild_only()
-    async def viewapps(self, ctx):
+    async def viewapps(self, ctx, match_day=None, stream_slot=None):
         applications = await self._applications(ctx.guild)
         message = "Pending applications ({}):".format(len(applications))
         if applications:
             for app in applications:
-                message += "\nMD {0}: {1} vs. {2} at {3} (Status: {4})".format(
-                    app['match_day'],
-                    app['requested_by'],
-                    app['request_recipient'],
-                    app['stream_slot'],
-                    app['status']
-                )
+                if match_day == app['match_day'] or not match_day:
+                    message += "\nMD {0}: {1} vs. {2} at {3} (Status: {4})".format(
+                        app['match_day'],
+                        app['requested_by'],
+                        app['request_recipient'],
+                        app['stream_slot'],
+                        app['status']
+                    )
             await ctx.send(message)
             return True
         await ctx.send("\n{0}\n\t(None)".format(message))
@@ -72,6 +73,27 @@ class StreamSignupManager(commands.Cog):
         await self._clear_applications(ctx.guild)
         await ctx.send("Done.")
 
+    @commands.command(aliases=['reviewapps', 'reviewApplications', 'approveApps'])
+    @commands.guild_only()
+    async def reviewApps(self, ctx, match_day=None):
+        applications = await self._applications(ctx.guild)
+        message = "Pending applications ({}):".format(len(applications))
+        if applications:
+            for app in applications:
+                if match_day == app['match_day'] or not match_day:
+                    message += "\nMD {0}: {1} vs. {2} at {3} (Status: {4})".format(
+                        app['match_day'],
+                        app['requested_by'],
+                        app['request_recipient'],
+                        app['stream_slot'],
+                        app['status'] 
+                    )
+            await ctx.send(message)
+            return True
+        await ctx.send("\n{0}\n\t(None)".format(message))
+        return False
+
+
     async def _add_application(self, ctx, requested_by, match_data, stream_slot):
         applications = await self._applications(ctx.guild)
         if self._get_application(match_data):
@@ -95,14 +117,13 @@ class StreamSignupManager(commands.Cog):
             "request_recipient": other_captain.id,
             "home_team": match_data['home'],
             "away_team": match_data['away'],
-            "match_day": match_day,
             "stream_slot": stream_slot,
             "time_slot": None
         }
         
         # Possible improvement: Update match info instead of adding a new field/don't duplicate saved data/get match ID reference?
         # Add application
-        applications.append(new_payload)
+        application[match_day].append(new_payload)
         await self._save_applications(ctx.guild, applications)
 
         # Challenge other team
@@ -131,6 +152,9 @@ class StreamSignupManager(commands.Cog):
     async def _applications(self, guild):
         return await self.config.guild(guild).Applications()
 
+    async def _stream_schedule(self, guild):
+        return await self.config.guild(guild).Schedule()
+
     async def _get_application(self, guild, match):
         for app in await self._applications(guild):
             if app['home_team'] == match['home'] and app['match_day'] == match['matchDay']:
@@ -139,6 +163,9 @@ class StreamSignupManager(commands.Cog):
 
     async def _save_applications(self, guild, applications):
         await self.config.guild(guild).Applications.set(applications)
+
+    async def _save_stream_schedule(self, guild, schedule):
+        await self.config.guild(guild).Schedule.set(schedule)
 
     async def _clear_applications(self, guild):
         await self.config.guild(guild).Applications.set([])
