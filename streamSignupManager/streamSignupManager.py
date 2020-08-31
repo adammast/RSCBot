@@ -27,7 +27,7 @@ class StreamSignupManager(commands.Cog):
     @commands.command(aliases=["applications", "getapps", "listapps", "apps"])
     @commands.guild_only()
     async def viewapps(self, ctx, match_day=None, time_slot=None):
-        embed = self._format_apps(ctx.guild, match_day, time_slot):
+        embed = await self._format_apps(ctx.guild, match_day, time_slot)
         if embed:
             await ctx.send(embed)
         else:
@@ -58,11 +58,11 @@ class StreamSignupManager(commands.Cog):
 
         requesting_member = ctx.message.author
         gm_role = self.team_manager_cog._find_role_by_name(ctx, self.team_manager_cog.GM_ROLE)
-        if gm_role not in requesting_member:
+        if gm_role not in requesting_member.roles:
             requesting_team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
         else:
             requesting_team = team
-            if not await self._verify_gm_team(requesting_member, requesting_team):
+            if not await self._verify_gm_team(ctx, requesting_member, requesting_team):
                 return False
             if action in ['accept', 'reject'] and team == None:
                 requesting_team = time_slot  # shifting places
@@ -109,7 +109,7 @@ class StreamSignupManager(commands.Cog):
     @commands.command(aliases=['reviewapps', 'reviewApplications', 'approveApps'])
     @commands.guild_only()
     async def reviewApps(self, ctx, match_day=None, time_slot=None):
-        embed = self._format_apps(ctx.guild, match_day, time_slot):
+        embed = await self._format_apps(ctx.guild, match_day, time_slot)
         if embed:
             await ctx.send(embed)
         else:
@@ -155,7 +155,7 @@ class StreamSignupManager(commands.Cog):
         await self._send_member_message(ctx, other_captain, message)
         return True
 
-    async def _verify_gm_team(self, gm: discord.Member, team: str):
+    async def _verify_gm_team(self, ctx, gm: discord.Member, team: str):
         try:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team)
             if franchise_role not in requesting_member.roles:
@@ -163,7 +163,7 @@ class StreamSignupManager(commands.Cog):
                 return False
             return True
         except LookupError:
-            await ctx.send(":x: {0} is not a valid team name".format(requesting_team))
+            await ctx.send(":x: {0} is not a valid team name".format(team))
             return False
 
     async def _accept_reject_application(self, ctx, recipient, match_day, is_accepted, responding_team=None):
@@ -259,7 +259,7 @@ class StreamSignupManager(commands.Cog):
         await self.config.guild(guild).Schedule.set(schedule)
 
     async def _clear_applications(self, guild):
-        await self.config.guild(guild).Applications.set([])
+        await self.config.guild(guild).Applications.set({})
     
     async def _send_member_message(self, ctx, member, message):
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
