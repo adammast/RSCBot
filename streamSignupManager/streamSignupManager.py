@@ -17,6 +17,12 @@ class StreamSignupManager(commands.Cog):
         self.match_cog = bot.get_cog("Match")
         self.team_manager_cog = bot.get_cog("TeamManager")
         self.bot = bot
+
+        # Application statuses
+        self.PENDING_OPP_CONFIRMATION_STATUS = "PENDING_OPP_CONFIRMATION"
+        self.PENDING_LEAGUE_APPROVAL_STATUS = "PENDING_LEAGUE_APPROVAL"
+        self.SCHEDULED_ON_STREAM_STATUS = "SCHEDULED_ON_STREAM"
+        self.REJECTED_STATUS = "REJECTED"
     
     @commands.command(aliases=["applications", "getapps", "listapps", "apps"])
     @commands.guild_only()
@@ -107,7 +113,8 @@ class StreamSignupManager(commands.Cog):
         if embed:
             await ctx.send(embed)
         else:
-            await ctx.send("No pending applications.")
+            # TODO: have review only show completed applications
+            await ctx.send("No completed applications have been found.")
 
     async def _add_application(self, ctx, requested_by, match_data, time_slot):
         applications = await self._applications(ctx.guild)
@@ -127,7 +134,7 @@ class StreamSignupManager(commands.Cog):
             other_captain = self.team_manager_cog._get_gm(ctx, other_franchise_role)
 
         new_payload = {
-            "status": "PENDING_OPP_CONFIRMATION", # pending opponent confirmation
+            "status": self.PENDING_OPPONENT_CONFIRMATION_STATUS,
             "requested_by": requested_by.id,
             "request_recipient": other_captain.id,
             "home": match_data['home'],
@@ -166,21 +173,37 @@ class StreamSignupManager(commands.Cog):
         else:
             gm_team_match = True
 
-        for app in applications:
-            if app['request_recipient'] == recipient.id and app['match_day'] == match_day:
+        for app in applications[match_day]:
+            if app['request_recipient'] == recipient.id:
                 if responding_team:
                     if app['home'] == responding_team or app['away'] == responding_team:
                         gm_team_match = True
-                if app['status'] == "PENDING_OPP_CONFIRMATION" and gm_team_match:
+                if app['status'] == self.PENDING_OPP_CONFIRMATION_STATUS and gm_team_match:
+                    requesting_member = self._get_member_from_id(app['requested_by'])
                     if is_accepted:
-                        app['status'] == "PENDING_LEAGUE_APPROVAL"
+                        # Send update message to other team - initial requester and that team's captain
+                        if not responding_team:
+                            responding_team = await self.team_manager_cog.get_current_team_name(ctx, requesting_member)
+                        franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, responding_team)
+                        other_captain = await self.team_manager_cog.get_team_captain(ctx, franchise_role, tier_role)
+                        
+                        message = challenge_accepted_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                        await self._send_member_message(ctx, requesting_member, message)
+                        if other_captain and requesting_member != other_captain:
+                            await self._send_member_message(ctx, requesting_member, message)
+                        
+                        # TODO: send new complete app to media channel feed
+
+                        # set status to pending league approval, save applications
+                        app['status'] = self.PENDING_LEAGUE_APPROVAL_STATUS
                         await self._save_applications(guild, applications)
-                        # TODO: send update to requesting player, send alert to media channel feed
                         return True
                     else:
-                        applications.remove(app)
+                        applications[match_day].remove(app)
                         await self._save_applications(guild, applications)
                         # TODO: send rejection message to requesting player
+                        message = challenge_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                        await self._send_member_message(ctx, requesting_member, message)
                         return True
         return False
 
