@@ -391,7 +391,7 @@ class Match(commands.Cog):
         message += self._create_additional_info(user_team_name, home, away)
         return message
 
-    await def get_match_from_day_team(self, ctx, match_day, team_name):
+    async def get_match_from_day_team(self, ctx, match_day, team_name):
         matches = await self._matches(ctx)
         # Match format:
         # match_data = {
