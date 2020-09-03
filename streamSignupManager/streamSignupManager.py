@@ -4,7 +4,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {'1': "11:00pm ET", '2': "11:30pm ET"}, "StreamFeedChannel": None}
+defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {'1': "11:00pm ET", '2': "11:30pm ET"}, "LiveStreamChannels": ["https://www.twitch.tv/rocketsoccarconfederation"], "StreamFeedChannel": None}
 
 # TODO: (All listed todos)
 # + league approve/reject applications
@@ -173,10 +173,6 @@ class StreamSignupManager(commands.Cog):
                 }
                 await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
                 
-                
-
-
-
     @commands.command()
     @commands.guild_only()
     async def rejectApps(self, ctx, match_day, stream_channel, team):
@@ -184,7 +180,7 @@ class StreamSignupManager(commands.Cog):
     
 
     @commands.guild_only()
-    @commands.command(aliases=["getStreamChannel"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def getStreamFeedChannel(self, ctx):
         """Gets the channel currently assigned as the stream feed channel. Stream application updates are sent to this channel when it is set."""
@@ -194,7 +190,7 @@ class StreamSignupManager(commands.Cog):
             await ctx.send(":x: Stream log channel not set.")
 
     @commands.guild_only()
-    @commands.command(aliases=["unsetStreamChannel"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetStreamFeedChannel(self, ctx):
         """Unsets the stream feed channel."""
@@ -331,9 +327,6 @@ class StreamSignupManager(commands.Cog):
 
         return message
         
-    async def _applications(self, guild):
-        return await self.config.guild(guild).Applications()
-
     async def _stream_schedule(self, guild):
         return await self.config.guild(guild).Schedule()
 
@@ -351,6 +344,9 @@ class StreamSignupManager(commands.Cog):
 
     async def _get_app_from_match(self, guild, match):
         return self._get_app(guild, match['matchDay'], match['home'])
+
+    async def _applications(self, guild):
+        return await self.config.guild(guild).Applications()
 
     async def _save_applications(self, guild, applications):
         await self.config.guild(guild).Applications.set(applications)
@@ -394,6 +390,18 @@ class StreamSignupManager(commands.Cog):
 
     async def _clear_time_slots(self, guild):
         await self._save_time_slots(guild, None)
+    
+    async def _get_live_stream_channels(self, guild)
+        return await self.config.guild(guild).LiveStreamChannels()
+
+    async def _add_live_stream_channel(self, guild, url):
+        channels = await self._get_live_stream_channels(guild)
+        channels.append(url)
+        return await self._save_live_stream_channels(guild, channels)
+    
+    async def _save_live_stream_channels(self, guild, urls):
+        await self.config.guild(guild).LiveStreamChannels.set(urls)
+        return True
 
 
 challenged_msg = ("You have been asked to play **match day {match_day}** ({home} vs. {away}) on stream at **time slot {time_slot}**. "
