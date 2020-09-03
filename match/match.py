@@ -409,6 +409,16 @@ class Match(commands.Cog):
                 return match
         return None
 
+    async def set_match_on_stream(self, ctx, match_day, team_name, stream_info):
+        matches = await self._matches(ctx)
+        for match in matches:
+            if not match['matchDay'] == match_day:
+                break 
+            if match['home'] == team_name or match['away'] == team_name:
+                match['stream_info'] = stream_info
+                
+        return None
+
     def _create_additional_info(self, user_team_name, home, away):
         additional_info = ""
         if user_team_name:
