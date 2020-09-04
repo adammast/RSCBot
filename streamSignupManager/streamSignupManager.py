@@ -170,9 +170,10 @@ class StreamSignupManager(commands.Cog):
                 if match_day == this_match_day or not match_day:
                     for this_match_day, time_slots in sorted(match_days.items()):
                         message += "\n> __Match Day {0}__".format(this_match_day)
-                            for time_slot, match in sorted(time_slots.items()):
-                                message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
-                                num_matches += 1
+                        for time_slot, match in sorted(time_slots.items()):
+                            message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
+                            num_matches += 1
+
         if not num_matches:
             message = ":x: No matches have been scheduled"
             if not url and match_day:
@@ -183,7 +184,7 @@ class StreamSignupManager(commands.Cog):
                 if url:
                     message += " on {0}".format(url)
             message += "."
-            
+
         await ctx.send(message)
 
     @commands.command()
