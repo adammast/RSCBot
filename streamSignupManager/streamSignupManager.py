@@ -149,6 +149,45 @@ class StreamSignupManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
+    async def streamSchedule(self, ctx, url_or_id=None, match_day=None):
+        """View Matches that have been scheduled on stream"""
+        schedule = await self._stream_schedule(ctx.guild)
+        url = await self._get_live_stream(ctx.guild, url_or_id)
+
+        if url:
+            message = "Stream Schedule for \"__{0}__\"".format(url)
+            if match_day:
+                message += " (match day {0})".format(match_day)
+        else:
+            message = "Stream Schedule"
+        message += ":\n"
+        
+        # Print Quoted Schedule
+        num_matches = 0
+        for this_url, match_days in schedule.items():
+            if url == this_url or not url:
+                message += "\n> \n> __**{0} Schedule**__".format(this_url)
+                if match_day == this_match_day or not match_day:
+                    for this_match_day, time_slots in sorted(match_days.items()):
+                        message += "\n> __Match Day {0}__".format(this_match_day)
+                            for time_slot, match in sorted(time_slots.items()):
+                                message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
+                                num_matches += 1
+        if not num_matches:
+            message = ":x: No matches have been scheduled"
+            if not url and match_day:
+                message = ":x: \"{0}\" is not a valid url or live stream id"
+            else:
+                if match_day:
+                    message += " for match day {0}".format(match_day)
+                if url:
+                    message += " on {0}".format(url)
+            message += "."
+            
+        await ctx.send(message)
+
+    @commands.command()
+    @commands.guild_only()
     async def approveApp(self, ctx, match_day, url_or_id, team):
         """Approve application for stream"""
         apps = await self._applications(ctx.guild)
