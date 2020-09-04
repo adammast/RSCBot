@@ -1,5 +1,6 @@
 import re
 import discord
+import asyncio
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
@@ -13,6 +14,7 @@ verify_timeout = 30
 # + league approve/reject applications
 # + alert all game players when match has been league approved, include which stream its on
 # + reject applications for same time frame/alert that a different application has been accepted.
+# + limit selection commands to Stream Committee
 
 # Roles: Captain, GM, <Tier>, <Franchise>, (Soon: Stream Committee)
 
@@ -147,12 +149,15 @@ class StreamSignupManager(commands.Cog):
             message += "."
             await ctx.send(message)
 
-    @commands.command()
+    @commands.command(aliases=['schedule'])
     @commands.guild_only()
     async def streamSchedule(self, ctx, url_or_id=None, match_day=None):
         """View Matches that have been scheduled on stream"""
         schedule = await self._stream_schedule(ctx.guild)
-        url = await self._get_live_stream(ctx.guild, url_or_id)
+        url = None
+
+        if url_or_id:
+            url = await self._get_live_stream(ctx.guild, url_or_id)
 
         if url:
             message = "Stream Schedule for \"__{0}__\"".format(url)
@@ -160,15 +165,17 @@ class StreamSignupManager(commands.Cog):
                 message += " (match day {0})".format(match_day)
         else:
             message = "Stream Schedule"
-        message += ":\n"
+        message += ":"
         
         # Print Quoted Schedule
         num_matches = 0
         for this_url, match_days in schedule.items():
             if url == this_url or not url:
-                message += "\n> \n> __**{0} Schedule**__".format(this_url)
-                if match_day == this_match_day or not match_day:
-                    for this_match_day, time_slots in sorted(match_days.items()):
+                if num_matches:
+                    message += "\n> "
+                message += "\n> __**{0} Schedule**__\n> ".format(this_url)
+                for this_match_day, time_slots in sorted(match_days.items()):
+                    if match_day == this_match_day or not match_day:
                         message += "\n> __Match Day {0}__".format(this_match_day)
                         for time_slot, match in sorted(time_slots.items()):
                             message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
@@ -187,26 +194,59 @@ class StreamSignupManager(commands.Cog):
 
         await ctx.send(message)
 
+    @commands.guild_only()
+    @commands.command()
+    async def clearStreamSchedule(self, ctx):
+        """Removes stream schedule
+        Note: This will **not** update information in the match cog."""
+
+        msg = "Are you sure you want to remove all scheduled live stream matches?"
+        react_msg = await ctx.send(msg)
+        start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        try:
+            pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result:
+                await self._save_stream_schedule(ctx.guild, {})
+                await ctx.send("Done.")
+            else:
+                await ctx.send("Live Stream Schedule was not modified or removed.")
+        except asyncio.TimeoutError:
+            await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+
     @commands.command()
     @commands.guild_only()
     async def approveApp(self, ctx, match_day, url_or_id, team):
         """Approve application for stream"""
         apps = await self._applications(ctx.guild)
-        stream_channel = self._get_live_stream(ctx.guild, url_or_id)
+        stream_channel = await self._get_live_stream(ctx.guild, url_or_id)
         if not stream_channel:
-            ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
+            await ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
+            return False
         for app in apps[match_day]:
             if app['home'] == team or app['away'] == team:
                 # Update App Status
                 app['status'] = self.SCHEDULED_ON_STREAM_STATUS
+                slot = app['slot']
 
                 # Add to Stream Schedule
                 schedule = await self._stream_schedule(ctx.guild)
-                try:
-                    conflict = schedule[stream_channel][match_day][slot]
-                    await ctx.send("There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
-                except KeyError:
-                    schedule[stream_channel][match_day][slot] = {'home': app['home'], 'away': app['away']}
+                if schedule:
+                    try:
+                        conflict = schedule[stream_channel][match_day][slot]
+                        await ctx.send(":x: There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
+                    except KeyError:
+                        try:
+                            # Ideal case - stream/day found, slot not found
+                            other_matches = schedule[stream_channel][match_day]
+                            schedule[stream_channel][match_day] = {slot: {'home': app['home'], 'away': app['away']}}
+                        except KeyError:
+                            # Fist Scheduled match on this stream & match day
+                            other_match_days = schedule[stream_channel]
+                            schedule[stream_channel] = {match_day: {slot: {'home': app['home'], 'away': app['away']}}}    
+                else:
+                    # first scheduled match on this stream
+                    schedule = {stream_channel: {match_day: {slot: {'home': app['home'], 'away': app['away']}}}}
                 
                 scheduled = await self._save_stream_schedule(ctx.guild, schedule)
                 if not scheduled:
@@ -356,7 +396,7 @@ class StreamSignupManager(commands.Cog):
                 await ctx.send("Done.")
             else:
                 await ctx.send("\"__{0}__\" was not added as a live stream page.".format(url))
-        except:
+        except asyncio.TimeoutError:
             await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
         
     @commands.guild_only()
@@ -379,7 +419,7 @@ class StreamSignupManager(commands.Cog):
                     return True
                 else:
                     await ctx.send("\"__{0}__\" was not removed as a live stream page.".format(url))
-            except:
+            except asyncio.TimeoutError:
                 await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
         else:
             await ctx.send("Url not found: \"__{0}__\"".format(url))
@@ -601,14 +641,18 @@ class StreamSignupManager(commands.Cog):
     async def _save_time_slots(self, guild, time_slots):
         await self.config.guild(guild).TimeSlots.set(time_slots)
     
+    # TODO: Fix this function
     async def _get_live_stream(self, guild, url_or_id):
         channels = await self._get_live_stream_channels(guild)
         try:
             i = int(url_or_id)
-            return channels[i - 1]
+            return channels[str(i - 1)]
         except IndexError:
             return None
         except ValueError:
+            if url_or_id in channels:
+                return url_or_id
+        except TypeError:
             if url_or_id in channels:
                 return url_or_id
         return None
