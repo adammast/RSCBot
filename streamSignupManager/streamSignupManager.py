@@ -149,43 +149,74 @@ class StreamSignupManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def approveApps(self, ctx, match_day, url_or_id, team):
+    async def approveApp(self, ctx, match_day, url_or_id, team):
         """Approve application for stream"""
         apps = await self._applications(ctx.guild)
         stream_channel = self._get_live_stream(ctx.guild, url_or_id)
+        if not stream_channel:
+            ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
         for app in apps[match_day]:
             if app['home'] == team or app['away'] == team:
+                # Update App Status
                 app['status'] = self.SCHEDULED_ON_STREAM_STATUS
 
+                # Add to Stream Schedule
                 schedule = await self._stream_schedule(ctx.guild)
-
-                payload = {
-                    'home': app['home'],
-                    'away': app['away'],
-                    'stream': stream_channel,
-                    'slot': app['slot']
-                }
-
                 try:
-                    schedule[match_day].append(payload)
+                    conflict = schedule[stream_channel][match_day][slot]
+                    await ctx.send("There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
                 except KeyError:
-                    schedule[match_day] = [payload]
+                    schedule[stream_channel][match_day][slot] = {'home': app['home'], 'away': app['away']}
                 
                 scheduled = await self._save_stream_schedule(ctx.guild, schedule)
                 if not scheduled:
                     return False
                 
+                await self._save_applications(ctx.guild, apps)
+                
+                # Update match cog details
                 stream_details = {
                     'channel': stream_channel,
                     'slot': app['slot'],
                     'time': await self._get_time_from_slot(ctx.guild, slot)
                 }
                 await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
-                
+
+                # Notify all team members that the game is on stream
+                message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel)
+                for team_name in [app['home'], app['away']]:
+                    franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+                    gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+
+                    await gm.send(message)
+                    for team_member in team_members:
+                        await team_member.send(message)
+
+                await ctx.send("Done.")
+                return True
+
+        await ctx.send("Stream Application could not be found.")
+          
     @commands.command()
     @commands.guild_only()
-    async def rejectApps(self, ctx, match_day, stream_channel, team):
+    async def rejectApp(self, ctx, match_day, team):
         """Reject application for stream"""
+        apps = await self._applications(ctx.guild)
+        stream_channel = self._get_live_stream(ctx.guild, url_or_id)
+        for app in apps[match_day]:
+            if app['home'] == team or app['away'] == team:
+                # Update App Status
+                app['status'] = self.REJECTED_STATUS
+                await self._save_applications(ctx.guild, apps)
+
+                # Inform applicants that their application has been rejected
+                message = league_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                for member_id in [app['requested_by'], app['request_recipient']]:
+                    member = await self._get_member_from_id(ctx.guild, member_id)
+            
+                await ctx.send("Done.")
+                return True
+        await ctx.send(":x: Stream Application could not be found.")
     
     @commands.guild_only()
     @commands.command()
@@ -579,9 +610,9 @@ challenge_rejected_msg = (":x: Your stream application for **match day {match_da
     "not be considered moving forward.")
 
 league_approved_msg = ("**Congratulations!** You have been selected to play **match day {match_day}** ({home} vs. {away}) on stream at "
-    "the **{3} time slot**. Feel free to use the `[p]match {match_day}` in your designated bot input channel see updated "
-    "details of this match. We look forward to seeing you on stream!\n\nLive Stream Page: {live_stream}")
+    "the **{slot} time slot**. Feel free to use the `[p]match {match_day}` in your designated bot input channel see updated "
+    "details of this match. We look forward to seeing you on the stream listed below!\n\nLive Stream Page: {live_stream}")
 
 league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
-    "Your application will be kept on file in the event of a rescheduled stream match.")
+    "Your application will be kept on file in the event that an on-stream match has been rescheduled.")
 
