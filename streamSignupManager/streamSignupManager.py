@@ -3,8 +3,11 @@ import discord
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
-defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {'1': "11:00pm ET", '2': "11:30pm ET"}, "LiveStreamChannels": ["https://www.twitch.tv/rocketsoccarconfederation"], "StreamFeedChannel": None}
+defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {}, "LiveStreamChannels": [], "StreamFeedChannel": None}
+verify_timeout = 30
 
 # TODO: (All listed todos)
 # + league approve/reject applications
@@ -70,6 +73,11 @@ class StreamSignupManager(commands.Cog):
             match = await self.match_cog.get_match_from_day_team(ctx, match_day, requesting_team)
             if not match:
                 await ctx.send("No match found for {team} on match day {match_day}".format(team=requesting_team, match_day=match_day))
+            
+            if not await self._get_time_from_slot(ctx.guild, slot):
+                await ctx.send(":x: {0} is not a valid time slot".format(slot))
+                return False
+            
             applied = await self._add_application(ctx, requesting_member, match, time_slot, requesting_team)
             if applied:
                 await ctx.send("Done.")
@@ -141,9 +149,10 @@ class StreamSignupManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def approveApps(self, ctx, match_day, stream_channel, team):
+    async def approveApps(self, ctx, match_day, url_or_id, team):
         """Approve application for stream"""
         apps = await self._applications(ctx.guild)
+        stream_channel = self._get_live_stream(ctx.guild, url_or_id)
         for app in apps[match_day]:
             if app['home'] == team or app['away'] == team:
                 app['status'] = self.SCHEDULED_ON_STREAM_STATUS
@@ -178,7 +187,6 @@ class StreamSignupManager(commands.Cog):
     async def rejectApps(self, ctx, match_day, stream_channel, team):
         """Reject application for stream"""
     
-
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -195,7 +203,138 @@ class StreamSignupManager(commands.Cog):
     async def unsetStreamFeedChannel(self, ctx):
         """Unsets the stream feed channel."""
         await self._save_trans_channel(ctx, None)
-        await ctx.send("Done")
+        await ctx.send("Done.")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addTimeSlot(self, ctx, slot, *, time):
+        """Adds a time slot association"""
+        if await self._get_time_from_slot(ctx.guild, slot):
+            await ctx.send(":x: Time slot {0} is already registered.".format(slot))
+            return False
+        await self._add_time_slot(ctx.guild, slot, time)
+        await ctx.send("Done.")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeTimeSlot(self, ctx, slot):
+        """Remove time slot association"""
+        time_slots = await self.config.guild(ctx.guild).TimeSlots()
+
+        try:
+            del time_slots[slot]
+            await self._save_time_slots(ctx.guild, time_slots)
+            await ctx.send(time_slots)
+            await ctx.send("Done.")
+        except KeyError:
+            await ctx.send(":x: {0} is not a registered time slot.".format(slot))
+
+    @commands.guild_only()
+    @commands.command(aliases=['cleartimeslots'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearTimeSlots(self, ctx):
+        """Removes all time slot associations"""
+        await self._save_time_slots(ctx.guild, {})
+        await ctx.send("Done.")
+
+    @commands.guild_only()
+    @commands.command(aliases=['timeSlots', 'timeslots', 'streamslots', 'viewTimeSlots'])
+    async def getTimeSlots(self, ctx):
+        """Lists all registered live stream time slots"""
+        time_slots = await self._get_time_slots(ctx.guild)
+        if time_slots:
+            message = "__Stream Time Slots:__"
+            for slot, time in time_slots.items():
+                message += "\n{0} - {1}".format(slot, time)
+        else:
+            message = "No Stream Slots have been set."
+
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command(aliases=['livestreams', 'liveStreams'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getLiveStreams(self, ctx):
+        """Lists all saved live stream channels"""
+        channels = await self._get_live_stream_channels(ctx.guild)
+        if channels:
+           message = "__Live Stream Channels:__"
+           for channel_i in range(1, len(channels) + 1):
+               message += "\n{0} - {1}".format(channel_i, channels[channel_i - 1])
+        else:
+            message = "No live stream channels have been set."
+        
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command(aliases=['addStream'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addLiveStream(self, ctx, url):
+        """Adds a new live stream page for stream signups"""
+
+        msg = "Add \"__{0}__\" to list of stream pages?".format(url)
+        react_msg = await ctx.send(msg)
+        start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        try:
+            pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result:
+                await self._add_live_stream_channel(ctx.guild, url)
+                await ctx.send("Done.")
+            else:
+                await ctx.send("\"__{0}__\" was not added as a live stream page.".format(url))
+        except:
+            await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+        
+    @commands.guild_only()
+    @commands.command(aliases=['removeStream'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeLiveStream(self, ctx, url_or_id):
+        """Removes live stream pages"""
+        streams = await self._get_live_stream_channels(ctx.guild)
+        url = await self._get_live_stream(ctx.guild, url_or_id)
+        if url in streams:
+            msg = "Remove \"__{0}__\" from list of stream pages?".format(url)
+            react_msg = await ctx.send(msg)
+            start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+            try:
+                pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+                await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+                if pred.result:
+                    await self._remove_live_stream_channel(ctx.guild, url)
+                    await ctx.send("Done.")
+                    return True
+                else:
+                    await ctx.send("\"__{0}__\" was not removed as a live stream page.".format(url))
+            except:
+                await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+        else:
+            await ctx.send("Url not found: \"__{0}__\"".format(url))
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearLiveStreams(self, ctx, slot):
+        """Removes all saved stream urls"""
+        streams = await self._get_live_stream_channels(ctx.guild)
+        if streams:
+            msg = "Remove all saved live stream channels?"
+            react_msg = await ctx.send(msg)
+            start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+            try:
+                pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+                await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+                if pred.result:
+                    await self._save_live_stream_channels(ctx.guild, [])
+                    await ctx.send("Done.")
+                else:
+                    await ctx.send("No live stream channels have been removed.")
+            except:
+                await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+        else:
+            await ctx.send("No live stream channels found.")
 
 
     async def _add_application(self, ctx, requested_by, match_data, time_slot, requesting_team=None):
@@ -379,6 +518,9 @@ class StreamSignupManager(commands.Cog):
                 return t
         return None
 
+    async def _get_time_slots(self, guild):
+        return await self.config.guild(guild).TimeSlots()
+
     async def _add_time_slot(self, guild, slot, time):
         data = await self.config.guild(guild).TimeSlots()
         data[slot] = time
@@ -387,11 +529,20 @@ class StreamSignupManager(commands.Cog):
 
     async def _save_time_slots(self, guild, time_slots):
         await self.config.guild(guild).TimeSlots.set(time_slots)
-
-    async def _clear_time_slots(self, guild):
-        await self._save_time_slots(guild, None)
     
-    async def _get_live_stream_channels(self, guild)
+    async def _get_live_stream(self, guild, url_or_id):
+        channels = await self._get_live_stream_channels(guild)
+        try:
+            i = int(url_or_id)
+            return channels[i - 1]
+        except IndexError:
+            return None
+        except ValueError:
+            if url_or_id in channels:
+                return url_or_id
+        return None
+
+    async def _get_live_stream_channels(self, guild):
         return await self.config.guild(guild).LiveStreamChannels()
 
     async def _add_live_stream_channel(self, guild, url):
@@ -399,6 +550,11 @@ class StreamSignupManager(commands.Cog):
         channels.append(url)
         return await self._save_live_stream_channels(guild, channels)
     
+    async def _remove_live_stream_channel(self, guild, url):
+        channels = await self._get_live_stream_channels(guild)
+        channels.remove(url)
+        return await self._save_live_stream_channels(guild, channels)
+
     async def _save_live_stream_channels(self, guild, urls):
         await self.config.guild(guild).LiveStreamChannels.set(urls)
         return True
@@ -422,10 +578,9 @@ challenge_accepted_msg = (":white_check_mark: Your stream application for **matc
 challenge_rejected_msg = (":x: Your stream application for **match day {match_day}** ({home} vs. {away}) has been rejected by your opponents, and will "
     "not be considered moving forward.")
 
-#TODO: add stream channel (rsc vs rsc_2, etc)
 league_approved_msg = ("**Congratulations!** You have been selected to play **match day {match_day}** ({home} vs. {away}) on stream at "
     "the **{3} time slot**. Feel free to use the `[p]match {match_day}` in your designated bot input channel see updated "
-    "details of this match. We look forward to seeing you on stream!")
+    "details of this match. We look forward to seeing you on stream!\n\nLive Stream Page: {live_stream}")
 
 league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
     "Your application will be kept on file in the event of a rescheduled stream match.")
