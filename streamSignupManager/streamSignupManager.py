@@ -155,27 +155,27 @@ class StreamSignupManager(commands.Cog):
         """View Matches that have been scheduled on stream"""
         schedule = await self._stream_schedule(ctx.guild)
         url = None
-
+        message = "Stream Schedule"
         if url_or_id:
             url = await self._get_live_stream(ctx.guild, url_or_id)
-
-        if url:
-            message = "Stream Schedule for \"__{0}__\"".format(url)
+            if not url:
+                await ctx.send(":x: \"{0}\" is not a valid live stream indicator.".format(url_or_id))
+                return False
             if match_day:
                 message += " (match day {0})".format(match_day)
-        else:
-            message = "Stream Schedule"
         message += ":"
         
-        # Print Quoted Schedule
+        # Print Schedule as Quote
+        current_match_day = await self.match_cog._match_day(ctx)
         num_matches = 0
         for this_url, match_days in schedule.items():
             if url == this_url or not url:
                 if num_matches:
                     message += "\n> "
-                message += "\n> __**{0} Schedule**__\n> ".format(this_url)
+                stream_header = "\n> __**<{0}> Schedule**__\n> ".format(this_url) if "https://" in this_url else "\n> __**{0} Schedule**__\n> ".format(this_url)
+                message += stream_header
                 for this_match_day, time_slots in sorted(match_days.items()):
-                    if match_day == this_match_day or not match_day:
+                    if match_day == this_match_day or (not match_day and this_match_day >= current_match_day):
                         message += "\n> __Match Day {0}__".format(this_match_day)
                         for time_slot, match in sorted(time_slots.items()):
                             message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
@@ -189,7 +189,7 @@ class StreamSignupManager(commands.Cog):
                 if match_day:
                     message += " for match day {0}".format(match_day)
                 if url:
-                    message += " on {0}".format(url)
+                    message += " on <{0}>".format(url) if "https://" in url else " on <{0}>".format(url)
             message += "."
 
         await ctx.send(message)
@@ -554,6 +554,9 @@ class StreamSignupManager(commands.Cog):
             message = "> __All stream applications in progress:__"
         message += "\n> \n> **<time slot> | <home> vs. <away>**"
 
+        if not for_approval:
+            message += "`[<status>]`"
+
         count = 0
         applications = await self._applications(ctx.guild)
         for md, apps in applications.items():
@@ -641,20 +644,15 @@ class StreamSignupManager(commands.Cog):
     async def _save_time_slots(self, guild, time_slots):
         await self.config.guild(guild).TimeSlots.set(time_slots)
     
-    # TODO: Fix this function
     async def _get_live_stream(self, guild, url_or_id):
         channels = await self._get_live_stream_channels(guild)
+        if url_or_id in channels:
+            return url_or_id
         try:
             i = int(url_or_id)
-            return channels[str(i - 1)]
-        except IndexError:
+            return channels[i - 1]
+        except:
             return None
-        except ValueError:
-            if url_or_id in channels:
-                return url_or_id
-        except TypeError:
-            if url_or_id in channels:
-                return url_or_id
         return None
 
     async def _get_live_stream_channels(self, guild):
