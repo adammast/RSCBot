@@ -259,48 +259,11 @@ class StreamSignupManager(commands.Cog):
                 slot = app['slot']
 
                 # Add to Stream Schedule
-                schedule = await self._stream_schedule(ctx.guild)
-                if schedule:
-                    try:
-                        conflict = schedule[stream_channel][match_day][slot]
-                        await ctx.send(":x: There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
-                    except KeyError:
-                        try:
-                            # Ideal case - stream/day found, slot not found
-                            other_matches = schedule[stream_channel][match_day]
-                            schedule[stream_channel][match_day] = {slot: {'home': app['home'], 'away': app['away']}}
-                        except KeyError:
-                            # Fist Scheduled match on this stream & match day
-                            other_match_days = schedule[stream_channel]
-                            schedule[stream_channel] = {match_day: {slot: {'home': app['home'], 'away': app['away']}}}    
-                else:
-                    # first scheduled match on this stream
-                    schedule = {stream_channel: {match_day: {slot: {'home': app['home'], 'away': app['away']}}}}
+                scheduled = await self._schedule_match_on_stream(ctx, stream_channel, match_day, app['slot'], app['home'], app['away'])
                 
-                scheduled = await self._save_stream_schedule(ctx.guild, schedule)
-                if not scheduled:
-                    return False
+                if scheduled:
+                    await self._save_applications(ctx.guild, apps)
                 
-                await self._save_applications(ctx.guild, apps)
-                
-                # Update match cog details
-                stream_details = {
-                    'live_stream': stream_channel,
-                    'slot': app['slot'],
-                    'time': await self._get_time_from_slot(ctx.guild, slot)
-                }
-                await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
-
-                # Notify all team members that the game is on stream
-                message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel, channel=app['channel'])
-                for team_name in [app['home'], app['away']]:
-                    franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-                    gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
-
-                    await gm.send(message)
-                    for team_member in team_members:
-                        await team_member.send(message)
-
                 await ctx.send("Done.")
                 return True
 
@@ -652,6 +615,50 @@ class StreamSignupManager(commands.Cog):
             await gm.send(message)
             for team_member in team_members:
                 await team_member.send(message)
+
+    async def _schedule_match_on_stream(self, ctx, stream_channel, match_day, slot, home, away):
+        schedule = await self._stream_schedule(ctx.guild)
+        if schedule:
+            try:
+                conflict = schedule[stream_channel][match_day][slot]
+                await ctx.send(":x: There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
+            except KeyError:
+                try:
+                    # Ideal case - stream/day found, slot not found
+                    other_matches = schedule[stream_channel][match_day]
+                    schedule[stream_channel][match_day] = {slot: {'home': home, 'away': away}}
+                except KeyError:
+                    # Fist Scheduled match on this stream & match day
+                    other_match_days = schedule[stream_channel]
+                    schedule[stream_channel] = {match_day: {slot: {'home': home, 'away': away}}}    
+        else:
+            # first scheduled match on this stream
+            schedule = {stream_channel: {match_day: {slot: {'home': home, 'away': away}}}}
+        
+        scheduled = await self._save_stream_schedule(ctx.guild, schedule)
+        
+        if not scheduled:
+            return False
+        
+        # Update match cog details
+        stream_details = {
+            'live_stream': stream_channel,
+            'slot': slot,
+            'time': await self._get_time_from_slot(ctx.guild, slot)
+        }
+        await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
+
+        # Notify all team members that the game is on stream
+        message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel, channel=app['channel'])
+        for team_name in [app['home'], app['away']]:
+            franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+            gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+
+            await gm.send(message)
+            for team_member in team_members:
+                await team_member.send(message)
+        
+        return scheduled
 
     async def _stream_schedule(self, guild):
         return await self.config.guild(guild).Schedule()
