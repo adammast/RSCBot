@@ -11,10 +11,10 @@ defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {}, "LiveStreamChan
 verify_timeout = 30
 
 # TODO: (All listed todos)
-# + league approve/reject applications
+# + league approve applications
 # + alert all game players when match has been league approved, include which stream its on
 # + reject applications for same time frame/alert that a different application has been accepted.
-# + limit selection commands to Stream Committee
+# + limit select commands to Stream Committee
 
 # Roles: Captain, GM, <Tier>, <Franchise>, (Soon: Stream Committee)
 
@@ -182,7 +182,7 @@ class StreamSignupManager(commands.Cog):
                             num_matches += 1
 
         if not num_matches:
-            message = ":x: No matches have been scheduled"
+            message = ":x: No stream matches have been scheduled"
             if not url and match_day:
                 message = ":x: \"{0}\" is not a valid url or live stream id"
             else:
@@ -530,8 +530,6 @@ class StreamSignupManager(commands.Cog):
                         message = challenge_accepted_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                         await self._send_member_message(ctx, requesting_member, message)
                         if requesting_team_captain and (requesting_member.id != requesting_team_captain.id):
-                            print(requesting_member.id)
-                            print(requesting_team_captain.id)
                             await self._send_member_message(ctx, requesting_team_captain, message)
                         
                         # Send new complete app to media channel feed
