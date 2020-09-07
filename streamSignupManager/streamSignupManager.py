@@ -31,6 +31,7 @@ class StreamSignupManager(commands.Cog):
         self.PENDING_LEAGUE_APPROVAL_STATUS = "PENDING_LEAGUE_APPROVAL"
         self.SCHEDULED_ON_STREAM_STATUS = "SCHEDULED_ON_STREAM"
         self.REJECTED_STATUS = "REJECTED"
+        self.RESCINDED_STATUS = "RESCINDED"
     
     @commands.command(aliases=["streamapp", "streamapply", "streamApplications", "streamapplications"])
     @commands.guild_only()
@@ -214,17 +215,45 @@ class StreamSignupManager(commands.Cog):
         except asyncio.TimeoutError:
             await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
 
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def rescindStreamGame(self, ctx, match_day, team):
+        """Removes a match from the stream schedule"""
+        schedule = await self._stream_schedule(ctx.guild)
+        if schedule:
+            msg = "Remove {0} from stream schedule on match day {1}?".format(team, match_day)
+            react_msg = await ctx.send(msg)
+            start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+            try:
+                pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+                await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+                if pred.result:
+                    if await self._remove_match_from_stream(match_day, team, notify_teams=True):
+                        await ctx.send("Done.")
+                    else:
+                        await ctx.send(":x: Match was not found in the stream schedule.")
+                else:
+                    await ctx.send("No changes made.")
+            except:
+                await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+        else:
+            await ctx.send("No games have been scheduled on stream.")
+
     @commands.command(aliases=['acceptapp'])
     @commands.guild_only()
     async def approveApp(self, ctx, match_day, url_or_id, team):
-        """Approve application for stream"""
+        """Approve application for stream.
+        
+        Applications that have `PENDING_LEAUGE_APPROVAL`, `REJECTED`, or `RESCINDED` status may be approved."""
         apps = await self._applications(ctx.guild)
         stream_channel = await self._get_live_stream(ctx.guild, url_or_id)
         if not stream_channel:
             await ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
             return False
         for app in apps[match_day]:
-            if app['home'] == team or app['away'] == team:
+            if app['status'] == (self.PENDING_LEAGUE_APPROVAL_STATUS or app['status'] == self.REJECTED_STATUS or app['status'] == self.RESCINDED_STATUS)
+            and (app['home'] == team or app['away'] == team):
                 # Update App Status
                 app['status'] = self.SCHEDULED_ON_STREAM_STATUS
                 slot = app['slot']
@@ -448,7 +477,6 @@ class StreamSignupManager(commands.Cog):
         else:
             await ctx.send("No live stream channels found.")
 
-
     async def _add_application(self, ctx, requested_by, match_data, time_slot, requesting_team=None):
         applications = await self._applications(ctx.guild)
         app = await self._get_app_from_match(ctx.guild, match_data)
@@ -582,7 +610,49 @@ class StreamSignupManager(commands.Cog):
             message += "\n> \n> -- \n> Use `{p}approveApp` or `{p}rejectApp` to approve/reject an application.".format(p=ctx.prefix)
 
         return message
+    
+    async def _remove_match_from_stream(self, ctx, match_day, team, notify_teams=True):
+        schedule = await self._stream_schedule(ctx.guild)
+        removed_match = False
+        # Find, Remove Match from Stream Schedule
+        for stream_page, match_days in schedule.items():
+            for this_match_day, time_slots in match_days.items():
+                if this_match_day == match_day:
+                    for time_slot, match in time_slots.items():
+                        if match['home'].casefold() == team.casefold() or match['away'] == team.casefold():
+                            removed_match = time_slot.pop(match, None):
+                            await self._save_stream_schedule(ctx.guild, schedule)
+                            break
         
+        # Update Match in Match Cog
+        if removed_match:
+            await self.match_cog._remove_match_from_stream(ctx, match_day, team_name)
+        else:
+            return False
+
+        # Update application status
+        applications = await self._applications(guild))
+        for this_match_day, apps in (applications.items():
+            if this_match_day == match_day:
+                for app in apps:
+                    if app['home'] == team or app['away'] == team:
+                        app['status'] = self.RESCINDED_STATUS
+                        await self._save_applications(applications)
+                        break
+        
+        if not notify_teams:
+            return True
+
+        # Notify all team members that the game is no longer on stream
+        message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+        for team in [removed_match['home'], removed_match['away']]:
+            franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+            gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+
+            await gm.send(message)
+            for team_member in team_members:
+                await team_member.send(message)
+
     async def _stream_schedule(self, guild):
         return await self.config.guild(guild).Schedule()
 
@@ -704,3 +774,5 @@ league_approved_msg = ("**Congratulations!** You have been selected to play **ma
 league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
     "Your application will be kept on file in the event that an on-stream match has been rescheduled.")
 
+rescinded_msg = ("Your match that was scheduled to be played on stream (Match Day {match_day}: {home} vs. {away}) has been **rescinded**. This match will no longer be played"
+    "on stream, and will be played as it was originally scheduled. You may use the `[p]match {match_day}` command to see your updated match information for match day {match_day}.")
