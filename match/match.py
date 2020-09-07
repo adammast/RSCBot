@@ -117,11 +117,11 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                if not ctx.message.author.is_on_mobile():
-                    await ctx.message.author.send(embed=await self._format_match_embed(ctx,
+                if ctx.message.author.is_on_mobile():
+                    await ctx.message.author.send(await self._format_match_message(ctx,
                                             match_index, team_name_for_info))
                 else:
-                    await ctx.message.author.send(await self._format_match_message(ctx,
+                    await ctx.message.author.send(embed=await self._format_match_embed(ctx,
                                             match_index, team_name_for_info))
             else:
                 await ctx.message.author.send(
@@ -359,7 +359,10 @@ class Match(commands.Cog):
         embed.add_field(name="**Away Team:**",
                 value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
-        additional_info = self._create_additional_info(user_team_name, home, away)
+        try:
+            additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+        except KeyError:
+            additional_info = self._create_additional_info(user_team_name, home, away)
 
         embed.add_field(name="Additional Info:", value=additional_info)
         return embed
@@ -388,9 +391,10 @@ class Match(commands.Cog):
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
         message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
-        message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
+        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
+        
         try:
-            message += self._create_additional_info(user_team_name, home, away, match['streamDetails'])
+            message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
         except KeyError:
             message += self._create_additional_info(user_team_name, home, away)
         return message
@@ -424,18 +428,29 @@ class Match(commands.Cog):
                 return True
         return False
 
-    def _create_additional_info(self, user_team_name, home, away, stream_details=None):
+    async def remove_match_from_stream(self, ctx, match_day, team_name):
+        matches = await self._matches(ctx)
+        for match in matches:
+            if not match['matchDay'] == match_day:
+                break 
+            if match['home'] == team_name or match['away'] == team_name:
+                match.pop('stream_info', None)
+                await self._save_matches(ctx, matches)
+                return True
+        return False
+
+    def _create_additional_info(self, user_team_name, home, away, stream_details=None, is_playoffs=False):
         additional_info = ""
         if user_team_name:
             if stream_details:
-                if user_team_name == home:
+                if user_team_name.casefold() == home.casefold():
                     additional_info += stream_info.format(
                         home_or_away='home', 
                         time_slot=stream_details['slot'],
                         time=stream_details['time'],
                         live_stream=stream_details['live_stream']
                     )
-                elif user_team_name == away:
+                elif user_team_name.casefold() == away.casefold():
                     additional_info += stream_info.format(
                         home_or_away='away', 
                         time_slot=stream_details['slot'],
@@ -455,6 +470,7 @@ class Match(commands.Cog):
         additional_info += regular_info
         # PLAYOFF INFO
         #additional_info += playoff_info
+        print(additional_info)
         return additional_info
 
     def _generate_name_pass(self):
@@ -519,14 +535,14 @@ away_info = ("You are the **away** team. You will join the room "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
 
-stream_info = ("**This match is scheduled to play on stream.** "
-            "(Time slot {time_slot}: {time}) "
+stream_info = ("**This match is scheduled to play on stream ** "
+            "(Time slot {time_slot}: {time}). "
             "You are the **{home_or_away}** team. You will join the room "
             "using the above information once you have been contacted "
             "by a member of the media committee. Do not join a team "
             "until a stream host or caster has instructed you to do so."
-            "\n\nRemember to inform the stream committee what server "
-            "region your team would like to play on."
+            "\nRemember to inform the stream committee what server "
+            "region your team would like to play on before games begin."
             "\n\nLive Stream: <{live_stream}>")
 
 regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
