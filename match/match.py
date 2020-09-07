@@ -279,17 +279,13 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
-    async def _set_match_on_stream(self, ctx, match_day, team, stream_slot, time=None, channel=None):
-        schedule = await self._schedule(ctx)
-        for match in schedule[self.MATCHES_KEY]:
+    async def _set_match_on_stream(self, ctx, match_day, team, stream_details):
+        matches = await self._matches(ctx)
+        for match in matches:
             if match['matchDay'] == match_day and (one_team == match['home'] or one_team == match['away']):
-                match['stream_details'] = {
-                    'on_stream': True,
-                    'channel': channel,
-                    'slot': stream_slot
-                }
+                match['streamDetails'] = stream_details
                 #match['time'] = time  # ((could add time param to match))
-                await self._save_schedule(ctx, schedule)
+                await self._save_matches(ctx, matches)
                 return True
         return False
 
@@ -394,7 +390,7 @@ class Match(commands.Cog):
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
         message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
         try:
-            message += self._create_additional_info(user_team_name, home, away, match['stream_details'])
+            message += self._create_additional_info(user_team_name, home, away, match['streamDetails'])
         except KeyError:
             message += self._create_additional_info(user_team_name, home, away)
         return message
