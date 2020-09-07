@@ -413,7 +413,7 @@ class Match(commands.Cog):
         for match in matches:
             if not match['matchDay'] == match_day:
                 break 
-            if match['home'] == team_name or match['away'] == team_name:
+            if match['home'].casefold() == team_name.casefold() or match['away'].casefold() == team_name.casefold():
                 return match
         return None
 
@@ -539,8 +539,10 @@ stream_info = ("**This match is scheduled to play on stream ** "
             "(Time slot {time_slot}: {time}). "
             "You are the **{home_or_away}** team. You will join the room "
             "using the above information once you have been contacted "
-            "by a member of the media committee. Do not join a team "
-            "until a stream host or caster has instructed you to do so."
+            "by a member of the media committee. You may only join the "
+            "private match lobby if you are one of the three players on your "
+            "team playing in the current game. Do not join a team until a "
+            "stream host or caster has instructed you to do so via in-game chat."
             "\nRemember to inform the stream committee what server "
             "region your team would like to play on before games begin."
             "\n\nLive Stream: <{live_stream}>")

@@ -12,7 +12,6 @@ verify_timeout = 30
 
 # TODO: (All listed todos)
 # + league approve applications
-# + alert all game players when match has been league approved, include which stream its on
 # + reject applications for same time frame/alert that a different application has been accepted.
 # + limit select commands to Stream Committee
 
@@ -240,6 +239,7 @@ class StreamSignupManager(commands.Cog):
         else:
             await ctx.send("No games have been scheduled on stream.")
 
+    @commands.guild_only()
     @commands.command(aliases=['acceptapp'])
     @commands.guild_only()
     async def approveApp(self, ctx, match_day, url_or_id, team):
@@ -252,8 +252,8 @@ class StreamSignupManager(commands.Cog):
             await ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
             return False
         for app in apps[match_day]:
-            if app['status'] == (self.PENDING_LEAGUE_APPROVAL_STATUS or app['status'] == self.REJECTED_STATUS or app['status'] == self.RESCINDED_STATUS)
-            and (app['home'] == team or app['away'] == team):
+            if (app['status'] == (self.PENDING_LEAGUE_APPROVAL_STATUS or app['status'] == self.REJECTED_STATUS or app['status'] == self.RESCINDED_STATUS)
+                and (app['home'] == team or app['away'] == team)):
                 # Update App Status
                 app['status'] = self.SCHEDULED_ON_STREAM_STATUS
                 slot = app['slot']
@@ -268,7 +268,66 @@ class StreamSignupManager(commands.Cog):
                 return True
 
         await ctx.send("Stream Application could not be found.")
-          
+
+    @commands.guild_only()
+    @commands.command(aliases=['setmatchonstream'])
+    @commands.guild_only()
+    async def setMatchOnStream(self, ctx, stream_url_or_id, slot, match_day, team):
+        """
+        Override application process and set match on stream
+        
+        **Examples:**
+        [p]setMatchOnStream 1 1 1 Spartans
+        [p]setMatchOnStream https://twitch.tv/rocketsoccarconfederation 2 8 Vikings
+        """
+        match = await self.match_cog.get_match_from_day_team(ctx, match_day, team)
+        if not match:
+            await ctx.send(":x: Match not found for {0} on match day {1}".format(team, match_day))
+            return False
+        
+        stream_channel = await self._get_live_stream(ctx.guild, stream_url_or_id)
+        if not stream_channel:
+            await ctx.send(":x: \"{0}\" is not a valid stream url or id".format(url_or_id))
+            return False
+        
+        time = await self._get_time_from_slot(ctx.guild, slot)
+        if not time:
+            await ctx.send(":x: \"{0}\" is not a valid time slot".format(slot))
+            return False
+
+        prompt = ("Bypass application process and schedule **{home}** vs. **{away}** (match day {match_day}) on stream?"
+            "\nlive stream: <{live_stream}>\nstream slot: {stream_slot} - {time}").format(
+                home=match['home'],
+                away=match['away'],
+                match_day=match_day,
+                live_stream=stream_channel,
+                stream_slot=slot,
+                time=time
+            )
+        react_msg = await ctx.send(prompt)
+        start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        try:
+            pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result:
+                await self._schedule_match_on_stream(ctx, stream_channel, match_day, slot, match['home'], match['away'])
+                
+                # Update app if one was ongoing
+                apps = await self._applications(ctx.guild)
+                for app in apps[match_day]:
+                    if (app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold()):
+                        app['status'] = self.SCHEDULED_ON_STREAM_STATUS
+                        app['slot'] = slot
+                        await self._save_applications(ctx.guild, apps)
+                        break
+
+                await ctx.send("Done.")
+            else:
+                await ctx.send("Match was not added to the stream schedule.")
+        except asyncio.TimeoutError:
+            await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+
+    @commands.guild_only()  
     @commands.command(aliases=['rejectapp'])
     @commands.guild_only()
     async def rejectApp(self, ctx, match_day, team):
@@ -440,6 +499,7 @@ class StreamSignupManager(commands.Cog):
         else:
             await ctx.send("No live stream channels found.")
 
+
     async def _add_application(self, ctx, requested_by, match_data, time_slot, requesting_team=None):
         applications = await self._applications(ctx.guild)
         app = await self._get_app_from_match(ctx.guild, match_data)
@@ -497,6 +557,7 @@ class StreamSignupManager(commands.Cog):
             return False
 
     async def _accept_reject_application(self, ctx, recipient, match_day, is_accepted, responding_team=None):
+        # request recipient responds to stream challenge
         applications = await self._applications(ctx.guild)
         if responding_team:
             gm_team_match = False # Team needs to be verified
@@ -505,8 +566,6 @@ class StreamSignupManager(commands.Cog):
 
         for app in applications[match_day]:
             if app['request_recipient'] == recipient.id:
-                # started - null (requesting) - should get notification
-                # accepted - reag (other captain + request_recipient) - should not get notification
                 if responding_team:
                     if app['home'] == responding_team or app['away'] == responding_team:
                         gm_team_match = True
@@ -583,9 +642,10 @@ class StreamSignupManager(commands.Cog):
                 if this_match_day == match_day:
                     for time_slot, match in time_slots.items():
                         if match['home'].casefold() == team.casefold() or match['away'] == team.casefold():
-                            removed_match = time_slot.pop(match, None):
-                            await self._save_stream_schedule(ctx.guild, schedule)
-                            break
+                            removed_match = time_slot.pop(match, None)
+                            if removed_match:
+                                await self._save_stream_schedule(ctx.guild, schedule)
+                                break
         
         # Update Match in Match Cog
         if removed_match:
@@ -594,8 +654,8 @@ class StreamSignupManager(commands.Cog):
             return False
 
         # Update application status
-        applications = await self._applications(guild))
-        for this_match_day, apps in (applications.items():
+        applications = await self._applications(guild)
+        for this_match_day, apps in applications.items():
             if this_match_day == match_day:
                 for app in apps:
                     if app['home'] == team or app['away'] == team:
@@ -609,12 +669,12 @@ class StreamSignupManager(commands.Cog):
         # Notify all team members that the game is no longer on stream
         message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
         for team in [removed_match['home'], removed_match['away']]:
-            franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-            gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+            gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
-            await gm.send(message)
+            await self._send_member_message(ctx, gm, message)
             for team_member in team_members:
-                await team_member.send(message)
+                await self._send_member_message(ctx, team_member, message)
 
     async def _schedule_match_on_stream(self, ctx, stream_channel, match_day, slot, home, away):
         schedule = await self._stream_schedule(ctx.guild)
@@ -646,17 +706,17 @@ class StreamSignupManager(commands.Cog):
             'slot': slot,
             'time': await self._get_time_from_slot(ctx.guild, slot)
         }
-        await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
+        await self.match_cog.set_match_on_stream(ctx, match_day, home, stream_details)
 
         # Notify all team members that the game is on stream
-        message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel, channel=app['channel'])
-        for team_name in [app['home'], app['away']]:
-            franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-            gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        message = league_approved_msg.format(match_day=match_day, home=home, away=away, slot=slot, live_stream=stream_channel, channel=stream_channel)
+        for team_name in [home, away]:
+            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+            gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
-            await gm.send(message)
+            await self._send_member_message(ctx, gm, message)
             for team_member in team_members:
-                await team_member.send(message)
+                await self._send_member_message(ctx, team_member, message)
         
         return scheduled
 
@@ -668,10 +728,11 @@ class StreamSignupManager(commands.Cog):
         return True
 
     async def _get_app(self, guild, match_day, team):
+        team = team.casefold()
         for this_match_day, apps in (await self._applications(guild)).items():
             if this_match_day == match_day:
                 for app in apps:
-                    if app['home'] == team or app['away'] == team:
+                    if app['home'].casefold() == team or app['away'].casefold() == team:
                         return app
         return None
 
@@ -775,7 +836,7 @@ challenge_rejected_msg = (":x: Your stream application for **match day {match_da
     "not be considered moving forward.")
 
 league_approved_msg = ("**Congratulations!** You have been selected to play **match day {match_day}** ({home} vs. {away}) on stream at "
-    "the **{slot} time slot**. Feel free to use the `[p]match {match_day}` in your designated bot input channel see updated "
+    "the **{slot} time slot**. You may use the `[p]match {match_day}` in your designated bot input channel see updated "
     "details of this match. We look forward to seeing you on the stream listed below!\n\nLive Stream Page: {live_stream}")
 
 league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
