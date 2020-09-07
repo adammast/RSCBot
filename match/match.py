@@ -523,8 +523,8 @@ away_info = ("You are the **away** team. You will join the room "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
 
-stream_info = ("**This match will be scheduled on stream.**
-            " (Time slot {time_slot}: {time}) "
+stream_info = ("**This match is scheduled to play on stream.** "
+            "(Time slot {time_slot}: {time}) "
             "You are the **{home_or_away}** team. You will join the room "
             "using the above information once you have been contacted "
             "by a member of the media committee. Do not join a team "
