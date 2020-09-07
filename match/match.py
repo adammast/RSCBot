@@ -85,7 +85,7 @@ class Match(commands.Cog):
         followed by a list of teams for which the match info should be
         retrieved.
 
-        Example: `!match 1 derechos "killer bees"`
+        Example: `[p]match 1 derechos "killer bees"`
 
         Note: If no team names are sent, GMs (or anyone with multiple team
         roles) will get matchups for all their teams. User's without a team
@@ -379,6 +379,11 @@ class Match(commands.Cog):
         #     'away': away,
         #     'roomName': roomName,
         #     'roomPass': roomPass
+        #     'stream_details`: {
+        #         'live_stream': live_stream,
+        #         'slot': slot,
+        #         'time': time
+        #      }
         # }
         home = match['home']
         away = match['away']
@@ -388,7 +393,10 @@ class Match(commands.Cog):
         message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
         message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
-        message += self._create_additional_info(user_team_name, home, away)
+        try:
+            message += self._create_additional_info(user_team_name, home, away, match['stream_details'])
+        except KeyError:
+            message += self._create_additional_info(user_team_name, home, away)
         return message
 
     async def get_match_from_day_team(self, ctx, match_day, team_name):
@@ -416,23 +424,34 @@ class Match(commands.Cog):
                 break 
             if match['home'] == team_name or match['away'] == team_name:
                 match['stream_info'] = stream_info
-                
-        return None
+                await self._save_matches(ctx, matches)
+                return True
+        return False
 
-    def _create_additional_info(self, user_team_name, home, away):
+    def _create_additional_info(self, user_team_name, home, away, stream_details=None):
         additional_info = ""
         if user_team_name:
-            on_stream = False
-            if on_stream:
+            if stream_details:
+                if user_team_name == home:
+                    additional_info += stream_info.format(
+                        home_or_away='home', 
+                        time_slot=stream_details['slot'],
+                        time=stream_details['time'],
+                        live_stream=stream_details['live_stream']
+                    )
+                elif user_team_name == away:
+                    additional_info += stream_info.format(
+                        home_or_away='away', 
+                        time_slot=stream_details['slot'],
+                        time=stream_details['time'],
+                        live_stream=stream_details['live_stream']
+                    )
+            else:
                 if user_team_name == home:
                     additional_info += home_info
                 elif user_team_name == away:
                     additional_info += away_info
-            else:
-                if user_team_name == home:
-                    additional_info += stream_info.format("home")
-                elif user_team_name == away:
-                    additional_info += stream_info.format("away")
+                
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
@@ -504,13 +523,15 @@ away_info = ("You are the **away** team. You will join the room "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
 
-stream_info = ("**This match will be scheduled on stream.** "
-            "You are the **{0}** team. You will join the room "
+stream_info = ("**This match will be scheduled on stream.**
+            " (Time slot {time_slot}: {time}) "
+            "You are the **{home_or_away}** team. You will join the room "
             "using the above information once you have been contacted "
             "by a member of the media committee. Do not join a team "
             "until a stream host or caster has instructed you to do so."
-            "\nRemember to inform the stream committee what server "
-            "region your team would like to play on.")
+            "\n\nRemember to inform the stream committee what server "
+            "region your team would like to play on."
+            "\n\nLive Stream: <{live_stream}>")
 
 regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                 "and screenshots of the end-of-game scoreboard. Do not leave "

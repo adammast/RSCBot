@@ -176,7 +176,7 @@ class StreamSignupManager(commands.Cog):
                 message += stream_header
                 for this_match_day, time_slots in sorted(match_days.items()):
                     if match_day == this_match_day or (not match_day and this_match_day >= current_match_day):
-                        message += "\n> __Match Day {0}__".format(this_match_day)
+                        message += "\n> __**Match Day {0}**__".format(this_match_day)
                         for time_slot, match in sorted(time_slots.items()):
                             message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
                             num_matches += 1
@@ -256,14 +256,14 @@ class StreamSignupManager(commands.Cog):
                 
                 # Update match cog details
                 stream_details = {
-                    'channel': stream_channel,
+                    'live_stream': stream_channel,
                     'slot': app['slot'],
                     'time': await self._get_time_from_slot(ctx.guild, slot)
                 }
                 await self.match_cog.set_match_on_stream(ctx, match_day, team, stream_details)
 
                 # Notify all team members that the game is on stream
-                message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel)
+                message = league_approved_msg.format(match_day=match_day, home=app['home'], away=app['away'], slot=slot, live_stream=stream_channel, channel=app['channel'])
                 for team_name in [app['home'], app['away']]:
                     franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
                     gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
