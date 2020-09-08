@@ -150,7 +150,7 @@ class Match(commands.Cog):
 
         Examples:
 
-        [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards',
+        [p]addMatches "['1','September 10, 2020','Fakes','Leopards',
         'octane','worst car']"
         [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards']" "[
         '2','September 13, 2018','Leopards','Fire Ants']"
@@ -411,10 +411,9 @@ class Match(commands.Cog):
         #     'roomPass': roomPass
         # }
         for match in matches:
-            if not match['matchDay'] == match_day:
-                break 
-            if match['home'].casefold() == team_name.casefold() or match['away'].casefold() == team_name.casefold():
-                return match
+            if match['matchDay'] == match_day:
+                if match['home'].casefold() == team_name.casefold() or match['away'].casefold() == team_name.casefold():
+                    return match
         return None
 
     async def set_match_on_stream(self, ctx, match_day, team_name, stream_info):
@@ -470,7 +469,6 @@ class Match(commands.Cog):
         additional_info += regular_info
         # PLAYOFF INFO
         #additional_info += playoff_info
-        print(additional_info)
         return additional_info
 
     def _generate_name_pass(self):

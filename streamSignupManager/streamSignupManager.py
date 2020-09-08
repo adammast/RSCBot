@@ -246,21 +246,28 @@ class StreamSignupManager(commands.Cog):
         
         schedule = await self._stream_schedule(ctx.guild)
         if schedule:
-            msg = "Remove {0} from stream schedule on match day {1}?".format(team, match_day)
-            react_msg = await ctx.send(msg)
-            start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
-            try:
-                pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
-                await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
-                if pred.result:
-                    if await self._remove_match_from_stream(match_day, team, notify_teams=True):
-                        await ctx.send("Done.")
+            match_found = await self._get_stream_match(ctx, match_day, team)
+            if match_found:
+                match, slot = match_found
+                msg = ("__Match found.__\n**{home}** vs. **{away}**"
+                    "\nMatch Day {match_day}, time slot {slot}\n\nRemove this match from the "
+                    "stream schedule?").format(home=match['home'], away=match['away'], match_day=match_day, slot=slot)
+                react_msg = await ctx.send(msg)
+                start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+                try:
+                    pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
+                    await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+                    if pred.result:
+                        if await self._remove_match_from_stream(ctx, match_day, team, notify_teams=True):
+                            await ctx.send("Done.")
+                        else:
+                            await ctx.send(":x: Match was not found in the stream schedule.")
                     else:
-                        await ctx.send(":x: Match was not found in the stream schedule.")
-                else:
-                    await ctx.send("No changes made.")
-            except:
-                await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+                        await ctx.send("No changes made.")
+                except asyncio.TimeoutError:
+                    await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
+            else:
+                await ctx.send(":x: Match was not found in the stream schedule.")
         else:
             await ctx.send("No games have been scheduled on stream.")
 
@@ -302,7 +309,7 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['setmatchonstream'])
     @commands.guild_only()
-    async def setMatchOnStream(self, ctx, stream_url_or_id, slot, match_day, team):
+    async def setMatchOnStream(self, ctx, stream_url_or_id, match_day, slot, team):
         """
         Override application process and set match on stream
         
@@ -345,18 +352,21 @@ class StreamSignupManager(commands.Cog):
             pred = ReactionPredicate.yes_or_no(react_msg, ctx.message.author)
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result:
-                await self._schedule_match_on_stream(ctx, stream_channel, match_day, slot, match['home'], match['away'])
-                
-                # Update app if one was ongoing
-                apps = await self._applications(ctx.guild)
-                for app in apps[match_day]:
-                    if (app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold()):
-                        app['status'] = self.SCHEDULED_ON_STREAM_STATUS
-                        app['slot'] = slot
-                        await self._save_applications(ctx.guild, apps)
-                        break
-
-                await ctx.send("Done.")
+                scheduled = await self._schedule_match_on_stream(ctx, stream_channel, match_day, slot, match['home'], match['away'])
+                if scheduled:
+                    # Update app if one was ongoing
+                    apps = await self._applications(ctx.guild)
+                    try:
+                        for app in apps[match_day]:
+                            if (app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold()):
+                                app['status'] = self.SCHEDULED_ON_STREAM_STATUS
+                                app['slot'] = slot
+                                await self._save_applications(ctx.guild, apps)
+                                break
+                    except KeyError:
+                        pass
+                    
+                    await ctx.send("Done.")
             else:
                 await ctx.send("Match was not added to the stream schedule.")
         except asyncio.TimeoutError:
@@ -563,11 +573,21 @@ class StreamSignupManager(commands.Cog):
                     await ctx.send("Done.")
                 else:
                     await ctx.send("No live stream channels have been removed.")
-            except:
+            except asyncio.TimeoutError:
                 await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
         else:
             await ctx.send("No live stream channels found.")
 
+
+    async def _get_stream_match(self, ctx, match_day, team):
+        schedule = await self._stream_schedule(ctx.guild)
+        for stream_page, match_days in schedule.items():
+            for this_match_day, time_slots in match_days.items():
+                if this_match_day == match_day:
+                    for time_slot, match in time_slots.items():
+                        if match['home'].casefold() == team.casefold() or match['away'] == team.casefold():
+                            return match, time_slot
+        return None
 
     async def _add_application(self, ctx, requested_by, match_data, time_slot, requesting_team=None):
         applications = await self._applications(ctx.guild)
@@ -711,59 +731,68 @@ class StreamSignupManager(commands.Cog):
                 if this_match_day == match_day:
                     for time_slot, match in time_slots.items():
                         if match['home'].casefold() == team.casefold() or match['away'] == team.casefold():
-                            removed_match = time_slot.pop(match, None)
+                            removed_match = time_slots.pop(time_slot, None)
                             if removed_match:
                                 await self._save_stream_schedule(ctx.guild, schedule)
                                 break
         
         # Update Match in Match Cog
         if removed_match:
-            await self.match_cog._remove_match_from_stream(ctx, match_day, team_name)
+            await self.match_cog.remove_match_from_stream(ctx, match_day, team)
         else:
             return False
 
         # Update application status
-        applications = await self._applications(guild)
+        applications = await self._applications(ctx.guild)
         for this_match_day, apps in applications.items():
             if this_match_day == match_day:
                 for app in apps:
-                    if app['home'] == team or app['away'] == team:
+                    if app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold():
                         app['status'] = self.RESCINDED_STATUS
-                        await self._save_applications(applications)
+                        await self._save_applications(ctx.guild, applications)
                         break
         
         if not notify_teams:
-            return True
+            return removed_match
 
         # Notify all team members that the game is no longer on stream
         message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
         for team in [removed_match['home'], removed_match['away']]:
-            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team)
             gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
 
             await self._send_member_message(ctx, gm, message)
             for team_member in team_members:
                 await self._send_member_message(ctx, team_member, message)
+        
+        return removed_match
 
     async def _schedule_match_on_stream(self, ctx, stream_channel, match_day, slot, home, away):
+        already_scheduled = await self._get_stream_match(ctx, match_day, home)
+        if already_scheduled:
+            match, scheduled_slot = already_scheduled
+            if scheduled_slot == slot:
+                await ctx.send(":exclamation: This match is already scheduled for this time slot ({0}).".format(scheduled_slot))
+            else:
+                await ctx.send(":x: This match is already scheduled for time slot {0}.".format(scheduled_slot))
+            return False
+        
         schedule = await self._stream_schedule(ctx.guild)
         if schedule:
             try:
                 conflict = schedule[stream_channel][match_day][slot]
                 await ctx.send(":x: There is already a stream scheduled for this stream slot. ({0} vs. {1})".format(conflict['home'], conflict['away']))
+                return False
             except KeyError:
                 try:
-                    # Ideal case - stream/day found, slot not found
-                    other_matches = schedule[stream_channel][match_day]
-                    schedule[stream_channel][match_day] = {slot: {'home': home, 'away': away}}
+                    schedule[stream_channel][match_day][slot] = {'home': home, 'away': away}
                 except KeyError:
-                    # Fist Scheduled match on this stream & match day
-                    other_match_days = schedule[stream_channel]
-                    schedule[stream_channel] = {match_day: {slot: {'home': home, 'away': away}}}    
+                    try:
+                        schedule[stream_channel][match_day] = {slot: {'home': home, 'away': away}}
+                    except KeyError:
+                        schedule[stream_channel] = {match_day: {slot: {'home': home, 'away': away}}}  
         else:
-            # first scheduled match on this stream
             schedule = {stream_channel: {match_day: {slot: {'home': home, 'away': away}}}}
-        
         scheduled = await self._save_stream_schedule(ctx.guild, schedule)
         
         if not scheduled:
@@ -820,7 +849,8 @@ class StreamSignupManager(commands.Cog):
     async def _send_member_message(self, ctx, member, message):
         debug = True
         if debug:
-            await ctx.send("sent message to {0}".format(member))
+            await ctx.send("_didn't_ :) send message to {0}".format(member))
+            return False
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
         message = message.replace('[p]', ctx.prefix)
         message = message_title + message
