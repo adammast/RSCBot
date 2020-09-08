@@ -543,7 +543,7 @@ stream_info = ("**This match is scheduled to play on stream ** "
             "private match lobby if you are one of the three players on your "
             "team playing in the current game. Do not join a team until a "
             "stream host or caster has instructed you to do so via in-game chat."
-            "\nRemember to inform the stream committee what server "
+            "\nRemember to inform the Media Committee what server "
             "region your team would like to play on before games begin."
             "\n\nLive Stream: <{live_stream}>")
 
