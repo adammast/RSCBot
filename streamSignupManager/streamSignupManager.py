@@ -23,7 +23,7 @@ class StreamSignupManager(commands.Cog):
         self.match_cog = bot.get_cog("Match")
         self.team_manager_cog = bot.get_cog("TeamManager")
         self.bot = bot
-        MEDIA_ROLE = "Media Committee"
+        self.MEDIA_ROLE_STR = "Media Committee"
 
         # Application statuses
         self.PENDING_OPP_CONFIRMATION_STATUS = "PENDING_OPP_CONFIRMATION"
@@ -110,9 +110,9 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def clearApps(self, ctx):
         """Clears all saved applications."""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         await self._clear_applications(ctx.guild)
@@ -124,9 +124,9 @@ class StreamSignupManager(commands.Cog):
         """
         View all completed stream applications that are pending league approval. Match Day and Time Slot filters are optional.
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         message = await self._format_apps(ctx, True, match_day, time_slot)
@@ -147,9 +147,9 @@ class StreamSignupManager(commands.Cog):
         """
         View all stream applications and their corresponding statuses. Match Day and Time Slot filters are optional.
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         message = await self._format_apps(ctx, False, match_day, time_slot)
@@ -215,9 +215,9 @@ class StreamSignupManager(commands.Cog):
         """Removes stream schedule
         Note: This will **not** update information in the match cog."""
 
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         msg = "Are you sure you want to remove all scheduled live stream matches?"
@@ -239,9 +239,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def rescindStreamGame(self, ctx, match_day, team):
         """Removes a match from the stream schedule"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         schedule = await self._stream_schedule(ctx.guild)
@@ -271,9 +271,9 @@ class StreamSignupManager(commands.Cog):
         """Approve application for stream.
         
         Applications that have `PENDING_LEAUGE_APPROVAL`, `REJECTED`, or `RESCINDED` status may be approved."""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         apps = await self._applications(ctx.guild)
@@ -310,9 +310,9 @@ class StreamSignupManager(commands.Cog):
         [p]setMatchOnStream 1 1 1 Spartans
         [p]setMatchOnStream https://twitch.tv/rocketsoccarconfederation 2 8 Vikings
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         match = await self.match_cog.get_match_from_day_team(ctx, match_day, team)
@@ -367,9 +367,9 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def rejectApp(self, ctx, match_day, team):
         """Reject application for stream (Stream Committee only)"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         apps = await self._applications(ctx.guild)
@@ -413,9 +413,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addTimeSlot(self, ctx, slot, *, time):
         """Adds a time slot association"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         if await self._get_time_from_slot(ctx.guild, slot):
@@ -429,9 +429,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTimeSlot(self, ctx, slot):
         """Remove time slot association"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         time_slots = await self.config.guild(ctx.guild).TimeSlots()
@@ -449,9 +449,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearTimeSlots(self, ctx):
         """Removes all time slot associations"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         await self._save_time_slots(ctx.guild, {})
@@ -491,9 +491,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addLiveStream(self, ctx, url):
         """Adds a new live stream page for stream signups"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         msg = "Add \"__{0}__\" to list of stream pages?".format(url)
@@ -515,9 +515,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeLiveStream(self, ctx, url_or_id):
         """Removes live stream pages"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         streams = await self._get_live_stream_channels(ctx.guild)
@@ -545,9 +545,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearLiveStreams(self, ctx, slot):
         """Removes all saved stream urls"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, StreamSignupManager.MEDIA_ROLE)
-        if media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(media_role.name))
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
             return False
         
         streams = await self._get_live_stream_channels(ctx.guild)
