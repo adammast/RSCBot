@@ -777,7 +777,6 @@ class StreamSignupManager(commands.Cog):
             return False
 
         # Update application status
-        message = ""
         applications = await self._applications(ctx.guild)
         for this_match_day, apps in applications.items():
             if this_match_day == match_day:
@@ -785,13 +784,13 @@ class StreamSignupManager(commands.Cog):
                     if app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold():
                         app['status'] = self.RESCINDED_STATUS
                         await self._save_applications(ctx.guild, applications)
-                        message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                         break
         
         if not notify_teams:
             return removed_match
 
         # Notify all team members that the game is no longer on stream
+        message = rescinded_msg.format(match_day=match_day, home=removed_match['home'], away=removed_match['away'])
         for team in [removed_match['home'], removed_match['away']]:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team)
             gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
@@ -882,9 +881,6 @@ class StreamSignupManager(commands.Cog):
         await self.config.guild(guild).Applications.set({})
     
     async def _send_member_message(self, ctx, member, message):
-        if True:
-            await ctx.send("_didn't_ send message to {}".format(member.name))
-            return False
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
         message = message.replace('[p]', ctx.prefix)
         message = message_title + message
@@ -975,5 +971,5 @@ league_approved_msg = ("**Congratulations!** You have been selected to play **ma
 league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
     "Your application will be kept on file in the event that an on-stream match has been rescheduled.")
 
-rescinded_msg = ("Your match that was scheduled to be played on stream (Match Day {match_day}: {home} vs. {away}) has been **rescinded**. This match will no longer be played"
-    "on stream, and will be played as it was originally scheduled. You may use the `[p]match {match_day}` command to see your updated match information for match day {match_day}.")
+rescinded_msg = ("Your match that was scheduled to be played on stream (Match Day {match_day}: **{home}** vs. **{away}**) has been **rescinded**. This match will no longer be played"
+    "on stream, and will be played as it was originally scheduled. \n\nYou may use the `[p]match {match_day}` command to see your updated match information for match day {match_day}.")
