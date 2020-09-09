@@ -167,34 +167,54 @@ class StreamSignupManager(commands.Cog):
     @commands.command(aliases=['schedule'])
     @commands.guild_only()
     async def streamSchedule(self, ctx, url_or_id=None, match_day=None):
-        """View Matches that have been scheduled on stream"""
+        """View Matches that have been scheduled on stream
+        
+        `[p]streamSchedule today` may be used to see the schedule for the current week's stream matches.
+        """
         schedule = await self._stream_schedule(ctx.guild)
         url = None
-        message = "Stream Schedule"
+        this_week_only = False
+        title = "Stream Schedule"
         if url_or_id:
-            url = await self._get_live_stream(ctx.guild, url_or_id)
-            if not url:
-                await ctx.send(":x: \"{0}\" is not a valid live stream indicator.".format(url_or_id))
-                return False
-            if match_day:
-                message += " (match day {0})".format(match_day)
-        message += ":"
-        
+            if url_or_id.casefold() in ["today", "tonight", "this-week"]:
+                this_week_only = True
+                match_day = await self.match_cog._match_day(ctx)
+            else:
+                url = await self._get_live_stream(ctx.guild, url_or_id)
+                if not url:
+                    await ctx.send(":x: \"{0}\" is not a valid live stream indicator.".format(url_or_id))
+                    return False
+                if match_day:
+                    title += " (match day {0})".format(match_day)
+        title += ":"
+        message = title
         # Print Schedule as Quote
         current_match_day = await self.match_cog._match_day(ctx)
         num_matches = 0
         for this_url, match_days in schedule.items():
             if url == this_url or not url:
-                if num_matches:
-                    message += "\n> "
-                stream_header = "\n> __**<{0}> Schedule**__\n> ".format(this_url) if "https://" in this_url else "\n> __**{0} Schedule**__\n> ".format(this_url)
-                message += stream_header
+                # For Each Stream Page
+                stream_header = "\n> __**<{0}> Schedule**__".format(this_url) if "https://" in this_url else "\n> __**{0} Schedule**__".format(this_url)
+                tmp_message = ""
+                # message += stream_header
                 for this_match_day, time_slots in sorted(match_days.items()):
-                    if match_day == this_match_day or (not match_day and this_match_day >= current_match_day):
-                        message += "\n> __**Match Day {0}**__".format(this_match_day)
+                    # logic for whether or not to add matches for that match day
+                    add_matches = (
+                        (this_week_only and match_day == this_match_day) or 
+                        (not this_week_only and (match_day == this_match_day or (not match_day and this_match_day >= current_match_day)))
+                    )
+                    if add_matches:
+                        tmp_message += "\n> \n> __**Match Day {0}**__".format(this_match_day)
                         for time_slot, match in sorted(time_slots.items()):
-                            message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
+                            tmp_message += "\n> {0} | {1} vs. {2}".format(time_slot, match['home'], match['away'])
                             num_matches += 1
+
+                # Don't add stream to schedule preview unless it has matches that will be displayed in result
+                if tmp_message:
+                    if num_matches and message != title:
+                        message += "\n> \n> "
+                    message += stream_header
+                    message += tmp_message
 
         if not num_matches:
             message = ":x: No stream matches have been scheduled"
