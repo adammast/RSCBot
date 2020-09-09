@@ -13,7 +13,7 @@ verify_timeout = 30
 # - make [p]clearStreamSchedule notify players of stream removal
 # + (maybe?) reject applications for same time frame/alert that a different application has been accepted.
 
-# Roles: Captain, GM, <Tier>, <Franchise>, Stream Committee
+# Roles: Captain, GM, <Tier>, <Franchise>, Media Committee
 
 class StreamSignupManager(commands.Cog):
     def __init__(self, bot):
