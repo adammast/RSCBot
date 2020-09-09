@@ -118,11 +118,11 @@ class Match(commands.Cog):
                                                      match_day)
             if match_index is not None:
                 if ctx.message.author.is_on_mobile():
-                    await ctx.message.author.send(await self._format_match_message(ctx,
-                                            match_index, team_name_for_info))
+                    message = await self._format_match_message(ctx, match_index, team_name_for_info)
+                    await ctx.message.author.send(message)
                 else:
-                    await ctx.message.author.send(embed=await self._format_match_embed(ctx,
-                                            match_index, team_name_for_info))
+                    embed = await self._format_match_embed(ctx, match_index, team_name_for_info)
+                    await ctx.message.author.send(embed=embed)
             else:
                 await ctx.message.author.send(
                     "No match on day {0} for {1}".format(match_day,
@@ -257,7 +257,7 @@ class Match(commands.Cog):
             'away': away,
             'roomName': roomName,
             'roomPass': roomPass,
-            'stream_info': None
+            'streamDetails': None
         }
 
         # Append new match and create an index in "teamDays" for both teams.
@@ -422,7 +422,7 @@ class Match(commands.Cog):
             if not match['matchDay'] == match_day:
                 break 
             if match['home'] == team_name or match['away'] == team_name:
-                match['stream_info'] = stream_info
+                match['streamDetails'] = stream_info
                 await self._save_matches(ctx, matches)
                 return True
         return False
@@ -433,7 +433,7 @@ class Match(commands.Cog):
             if not match['matchDay'] == match_day:
                 break 
             if match['home'] == team_name or match['away'] == team_name:
-                match.pop('stream_info', None)
+                match.pop('streamDetails', None)
                 await self._save_matches(ctx, matches)
                 return True
         return False
@@ -534,17 +534,15 @@ away_info = ("You are the **away** team. You will join the room "
             "your entire team is ready to begin playing.")
 
 stream_info = ("**This match is scheduled to play on stream ** "
-            "(Time slot {time_slot}: {time}). "
-            "You are the **{home_or_away}** team. You will join the room "
-            "using the above information once you have been contacted "
-            "by a member of the media committee. You may only join the "
-            "private match lobby if you are one of the three players on your "
-            "team playing in the current game. Do not join a team until a "
-            "stream host or caster has instructed you to do so via in-game chat."
+            "(Time slot {time_slot}: {time})"
+            "\nYou are the **{home_or_away}** team. "
+            "A member of the Media Committee will inform you when the lobby is ready."
+            "Do not join the lobby unless you are playing in the upcoming game."
+            "Players should not join until instructed to do so via in-game chat."
             "\nRemember to inform the Media Committee what server "
             "region your team would like to play on before games begin."
             "\n\nLive Stream: <{live_stream}>")
-
+            
 regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                 "and screenshots of the end-of-game scoreboard. Do not leave "
                 "the game until screenshots have been taken. "
