@@ -13,39 +13,31 @@ The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` a
 
 ## Usage
 
-- `<p>combines`
-  Its that simple! This command behaves as a switch. If a combines category exists, it will run a teardown of all the rooms. If there is not a combines category established, it will create one, and add a voice channel for each tier.
+- `<p>startCombines`
+  Creates a Combine Rooms channel category with all associated text and voice channels.
 
-- `<p>combines [keywords]`
-  The `keywords` parameter can be used to force the start/stop behavior with the following keywords:
-- Start combines keywords: start, create
-- Stop combines keywords: stop, teardown, end
+- `<p>stopCombines`
+  Runs a teardown for all combine channels. This will remove all channels under the "Combine Rooms" categorty as well as the category itself.
+
+#### Roles involved:
+- League
+- Muted
 
 ## Customization
 
-- `<p>setPlayersPerRoom` (Default: 6)
-  - Sets the reccomended concurrent FA/DE limit in a room.
-  - (Disabled) The room name will reflect the number of FA/DE players in them
-    - Naming format: `<Rank> room <room number> (<player count>/<players_per_room>)`
-  - Examples:
-    - 3v3 leagues should have no more than 6 Free Agent/Draft Eligible players combined.
-    - 2v2 leagues should have no more than 4 Free Agent/Draft Eligible players combined.
-    - Special case: RSC's 1v1 league will have rooms of 4 players, who will cycle through matches against each other player in the room.
 - `<p>setRoomCapacity` (Default: 10)
-  - Sets the limit for discord members in room. This limit is role agnostic.
-  - This is a limit for players and scouts in a single room.
+  - Sets the limit for discord members in room.
 - `<p>togglePublicity` (Default: Public)
   - Toggles the combines between a Public and Private status.
   - If combines are Public, any member may participate.
   - If combines are Private, only members with the "League" role may particpate.
 - `<p>setAcronym` (Default: RSC)
   - Sets the acronym used in the combines cog.
-  - This is used to tweak the default message in the #combine-details channel, such as rule reference, and room information.
+  - This is is relevant with the naming scheme for dynamically created voice channels.
 
 ## Other commands
 
 The following commands can be used to check current properties of the server:
-- `<p>getPlayersPerRoom`
 - `<p>getRoomCapacity`
 - `<p>getCombinePublicity`
 - `<p>getAcronym`
