@@ -9,9 +9,9 @@ from redbot.core.utils.menus import start_adding_reactions
 defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {}, "LiveStreamChannels": [], "StreamFeedChannel": None}
 verify_timeout = 30
 
-# TODO: (All listed todos)
-# + league approve applications
-# + reject applications for same time frame/alert that a different application has been accepted.
+# TODO: 
+# - make [p]clearStreamSchedule notify players of stream removal
+# + (maybe?) reject applications for same time frame/alert that a different application has been accepted.
 
 # Roles: Captain, GM, <Tier>, <Franchise>, Stream Committee
 
@@ -132,7 +132,7 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def allApps(self, ctx, match_day=None, time_slot=None):
         """
-        View all stream applications and their corresponding statuses. Match Day and Time Slot filters are optional.
+        View all stream applications and their corresponding statuses. This is largely used for debugging purposes.
         """
         media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
@@ -166,7 +166,7 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['acceptapp'])
     @commands.guild_only()
-    async def approveApp(self, ctx, match_day, url_or_id, team):
+    async def approveApp(self, ctx, url_or_id, match_day, team):
         """Approve application for stream.
         
         Applications that have `PENDING_LEAUGE_APPROVAL`, `REJECTED`, or `RESCINDED` status may be approved."""
@@ -202,7 +202,7 @@ class StreamSignupManager(commands.Cog):
     @commands.command(aliases=['rejectapp'])
     @commands.guild_only()
     async def rejectApp(self, ctx, match_day, team):
-        """Reject application for stream (Stream Committee only)"""
+        """Reject application for stream"""
         media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
             await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
@@ -424,6 +424,11 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def setStreamFeedChannel(self, ctx, channel: discord.TextChannel):
         """Sets the channel where all stream application notification messages will be posted"""
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            return False
+
         await self._save_stream_feed_channel(ctx, channel.id)
         await ctx.send("Done.")
 
@@ -794,6 +799,11 @@ class StreamSignupManager(commands.Cog):
                         break
         
         if not notify_teams:
+            return removed_match
+        
+        # Don't notify if the match has already happened.
+        current_match_day = await self.match_cog._match_day(ctx)
+        if int(match_day) < int(current_match_day):
             return removed_match
 
         # Notify all team members that the game is no longer on stream
