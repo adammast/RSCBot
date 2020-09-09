@@ -255,9 +255,9 @@ class StreamSignupManager(commands.Cog):
             await ctx.send("{0} You didn't react quick enough. Please try again.".format(ctx.author.mention))
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['rescindStreamGame'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def rescindStreamGame(self, ctx, match_day, team):
+    async def rescindStreamMatch(self, ctx, match_day, team):
         """Removes a match from the stream schedule"""
         media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
