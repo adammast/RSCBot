@@ -867,10 +867,6 @@ class StreamSignupManager(commands.Cog):
         await self.config.guild(guild).Applications.set({})
     
     async def _send_member_message(self, ctx, member, message):
-        debug = True
-        if debug:
-            await ctx.send("_didn't_ :) send message to {0}".format(member))
-            return False
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
         message = message.replace('[p]', ctx.prefix)
         message = message_title + message
