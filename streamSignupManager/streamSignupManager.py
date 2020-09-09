@@ -745,17 +745,31 @@ class StreamSignupManager(commands.Cog):
     async def _remove_match_from_stream(self, ctx, match_day, team, notify_teams=True):
         schedule = await self._stream_schedule(ctx.guild)
         removed_match = False
+
+        # Potential removal data types
+        match_found = False
+        time_slots = None
+        match_days = None
+        this_match_day = None
+
         # Find, Remove Match from Stream Schedule
         for stream_page, match_days in schedule.items():
             for this_match_day, time_slots in match_days.items():
                 if this_match_day == match_day:
                     for time_slot, match in time_slots.items():
-                        if match['home'].casefold() == team.casefold() or match['away'] == team.casefold():
-                            removed_match = time_slots.pop(time_slot, None)
-                            if removed_match:
-                                await self._save_stream_schedule(ctx.guild, schedule)
-                                break
-        
+                        if match['home'].casefold() == team.casefold() or match['away'].casefold() == team.casefold():
+                            match_found = True
+                            break
+
+        if match_found:
+            removed_match = time_slots.pop(time_slot, None)
+            if not time_slots:
+                match_days.pop(this_match_day, None)
+            if not match_days:
+                schedule.pop(stream_page, None)
+            await self._save_stream_schedule(ctx.guild, schedule)
+
+
         # Update Match in Match Cog
         if removed_match:
             await self.match_cog.remove_match_from_stream(ctx, match_day, team)
@@ -763,6 +777,7 @@ class StreamSignupManager(commands.Cog):
             return False
 
         # Update application status
+        message = ""
         applications = await self._applications(ctx.guild)
         for this_match_day, apps in applications.items():
             if this_match_day == match_day:
@@ -770,13 +785,13 @@ class StreamSignupManager(commands.Cog):
                     if app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold():
                         app['status'] = self.RESCINDED_STATUS
                         await self._save_applications(ctx.guild, applications)
+                        message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                         break
         
         if not notify_teams:
             return removed_match
 
         # Notify all team members that the game is no longer on stream
-        message = rescinded_msg.format(match_day=match_day, home=app['home'], away=app['away'])
         for team in [removed_match['home'], removed_match['away']]:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team)
             gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
@@ -785,7 +800,7 @@ class StreamSignupManager(commands.Cog):
             for team_member in team_members:
                 await self._send_member_message(ctx, team_member, message)
         
-        return removed_match
+        return match_found
 
     async def _schedule_match_on_stream(self, ctx, stream_channel, match_day, slot, home, away):
         already_scheduled = await self._get_stream_match(ctx, match_day, home)
@@ -867,6 +882,9 @@ class StreamSignupManager(commands.Cog):
         await self.config.guild(guild).Applications.set({})
     
     async def _send_member_message(self, ctx, member, message):
+        if True:
+            await ctx.send("_didn't_ send message to {}".format(member.name))
+            return False
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
         message = message.replace('[p]', ctx.prefix)
         message = message_title + message
