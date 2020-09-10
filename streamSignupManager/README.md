@@ -12,7 +12,7 @@ The `streamSignupManager` cog depends on the `match` cog. Install `match` as wel
 ```
 ### Roles
 
-    Franchise, Tier and General Manager roles must be defined for this cog to work properly. In addition, some commands are limited to users who have a **Media Committee** role.
+Franchise, Tier and General Manager roles must be defined for this cog to work properly. In addition, some commands are limited to users who have a **Media Committee** role.
 
 ## Usage
 
