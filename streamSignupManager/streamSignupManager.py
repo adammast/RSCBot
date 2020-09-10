@@ -396,10 +396,12 @@ class StreamSignupManager(commands.Cog):
                 if embed:
                     lobbies_embeds.append(embed)
 
+        # Delete original message
         if not lobbies_embeds:
             await ctx.send(":x: No stream matches found.")
             return False
         
+        # Send lobby info in DMs
         if lobbies_embeds:
             await ctx.message.delete()
             for lobbies_embed in lobbies_embeds:

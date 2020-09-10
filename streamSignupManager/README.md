@@ -59,6 +59,11 @@ When a match has been set to be on stream, the `<p>match` command in the match c
 - `<p>streamSchedule [url_or_id] [match_day]`
     - View Matches that have been scheduled on stream
     - `<p>streamSchedule today` may be used to see the schedule for the current week's stream matches.
+- `<p>getStreamLobbies [url_or_id] [match_day]`
+    - Get Private Lobby information for matches that will be scheduled on stream. Private lobby information will be sent as an embed in DMs.
+    - If `url_or_id` is not provided, information will be sent for all found stream channels with matches scheduled.
+    - If `match_day` is not provided, information will be sent for current match day.
+    - Note: Media Committee only
 - `<p>clearStreamSchedule`
     - Removes stream schedule
     - Note: This will **not** update information in the match cog.
