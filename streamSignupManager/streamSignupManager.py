@@ -357,6 +357,54 @@ class StreamSignupManager(commands.Cog):
 
         await ctx.send(message)
 
+    @commands.command(aliases=['getstreamlobbiess', 'streamLobbyInfo', 'streamlobbies'])
+    @commands.guild_only()
+    async def getStreamLobbies(self, ctx, stream_url_or_id=None, match_day=None):
+        """Get Private Lobby information for matches that will be scheduled on stream"""
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        if not media_role or media_role not in ctx.message.author.roles:
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            return False
+    
+        # Parse match day to int
+        if match_day:
+            try:
+                match_day = int(match_day)
+                match_day = str(match_day)
+            except:
+                await ctx.send("\"{}\" is not a valid match day. Defaulting to current match day.".format(match_day))
+                match_day = None
+            pass
+
+        # Set match_day to today if not specified
+        if not match_day:
+            match_day = await self.match_cog._match_day(ctx)
+
+        lobbies_embeds = []
+        if stream_url_or_id:
+            live_stream = await self._get_live_stream(ctx.guild, stream_url_or_id)
+            if not live_stream:
+                await ctx.send(":x: {0} is not a valid stream url or ID".format(stream_url_or_id))
+                return False
+            
+            embed = await self._format_match_lobby_info(ctx, match_day, live_stream)
+            if embed:
+                lobbies_embeds.append(embed)
+        else:
+            for live_stream in await self._get_live_stream_channels(ctx.guild):
+                embed = await self._format_match_lobby_info(ctx, match_day, live_stream)
+                if embed:
+                    lobbies_embeds.append(embed)
+
+        if not lobbies_embeds:
+            await ctx.send(":x: No stream matches found.")
+            return False
+        
+        if lobbies_embeds:
+            await ctx.message.delete()
+            for lobbies_embed in lobbies_embeds:
+                await ctx.message.author.send(embed=lobbies_embed)
+
     @commands.guild_only()
     @commands.command(aliases=['clearschedule'])
     async def clearStreamSchedule(self, ctx):
@@ -611,6 +659,17 @@ class StreamSignupManager(commands.Cog):
             await ctx.send("No live stream channels found.")
 
 
+    async def _get_stream_matches(self, ctx, live_stream, match_day):
+        matches = []
+        schedule = await self._stream_schedule(ctx.guild)
+        for stream_page, match_days in schedule.items():
+            if stream_page == live_stream:
+                for this_match_day, time_slots in match_days.items():
+                    if this_match_day == match_day:
+                        for time_slot, match in sorted(time_slots.items()):
+                            matches.append((time_slot, match))
+        return matches
+
     async def _get_stream_match(self, ctx, match_day, team):
         schedule = await self._stream_schedule(ctx.guild)
         for stream_page, match_days in schedule.items():
@@ -720,6 +779,42 @@ class StreamSignupManager(commands.Cog):
                         await self._send_member_message(ctx, requesting_member, message)
                         return True
         return False
+
+    async def _format_match_lobby_info(self, ctx, match_day, stream_url):
+        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        
+        title = "__Match Day {match_day}: {date}__".format(match_day=match_day, date="{date}")
+
+        matchups = []
+        lobby_names = []
+        passwords = []
+
+        matches = await self._get_stream_matches(ctx, stream_url, match_day)
+        for match in matches:
+            time_slot, match = match
+            home = match['home']
+            away = match['away']
+
+            matchup = '{0} | {1} vs. {2}'.format(time_slot, home, away)
+            match = await self.match_cog.get_match_from_day_team(ctx, match_day, home)
+            if match:
+                if '{date}' in title:
+                    title = title.format(date=match['matchDate'])
+                matchups.append(matchup)
+                lobby_names.append(match['roomName'])
+                passwords.append(match['roomPass'])
+
+        if not matchups:
+            return None
+
+        # Format lobby info
+        description = "Matchups and private lobby information for matches scheduled on stream"
+        description += "\n\nLive Stream: " + stream_url
+        embed = discord.Embed(title=title, description=description, color=media_role.color)
+        embed.add_field(name="Matchup", value='{}\n'.format('\n'.join(matchups)), inline=True)
+        embed.add_field(name="Room Name", value='{}\n'.format('\n'.join(lobby_names)), inline=True)
+        embed.add_field(name="Room Password", value='{}\n'.format('\n'.join(passwords)), inline=True)
+        return embed
 
     async def _format_apps(self, ctx, for_approval=False, match_day=None, time_slot=None):
         if for_approval:
