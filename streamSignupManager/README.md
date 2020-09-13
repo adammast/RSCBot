@@ -1,4 +1,4 @@
-# RSCBot: combineRooms
+# RSCBot: streamSignupManager
 
 The `streamSignupManager` cog is primarily responsible for managing stream signups for RSC. This is used to manage which live stream channels are available for streams, and what time slots are available.
 

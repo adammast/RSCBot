@@ -150,7 +150,7 @@ class Match(commands.Cog):
 
         Examples:
 
-        [p]addMatches "['1','September 10, 2020','Fakes','Leopards',
+        [p]addMatches "['1','September 10, 2020','Fire Ants','Leopards',
         'octane','worst car']"
         [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards']" "[
         '2','September 13, 2018','Leopards','Fire Ants']"
@@ -191,6 +191,7 @@ class Match(commands.Cog):
                                       home, away, *args)
         if match:
             await ctx.send("Done")
+
 
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
