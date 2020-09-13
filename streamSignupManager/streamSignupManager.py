@@ -757,7 +757,7 @@ class StreamSignupManager(commands.Cog):
         for t in teams:
             if t.casefold() == team.casefold():
                 return True
-        await ctx.send(":x: {0} does not have a team with the name, \"{1}\"".format(franchise_role.name, team))
+        await ctx.send(":x: **{0}** does not have a team named, **{1}**".format(franchise_role.name, team))
         return False
 
     async def _accept_reject_application(self, ctx, recipient, match_day, is_accepted, recipient_team=None):
