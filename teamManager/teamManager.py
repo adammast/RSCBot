@@ -116,7 +116,7 @@ class TeamManager(commands.Cog):
         \t[p]transferFranchise nullidea adammast
         \t[p]recoverFranchise nullidea The Ocean
         \t[p]claimFranchise nullidea OCE"""
-        
+
         if self.is_gm(new_gm):
             await ctx.send("{0} already has the \"General Manager\" role.".format(new_gm.name))
             return False
@@ -127,6 +127,13 @@ class TeamManager(commands.Cog):
             return False
 
         franchise_role, old_gm_name, prefix, franchise_name = franchise_data
+        
+        prompt = "Transfer ownership of **{franchise}** from {old_gm} to {new_gm}?".format(
+            franchise=franchise_name, old_gm=old_gm_name, new_gm=new_gm.name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
 
         ## TRANSFER/RECOVER FRANCHISE
         
