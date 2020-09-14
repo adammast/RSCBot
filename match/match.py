@@ -14,7 +14,7 @@ defaults = {"MatchDay": 0, "Schedule": {}}
 class Match(commands.Cog):
     """Used to get the match information"""
 
-    MATHCES_KEY = "Matches"
+    MATCHES_KEY = "Matches"
     TEAM_DAY_INDEX_KEY = "TeamDays"
 
     def __init__(self, bot):
@@ -85,7 +85,7 @@ class Match(commands.Cog):
         followed by a list of teams for which the match info should be
         retrieved.
 
-        Example: `!match 1 derechos "killer bees"`
+        Example: `[p]match 1 derechos "killer bees"`
 
         Note: If no team names are sent, GMs (or anyone with multiple team
         roles) will get matchups for all their teams. User's without a team
@@ -117,12 +117,12 @@ class Match(commands.Cog):
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
-                if not ctx.message.author.is_on_mobile():
-                    await ctx.message.author.send(embed=await self._format_match_embed(ctx,
-                                            match_index, team_name_for_info))
+                if ctx.message.author.is_on_mobile():
+                    message = await self._format_match_message(ctx, match_index, team_name_for_info)
+                    await ctx.message.author.send(message)
                 else:
-                    await ctx.message.author.send(await self._format_match_message(ctx,
-                                            match_index, team_name_for_info))
+                    embed = await self._format_match_embed(ctx, match_index, team_name_for_info)
+                    await ctx.message.author.send(embed=embed)
             else:
                 await ctx.message.author.send(
                     "No match on day {0} for {1}".format(match_day,
@@ -150,7 +150,7 @@ class Match(commands.Cog):
 
         Examples:
 
-        [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards',
+        [p]addMatches "['1','September 10, 2020','Fire Ants','Leopards',
         'octane','worst car']"
         [p]addMatches "['1','September 10, 2018','Fire Ants','Leopards']" "[
         '2','September 13, 2018','Leopards','Fire Ants']"
@@ -191,6 +191,7 @@ class Match(commands.Cog):
                                       home, away, *args)
         if match:
             await ctx.send("Done")
+
 
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
@@ -256,11 +257,12 @@ class Match(commands.Cog):
             'home': home,
             'away': away,
             'roomName': roomName,
-            'roomPass': roomPass
+            'roomPass': roomPass,
+            'streamDetails': None
         }
 
         # Append new match and create an index in "teamDays" for both teams.
-        matches = schedule.setdefault(self.MATHCES_KEY, [])
+        matches = schedule.setdefault(self.MATCHES_KEY, [])
         team_days = schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
 
         home_key = self._team_day_key(home, match_day)
@@ -278,6 +280,16 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
+    async def _set_match_on_stream(self, ctx, match_day, team, stream_details):
+        matches = await self._matches(ctx)
+        for match in matches:
+            if match['matchDay'] == match_day and (one_team == match['home'] or one_team == match['away']):
+                match['streamDetails'] = stream_details
+                #match['time'] = time  # ((could add time param to match))
+                await self._save_matches(ctx, matches)
+                return True
+        return False
+
     async def _schedule(self, ctx):
         return await self.config.guild(ctx.guild).Schedule()
 
@@ -286,11 +298,11 @@ class Match(commands.Cog):
 
     async def _matches(self, ctx):
         schedule = await self._schedule(ctx)
-        return schedule.setdefault(self.MATHCES_KEY, {})
+        return schedule.setdefault(self.MATCHES_KEY, {})
 
     async def _save_matches(self, ctx, matches):
         schedule = await self._schedule(ctx)
-        schedule[self.MATHCES_KEY] = matches
+        schedule[self.MATCHES_KEY] = matches
         await self._save_schedule(ctx, schedule)
 
     async def _team_days_index(self, ctx):
@@ -329,7 +341,8 @@ class Match(commands.Cog):
         #     'home': home,
         #     'away': away,
         #     'roomName': roomName,
-        #     'roomPass': roomPass
+        #     'roomPass': roomPass,
+        #     'stream_details' : <stream details/None>
         # }
         home = match['home']
         away = match['away']
@@ -347,7 +360,10 @@ class Match(commands.Cog):
         embed.add_field(name="**Away Team:**",
                 value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
-        additional_info = self._create_additional_info(user_team_name, home, away)
+        try:
+            additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+        except KeyError:
+            additional_info = self._create_additional_info(user_team_name, home, away)
 
         embed.add_field(name="Additional Info:", value=additional_info)
         return embed
@@ -363,6 +379,11 @@ class Match(commands.Cog):
         #     'away': away,
         #     'roomName': roomName,
         #     'roomPass': roomPass
+        #     'stream_details`: {
+        #         'live_stream': live_stream,
+        #         'slot': slot,
+        #         'time': time
+        #      }
         # }
         home = match['home']
         away = match['away']
@@ -371,16 +392,77 @@ class Match(commands.Cog):
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
         message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
-        message += "**Away Team:**\n{0}\n\n".format(await self.team_manager.format_roster_info(ctx, away))
-        message += self._create_additional_info(user_team_name, home, away)
+        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
+        
+        try:
+            message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+        except KeyError:
+            message += self._create_additional_info(user_team_name, home, away)
         return message
 
-    def _create_additional_info(self, user_team_name, home, away):
+    async def get_match_from_day_team(self, ctx, match_day, team_name):
+        matches = await self._matches(ctx)
+        # Match format:
+        # match_data = {
+        #     'matchDay': match_day,
+        #     'matchDate': match_date,
+        #     'home': home,
+        #     'away': away,
+        #     'roomName': roomName,
+        #     'roomPass': roomPass
+        # }
+        for match in matches:
+            if match['matchDay'] == match_day:
+                if match['home'].casefold() == team_name.casefold() or match['away'].casefold() == team_name.casefold():
+                    return match
+        return None
+
+    async def set_match_on_stream(self, ctx, match_day, team_name, stream_info):
+        matches = await self._matches(ctx)
+        for match in matches:
+            if not match['matchDay'] == match_day:
+                break 
+            if match['home'] == team_name or match['away'] == team_name:
+                match['streamDetails'] = stream_info
+                await self._save_matches(ctx, matches)
+                return True
+        return False
+
+    async def remove_match_from_stream(self, ctx, match_day, team_name):
+        matches = await self._matches(ctx)
+        for match in matches:
+            if not match['matchDay'] == match_day:
+                break 
+            if match['home'] == team_name or match['away'] == team_name:
+                match.pop('streamDetails', None)
+                await self._save_matches(ctx, matches)
+                return True
+        return False
+
+    def _create_additional_info(self, user_team_name, home, away, stream_details=None, is_playoffs=False):
         additional_info = ""
-        if user_team_name and user_team_name == home:
-            additional_info += home_info
-        elif user_team_name and user_team_name == away:
-            additional_info += away_info
+        if user_team_name:
+            if stream_details:
+                if user_team_name.casefold() == home.casefold():
+                    additional_info += stream_info.format(
+                        home_or_away='home', 
+                        time_slot=stream_details['slot'],
+                        time=stream_details['time'],
+                        live_stream=stream_details['live_stream']
+                    )
+                elif user_team_name.casefold() == away.casefold():
+                    additional_info += stream_info.format(
+                        home_or_away='away', 
+                        time_slot=stream_details['slot'],
+                        time=stream_details['time'],
+                        live_stream=stream_details['live_stream']
+                    )
+            else:
+                if user_team_name == home:
+                    additional_info += home_info
+                elif user_team_name == away:
+                    additional_info += away_info
+                
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
@@ -452,6 +534,16 @@ away_info = ("You are the **away** team. You will join the room "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
 
+stream_info = ("**This match is scheduled to play on stream ** "
+            "(Time slot {time_slot}: {time})"
+            "\nYou are the **{home_or_away}** team. "
+            "A member of the Media Committee will inform you when the lobby is ready. "
+            "Do not join the lobby unless you are playing in the upcoming game. "
+            "Players should not join until instructed to do so via in-game chat. "
+            "\nRemember to inform the Media Committee what server "
+            "region your team would like to play on before games begin."
+            "\n\nLive Stream: <{live_stream}>")
+            
 regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                 "and screenshots of the end-of-game scoreboard. Do not leave "
                 "the game until screenshots have been taken. "
