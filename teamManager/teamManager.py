@@ -1,15 +1,20 @@
 import discord
 import re
 import ast
+import asyncio
 import difflib
 
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 from collections import Counter
+from redbot.core.utils.predicates import MessagePredicate
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
 
 defaults = {"Tiers": [], "Teams": [], "Team_Roles": {}}
+verify_timeout = 30
 
 class TeamManager(commands.Cog):
     """Used to match roles to teams"""
@@ -39,6 +44,13 @@ class TeamManager(commands.Cog):
         [p]addFranchise adammast OCE The Ocean
         [p]addFranchise Drupenson POA Planet of the Apes
         """
+        
+        prompt = "Franchise Name: **{franchise}**\nPrefix: **{prefix}**\nGeneral Manager: **{gm}**\n\nAre you sure you want to add this franchise?".format(
+            franchise=franchise_name, prefix=franchise_prefix, gm=gm.name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
 
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
@@ -65,13 +77,20 @@ class TeamManager(commands.Cog):
         \t[p]removeFranchise adammast
         \t[p]removeFranchise OCE
         \t[p]removeFranchise The Ocean"""
-        franchise_data = self._get_franchise_data(ctx, franchise_identifier):
+        franchise_data = await self._get_franchise_data(ctx, franchise_identifier)
         if not franchise_data:
             await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
             return False
 
-        franchise_role, gm_name, prefix, franchise_name = franchise_data
+        franchise_role, gm_name, franchise_prefix, franchise_name = franchise_data
         gm = self._find_member_by_name(ctx, gm_name) # get gm member type from gm string
+
+        prompt = "Franchise Name: **{franchise}**\nPrefix: **{prefix}**\nGeneral Manager: **{gm}**\n\nAre you sure you want to remove this franchise?".format(
+            franchise=franchise_name, prefix=franchise_prefix, gm=gm_name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
         
         gm_active = gm in ctx.guild.members
         franchise_role = self._get_franchise_role(ctx, gm.name)
@@ -102,7 +121,7 @@ class TeamManager(commands.Cog):
             await ctx.send("{0} already has the \"General Manager\" role.".format(new_gm.name))
             return False
 
-        franchise_data = self._get_franchise_data(ctx, franchise_identifier):
+        franchise_data = await self._get_franchise_data(ctx, franchise_identifier)
         if not franchise_data:
             await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
             return False
@@ -138,7 +157,7 @@ class TeamManager(commands.Cog):
             
         
         await ctx.send("{0} is the new General Manager for {1}.".format(new_gm.name, franchise_name))
-        
+    
     @commands.command(aliases=["getFranchises", "listFranchises"])
     @commands.guild_only()
     async def franchises(self, ctx):
@@ -447,6 +466,22 @@ class TeamManager(commands.Cog):
                     
         await ctx.send(embed=embed)
 
+
+    async def _react_prompt(self, ctx, prompt, if_not_msg=None):
+        user = ctx.message.author
+        react_msg = await ctx.send(prompt)
+        start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        try:
+            pred = ReactionPredicate.yes_or_no(react_msg, user)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result:
+                return True
+            if if_not_msg:
+                await ctx.send(if_not_msg)
+            return False
+        except asyncio.TimeoutError:
+            await ctx.send("Sorry {}, you didn't react quick enough. Please try again.".format(user.mention))
+            return False
 
     async def _get_franchise_data(self, ctx, franchise_identifier):
         franchise_found = False
