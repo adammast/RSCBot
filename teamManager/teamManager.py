@@ -1,15 +1,20 @@
 import discord
 import re
 import ast
+import asyncio
 import difflib
 
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 from collections import Counter
+from redbot.core.utils.predicates import MessagePredicate
+from redbot.core.utils.predicates import ReactionPredicate
+from redbot.core.utils.menus import start_adding_reactions
 
 
 defaults = {"Tiers": [], "Teams": [], "Team_Roles": {}}
+verify_timeout = 30
 
 class TeamManager(commands.Cog):
     """Used to match roles to teams"""
@@ -26,18 +31,27 @@ class TeamManager(commands.Cog):
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
 
-
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *franchise_name: str):
+    async def addFranchise(self, ctx, gm: discord.Member, franchise_prefix: str, *, franchise_name: str):
         """Add a single franchise and prefix
-        
         This will also create the franchise role in the format: <franchise name> (GM name)
-        
         Afterwards it will assign this role and the General Manager role to the new GM and modify their nickname
+        
+        Examples:
+        [p]addFranchise nullidea MEC Mechanics
+        [p]addFranchise adammast OCE The Ocean
+        [p]addFranchise Drupenson POA Planet of the Apes
         """
-        franchise_name = ' '.join(franchise_name)
+        
+        prompt = "Franchise Name: **{franchise}**\nPrefix: **{prefix}**\nGeneral Manager: **{gm}**\n\nAre you sure you want to add this franchise?".format(
+            franchise=franchise_name, prefix=franchise_prefix, gm=gm.name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
+
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
         franchise_role_name = "{0} ({1})".format(franchise_name, gm.name)
         franchise_role = await self._create_role(ctx, franchise_role_name)
@@ -45,10 +59,7 @@ class TeamManager(commands.Cog):
         if franchise_role and not self.is_gm(gm):
             await gm.add_roles(gm_role, franchise_role)
             await self.prefix_cog.add_prefix(ctx, gm.name, franchise_prefix)
-            try:
-                await gm.edit(nick="{0} | {1}".format(franchise_prefix, self.get_player_nickname(gm)))
-            except discord.Forbidden:
-                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
+            await self._set_user_nickname_prefix(ctx, franchise_prefix, gm)
             await ctx.send("Done.")
         else:
             if self.is_gm(gm):
@@ -58,22 +69,102 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @commands.admin_or_permissions(manage_guild=True)
-    async def removeFranchise(self, ctx, gm: discord.Member):
+    async def removeFranchise(self, ctx, *, franchise_identifier: str):
+        """Removes a franchise and all of its components (role, prefix) from the league.
+        A franchise must not have any teams for this command to work.
+        
+        Examples:
+        \t[p]removeFranchise adammast
+        \t[p]removeFranchise OCE
+        \t[p]removeFranchise The Ocean"""
+        franchise_data = await self._get_franchise_data(ctx, franchise_identifier)
+        if not franchise_data:
+            await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
+            return False
+
+        franchise_role, gm_name, franchise_prefix, franchise_name = franchise_data
+        gm = self._find_member_by_name(ctx, gm_name) # get gm member type from gm string
+
+        prompt = "Franchise Name: **{franchise}**\nPrefix: **{prefix}**\nGeneral Manager: **{gm}**\n\nAre you sure you want to remove this franchise?".format(
+            franchise=franchise_name, prefix=franchise_prefix, gm=gm_name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
+        
+        gm_active = gm in ctx.guild.members
         franchise_role = self._get_franchise_role(ctx, gm.name)
         franchise_teams = await self._find_teams_for_franchise(ctx, franchise_role)
         if len(franchise_teams) > 0:
             await ctx.send(":x: Cannot remove a franchise that has teams enrolled.")
         else:
             gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
-            await gm.remove_roles(gm_role)
+            if gm_active:
+                await gm.remove_roles(gm_role)
             await franchise_role.delete()
-            await self.prefix_cog.remove_prefix(ctx, gm.name)
-            try: 
-                await gm.edit(nick=self.get_player_nickname(gm))
-            except:
-                await ctx.send("Chaning nickname forbidden for user: {0}".format(gm.name))
+            await self.prefix_cog.remove_prefix(ctx, gm_name)
+            await self._set_user_nickname_prefix(ctx, None, gm)
             await ctx.send("Done.")
 
+    @commands.command(aliases=["recoverFranchise", "claimFranchise"])
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def transferFranchise(self, ctx, new_gm: discord.Member, *, franchise_identifier: str):
+        """Transfer ownership of a franchise to a new GM, with the franchise's name, prefix, or previous GM.
+        
+        Examples:
+        \t[p]transferFranchise nullidea adammast
+        \t[p]recoverFranchise nullidea The Ocean
+        \t[p]claimFranchise nullidea OCE"""
+
+        if self.is_gm(new_gm):
+            await ctx.send("{0} already has the \"General Manager\" role.".format(new_gm.name))
+            return False
+
+        franchise_data = await self._get_franchise_data(ctx, franchise_identifier)
+        if not franchise_data:
+            await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
+            return False
+
+        franchise_role, old_gm_name, prefix, franchise_name = franchise_data
+        
+        prompt = "Transfer ownership of **{franchise}** from {old_gm} to {new_gm}?".format(
+            franchise=franchise_name, old_gm=old_gm_name, new_gm=new_gm.name)
+        nvm_msg = "No changes made."
+
+        if not await self._react_prompt(ctx, prompt, nvm_msg):
+            return False
+
+        ## TRANSFER/RECOVER FRANCHISE
+        
+        # rename franchise role
+        franchise_name = self.get_franchise_name_from_role(franchise_role)
+        new_franchise_name = "{0} ({1})".format(franchise_name, new_gm.name)
+        await franchise_role.edit(name=new_franchise_name)
+
+        # change prefix association to new GM
+        await self.prefix_cog.remove_prefix(ctx, old_gm_name)
+        await self.prefix_cog.add_prefix(ctx, new_gm.name, franchise_prefix)
+        await self._set_user_nickname_prefix(ctx, franchise_prefix, new_gm)
+
+        # reassign roles for gm/franchise
+        franchise_tier_roles = await self._find_franchise_tier_roles(ctx, franchise_role)
+        gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
+        transfer_roles = [gm_role, franchise_role] + franchise_tier_roles
+        await new_gm.add_roles(*transfer_roles)
+
+        # If old GM is still in server:
+        old_gm = self._find_member_by_name(ctx, old_gm_name)
+        if old_gm:
+            await old_gm.remove_roles(*transfer_roles)
+            await self._set_user_nickname_prefix(ctx, "", old_gm)
+            former_gm_role = self._find_role_by_name(ctx, "Former GM")
+            if former_gm_role:
+                await old_gm.add_roles(former_gm_role)
+            
+        
+        await ctx.send("{0} is the new General Manager for {1}.".format(new_gm.name, franchise_name))
+    
     @commands.command(aliases=["getFranchises", "listFranchises"])
     @commands.guild_only()
     async def franchises(self, ctx):
@@ -305,23 +396,13 @@ class TeamManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def removeTeam(self, ctx, team_name: str):
+    async def removeTeam(self, ctx, *, team_name: str):
         """Removes team from the file system. Team roles will be cleared as well"""
-        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-        teams = await self._teams(ctx)
-        team_roles = await self._team_roles(ctx)
-        try:
-            teams.remove(team_name)
-            del team_roles[team_name]
-        except ValueError:
-            await ctx.send(
-                "{0} does not seem to be a team.".format(team_name))
-            return
-        await self._save_teams(ctx, teams)
-        await self._save_team_roles(ctx, team_roles)
-        gm = self._get_gm(ctx, franchise_role)
-        await gm.remove_roles(tier_role)
-        await ctx.send("Done.")
+        teamRemoved = await self._remove_team(ctx, team_name)
+        if teamRemoved:
+            await ctx.send("Done.")
+        else:
+            await ctx.send("Error removing team: {0}".format(team_name))
 
     @commands.command()
     @commands.guild_only()
@@ -392,6 +473,49 @@ class TeamManager(commands.Cog):
                     
         await ctx.send(embed=embed)
 
+
+    async def _react_prompt(self, ctx, prompt, if_not_msg=None):
+        user = ctx.message.author
+        react_msg = await ctx.send(prompt)
+        start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+        try:
+            pred = ReactionPredicate.yes_or_no(react_msg, user)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            if pred.result:
+                return True
+            if if_not_msg:
+                await ctx.send(if_not_msg)
+            return False
+        except asyncio.TimeoutError:
+            await ctx.send("Sorry {}, you didn't react quick enough. Please try again.".format(user.mention))
+            return False
+
+    async def _get_franchise_data(self, ctx, franchise_identifier):
+        franchise_found = False
+        # GM/Prefix Identifier
+        prefixes = await self.prefix_cog._prefixes(ctx)
+        if(len(prefixes.items()) > 0):
+            for key, value in prefixes.items():
+                if franchise_identifier.lower() == key.lower() or franchise_identifier.lower() == value.lower():
+                    franchise_found = True
+                    gm_name = key
+                    franchise_prefix = value
+                    franchise_role = self._get_franchise_role(ctx, gm_name)
+                    franchise_name = self.get_franchise_name_from_role(franchise_role)
+                    
+                
+        # Franchise name identifier
+        if not franchise_found:
+            franchise_role = self.get_franchise_role_from_name(ctx, franchise_identifier)
+            if franchise_role:
+                franchise_found = True
+                franchise_name = self.get_franchise_name_from_role(franchise_role)
+                gm_name = self._get_gm_name(franchise_role)
+                franchise_prefix = await self.prefix_cog._get_gm_prefix(ctx, gm_name)
+
+        if franchise_found:
+            return franchise_role, gm_name, franchise_prefix, franchise_name
+        return None
 
     def is_gm(self, member):
         for role in member.roles:
@@ -654,6 +778,22 @@ class TeamManager(commands.Cog):
         gm = self._get_gm(ctx, franchise_role)
         await gm.add_roles(tier_role)
         return True
+    
+    async def _remove_team(self, ctx, team_name: str):
+        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+        teams = await self._teams(ctx)
+        team_roles = await self._team_roles(ctx)
+        try:
+            teams.remove(team_name)
+            del team_roles[team_name]
+        except ValueError:
+            await ctx.send("{0} does not seem to be a team.".format(team_name))
+            return False
+        await self._save_teams(ctx, teams)
+        await self._save_team_roles(ctx, team_roles)
+        gm = self._get_gm(ctx, franchise_role)
+        await gm.remove_roles(tier_role)
+        return True
 
     def _get_tier_role(self, ctx, tier: str):
         roles = ctx.message.guild.roles
@@ -686,6 +826,12 @@ class TeamManager(commands.Cog):
                 return role
         return None
 
+    def _find_member_by_name(self, ctx, member_name: str):
+        for member in ctx.guild.members:
+            if member.name == member_name:
+                return member
+        return None
+    
     def _get_franchise_role(self, ctx, gm_name):
         for role in ctx.message.guild.roles:
             try:
@@ -733,6 +879,22 @@ class TeamManager(commands.Cog):
                 franchise_teams.append(team)
         return franchise_teams
 
+    async def _find_franchise_tier_roles(self, ctx, franchise_role: discord.Role):
+        franchise_tier_roles = []
+        teams = await self._teams(ctx)
+        for team in teams:
+            if (await self._roles_for_team(ctx, team))[0] == franchise_role:
+                tier_role = (await self._roles_for_team(ctx, team))[1]
+                franchise_tier_roles.append(tier_role)
+        return franchise_tier_roles
+
+    async def _get_franchise_tier_team(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
+        teams = await self._teams(ctx)
+        for team in teams:
+            if (await self._roles_for_team(ctx, team)) == (franchise_role, tier_role):
+                return team
+        return None
+    
     def get_current_franchise_role(self, user: discord.Member):
         for role in user.roles:
             try:
@@ -764,6 +926,15 @@ class TeamManager(commands.Cog):
             return currentNickname
         return user.name
 
+    async def _set_user_nickname_prefix(self, ctx, prefix: str, user: discord.member):
+        try:
+            if prefix:
+                await user.edit(nick="{0} | {1}".format(prefix, self.get_player_nickname(user)))
+            else:
+                await user.edit(nick=self.get_player_nickname(user))
+        except discord.Forbidden:
+            await ctx.send("Changing nickname forbidden for user: {0}".format(user.name))
+
     def get_franchise_role_from_name(self, ctx, franchise_name: str):
         for role in ctx.message.guild.roles:
             try:
@@ -772,6 +943,10 @@ class TeamManager(commands.Cog):
                     return role
             except:
                 continue
+
+    def get_franchise_name_from_role(self, franchise_role: discord.Role):
+        end_of_name = franchise_role.name.rindex("(") - 1
+        return franchise_role.name[0:end_of_name]
 
     async def _match_team_name(self, ctx, team_name):
         teams = await self._teams(ctx)
@@ -819,3 +994,13 @@ class TeamManager(commands.Cog):
             return re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]
         except:
             raise LookupError('GM name not found from role {0}'.format(franchise_role.name))
+    
+    async def _get_user_tier_roles(self, ctx, user: discord.Member):
+        user_tier_roles = []
+        for tier_name in await self._tiers(ctx):
+            tier_role = self._find_role_by_name(ctx, tier_name)
+            if tier_role in user.roles:
+                user_tier_roles.append(tier_role)
+        return user_tier_roles
+    
+    
