@@ -126,7 +126,7 @@ class TeamManager(commands.Cog):
             await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
             return False
 
-        franchise_role, old_gm_name, prefix, franchise_name = franchise_data
+        franchise_role, old_gm_name, franchise_prefix, franchise_name = franchise_data
         
         prompt = "Transfer ownership of **{franchise}** from {old_gm} to {new_gm}?".format(
             franchise=franchise_name, old_gm=old_gm_name, new_gm=new_gm.name)
