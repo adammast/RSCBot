@@ -299,25 +299,35 @@ class TeamManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTier(self, ctx, tier_name: str):
         """Remove a tier from the tier list and the tier's corresponding roles"""
-
-        if len(await self._find_teams_for_tier(ctx, tier_name)) > 0:
-            await ctx.send(":x: Cannot remove a tier that has teams enrolled.")
-        else:
-            tier_role = self._get_tier_role(ctx, tier_name)
-            tier_fa_role = self._find_role_by_name(ctx, "{0}FA".format(tier_name))
-            if tier_role:
-                await tier_role.delete()
-            if tier_fa_role:
-                await tier_fa_role.delete()
-            tiers = await self.tiers(ctx)
-            try:
-                tiers.remove(tier_name)
-            except ValueError:
-                await ctx.send(
-                    "{0} does not seem to be a tier.".format(tier_name))
-                return
-            await self._save_tiers(ctx, tiers)
+        removed = await self._remove_tier(ctx, tier_name)
+        if removed:
             await ctx.send("Done.")
+        else:
+            await ctx.send(":x: Cannot remove a tier that has teams enrolled.")
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeAllTiers(self, ctx):
+        """Removes all tiers and corresponding roles from the server"""
+        # we need tiers
+        tiers = await self.tiers(ctx)
+
+        removed = []
+        not_removed = []
+        for tier in tiers:
+            if await self._remove_tier(ctx, tier):
+                removed.append(tier)
+            else:
+                not_removed.append(tier)
+
+        if not_removed:
+            message = ":white_check_mark: The following tiers have been removed: {0}".format(', '.join(removed))
+            message += "\n:x: The following tiers could not be removed: {0}".format(', '.join(not_removed))
+            await ctx.send(message)
+        else:
+            await ctx.send("Removed {} tiers.".format(len(removed)))
+
 
     @commands.command(aliases=["getTeams"])
     @commands.guild_only()
@@ -728,6 +738,26 @@ class TeamManager(commands.Cog):
 
     async def tiers(self, ctx):
         return await self.config.guild(ctx.guild).Tiers()
+
+    async def _remove_tier(self, ctx, tier_name):
+        if len(await self._find_teams_for_tier(ctx, tier_name)) > 0:
+            return False
+        else:
+            tier_role = self._get_tier_role(ctx, tier_name)
+            tier_fa_role = self._find_role_by_name(ctx, "{0}FA".format(tier_name))
+            if tier_role:
+                await tier_role.delete()
+            if tier_fa_role:
+                await tier_fa_role.delete()
+            tiers = await self.tiers(ctx)
+            try:
+                tiers.remove(tier_name)
+            except ValueError:
+                await ctx.send(
+                    "{0} does not seem to be a tier.".format(tier_name))
+                return
+            await self._save_tiers(ctx, tiers)
+            return True
 
     async def _save_tiers(self, ctx, tiers):
         await self.config.guild(ctx.guild).Tiers.set(tiers)
