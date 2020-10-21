@@ -102,7 +102,7 @@ class Transactions(commands.Cog):
                     role_name = "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name)
                     tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, role_name)
                 fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
-                await team_manager_cog._set_user_nickname_prefix(ctx, "FA", user)
+                await self.team_manager_cog._set_user_nickname_prefix(ctx, "FA", user)
                 await user.add_roles(tier_fa_role, fa_role)
                 gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
@@ -243,7 +243,7 @@ class Transactions(commands.Cog):
                 currentTier = await self.team_manager_cog.get_current_tier_role(ctx, user)
                 if currentTier is not None and currentTier != tier_role:
                     await user.remove_roles(currentTier)
-                await team_manager_cog._set_user_nickname_prefix(ctx, prefix, user)
+                await self.team_manager_cog._set_user_nickname_prefix(ctx, prefix, user)
                 await user.add_roles(tier_role, leagueRole, franchise_role)
 
     async def remove_player_from_team(self, ctx, user, team_name):
