@@ -674,7 +674,7 @@ class TeamManager(commands.Cog):
         for member in members:
             if captain_role in member.roles:
                 return member
-        if captain_role in gm.roles:
+        if gm and captain_role in gm.roles:
             return gm
         return None
             
