@@ -1,15 +1,16 @@
+from datetime import datetime
 import traceback
 import ast
 import random
-from datetime import datetime
-import json
 import discord
+import requests
+import json
 
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"MatchDay": 0, "Schedule": {}}
+defaults = {"MatchDay": 0, "Schedule": {}, "StandingsData": {"APIKey": None, "SheetId": None}}
 
 class Match(commands.Cog):
     """Used to get the match information"""
@@ -20,7 +21,7 @@ class Match(commands.Cog):
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager = bot.get_cog("TeamManager")
+        self.team_manager_cog = bot.get_cog("TeamManager")
 
     @commands.command()
     @commands.guild_only()
@@ -97,7 +98,7 @@ class Match(commands.Cog):
                                "the server.")
             return
         team_names = []
-        user_team_names = await self.team_manager.teams_for_user(
+        user_team_names = await self.team_manager_cog.teams_for_user(
             ctx, ctx.message.author)
 
         team_names_provided = len(args) > 1
@@ -192,6 +193,99 @@ class Match(commands.Cog):
         if match:
             await ctx.send("Done")
 
+    @commands.command(aliases=["setKey"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setAPIKey(self, ctx, key: str):
+        """Sets the Key for Google Sheets API requests (i.e. standings)"""
+        standings_data = await self._standings_data(ctx)
+        standings_data['APIKey'] = key
+        await self._save_standings_data(ctx, standings_data)
+        await ctx.send("Done")
+
+    @commands.command(aliases=["setSheetID"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setSheetId(self, ctx, id: str):
+        """Sets the Google Sheets ID for API requests (i.e. standings)"""
+        standings_data = await self._standings_data(ctx)
+        standings_data['SheetId'] = id
+        await self._save_standings_data(ctx, standings_data)
+        await ctx.send("Done")
+
+    @commands.command()
+    @commands.guild_only()
+    async def standings(self, ctx, tier):
+        """Displays standings for any given tier"""
+
+        # API Request Credentials
+        standings_data = await self._standings_data(ctx)
+        api_key = standings_data['APIKey']
+        sheet_id = standings_data['SheetId']
+        
+        # Determine teams per tier, request range
+        starting_cell = "A2"
+        if "franchise" in tier.lower():
+            tier = "Franchise Standings"
+            num_teams = len(self.team_manager_cog._get_all_franchise_roles(ctx))
+            ending_cell = "K{}".format(num_teams + int(starting_cell[1:]))  # H => K for franchises
+        else:
+            num_teams = len(await self.team_manager_cog._find_teams_for_tier(ctx, tier))
+            ending_cell = "H{}".format(num_teams + int(starting_cell[1:]))
+        
+        url = "https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{tab}!{starting_cell}:{ending_cell}?key={key}".format(
+            sheet_id=sheet_id, tab=tier, starting_cell=starting_cell, ending_cell=ending_cell, key=api_key)
+
+        # Make Request
+        standings = requests.get(url).json()
+
+        # Parse, Read Data
+        header = standings['values'][0]
+        rank_i = header.index("Rank")
+        wins_i = header.index("W")
+        losses_i = header.index("L")
+        wp_i = header.index("WP")
+
+        sheet_link = "https://docs.google.com/spreadsheets/d/{}".format(sheet_id)
+        if tier == "Franchise Standings":
+            franchise_i = 1
+            team_i = franchise_i
+            gm_i = 2
+            embed = discord.Embed(title="Franchise Standings:", description="For full standings, [click here]({}).".format(sheet_link), color=discord.Colour.blue())
+        else:
+            franchise_i = header.index("Franchise")
+            team_i = header.index("Team")
+            tier_role = self.team_manager_cog._get_tier_role(ctx, tier)
+            embed = discord.Embed(title="{} Standings:".format(tier.capitalize()), description="For full standings, [click here]({}).".format(sheet_link), color=tier_role.color)
+
+        # Create, Send Embed 
+        # output = ""
+        ranks = []
+        teams = []
+        records = []
+        for entry in standings['values'][1:]:
+            
+            franchise = entry[franchise_i]
+            team = entry[team_i]
+            rank = entry[rank_i]
+            win_percentage = entry[wp_i]
+            win_percentage = round(float(win_percentage)*100, 2)
+            wins = entry[wins_i]
+            losses = entry[losses_i]
+
+            # output += "{rank} | {team} ({wins}-{losses})\n".format(rank=rank, team=team, wins=wins, losses=losses)
+
+            ranks.append(rank)
+            teams.append(team)
+            records.append("{}-{} ({}%)".format(wins, losses, win_percentage))
+
+        embed.add_field(name="Rank", value="{}\n".format("\n".join(ranks)), inline=True)
+        embed.add_field(name="Team", value="{}\n".format("\n".join(teams)), inline=True)
+        embed.add_field(name="Record (WP)", value="{}\n".format("\n".join(records)), inline=True)
+        # sheet_link = "https://docs.google.com/spreadsheets/d/{}".format(sheet_id)
+        # embed.set_footer(text="\nFor full standings, [click here]({}).".format(sheet_link))
+        await ctx.send(embed=embed)
+
 
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
@@ -202,8 +296,8 @@ class Match(commands.Cog):
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
             match_date_error = "Date not valid: {0}".format(err)
-        homeRoles = await self.team_manager._roles_for_team(ctx, home)
-        awayRoles = await self.team_manager._roles_for_team(ctx, away)
+        homeRoles = await self.team_manager_cog._roles_for_team(ctx, home)
+        awayRoles = await self.team_manager_cog._roles_for_team(ctx, away)
         roomName = args[0] if args else self._generate_name_pass()
         roomPass = args[1] if len(args) > 1 else self._generate_name_pass()
 
@@ -320,6 +414,12 @@ class Match(commands.Cog):
     async def _save_match_day(self, ctx, match_day):
         await self.config.guild(ctx.guild).MatchDay.set(match_day)
 
+    async def _standings_data(self, ctx):
+        return await self.config.guild(ctx.guild).StandingsData()
+
+    async def _save_standings_data(self, ctx, data):
+        await self.config.guild(ctx.guild).StandingsData.set(data)
+
     async def _team_day_match_index(self, ctx, team, match_day):
         team_days_index = await self._team_days_index(ctx)
         team_days_index =  {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in team_days_index.items()}
@@ -347,7 +447,7 @@ class Match(commands.Cog):
         home = match['home']
         away = match['away']
 
-        tier_role = (await self.team_manager._roles_for_team(ctx, home))[1]
+        tier_role = (await self.team_manager_cog._roles_for_team(ctx, home))[1]
 
         title = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
         description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
@@ -356,9 +456,9 @@ class Match(commands.Cog):
         embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
                                         .format(match['roomName'], match['roomPass']), inline=False)
         embed.add_field(name="**Home Team:**",
-                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+                value=await self.team_manager_cog.format_roster_info(ctx, home), inline=False)
         embed.add_field(name="**Away Team:**",
-                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+                value=await self.team_manager_cog.format_roster_info(ctx, away), inline=False)
 
         try:
             additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
@@ -391,8 +491,8 @@ class Match(commands.Cog):
         message = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
         message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
-        message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
-        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
+        message += "**Home Team:**\n{0}\n".format(await self.team_manager_cog.format_roster_info(ctx, home))
+        message += "**Away Team:**\n{0}\n".format(await self.team_manager_cog.format_roster_info(ctx, away))
         
         try:
             message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])

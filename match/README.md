@@ -4,7 +4,7 @@ The `match` cog is primarily responsible for the creation and maintenance of lea
 
 ## Installation
 
-The `match` cog depends on the `teamManager` cog. Install `teamManager` before installing `match`.
+The `match` cog depends on the `teamManager` cog. Install `teamManager` before installing `match`. Note: Standings related commands uses the `requests` package. This must be installed to the virtual environment before running.
 
 ```
 <p>cog install RSCBot match
