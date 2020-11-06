@@ -222,6 +222,12 @@ class Match(commands.Cog):
         standings_data = await self._standings_data(ctx)
         api_key = standings_data['APIKey']
         sheet_id = standings_data['SheetId']
+
+        if not api_key or not sheet_id:
+            message = ":x: An admin must set an api key and a google sheets id to enable this command."
+            message += "\n\t\tUse `{p}help setAPIKey` or `{p}help setSheetId` for more information.".format(p=ctx.prefix)
+            await ctx.send(message)
+            return False
         
         # Determine teams per tier, request range
         starting_cell = "A2"
@@ -240,7 +246,12 @@ class Match(commands.Cog):
         standings = requests.get(url).json()
 
         # Parse, Read Data
-        header = standings['values'][0]
+        try:
+            header = standings['values'][0]
+        except:
+            await ctx.send(":x: {} is not a valid tier name.".format(tier))
+            return False
+        
         rank_i = header.index("Rank")
         wins_i = header.index("W")
         losses_i = header.index("L")
