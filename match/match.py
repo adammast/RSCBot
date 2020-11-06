@@ -216,7 +216,7 @@ class Match(commands.Cog):
     @commands.command()
     @commands.guild_only()
     async def standings(self, ctx, tier):
-        """Displays standings for any given tier"""
+        """Displays standings for a given tier"""
 
         # API Request Credentials
         standings_data = await self._standings_data(ctx)
@@ -248,7 +248,7 @@ class Match(commands.Cog):
         # Parse, Read Data
         try:
             header = standings['values'][0]
-        except:
+        except KeyError:
             await ctx.send(":x: {} is not a valid tier name.".format(tier))
             return False
         

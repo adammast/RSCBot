@@ -57,3 +57,12 @@ The `match` cog depends on the `teamManager` cog. Install `teamManager` before i
   - Examples:
     - `<p>addMatches "['1','September 10, 2018','Fire Ants','Leopards','octane','worst car']"`
     - `<p>addMatches "['1','September 10, 2018','Fire Ants','Leopards']" "['2','September 13, 2018','Leopards','Fire Ants']"`
+- `<p>setAPIKey <key>`
+  - Sets the authentication key for Google API requests. This is used to get standings information from the google sheets document.
+- `<p>setSheetId <id>`
+  - Sets the id of the google sheets document. This can be found from the Google Sheets url.
+  - Example: The ID can be found after "spreedsheet/d/"
+    - url: https://docs.google.com/spreadsheets/d/13VFcd35NtZLFySYR8UHTYcR0Jjc90OT6EdVhKuqZGBk/edit#gid=73973909
+    - Here, the ID is `13VFcd35NtZLFySYR8UHTYcR0Jjc90OT6EdVhKuqZGBk`
+- `<p>standings <tier>`
+  - Displays the standings for the provided Tier from the google sheets document. Franchise standings may be found if "franchise" is passed as the tier parameter.
