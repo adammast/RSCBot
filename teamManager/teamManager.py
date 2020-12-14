@@ -776,7 +776,8 @@ class TeamManager(commands.Cog):
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
         gm = self._get_gm(ctx, franchise_role)
-        await gm.add_roles(tier_role)
+        if gm:
+            await gm.add_roles(tier_role)
         return True
     
     async def _remove_team(self, ctx, team_name: str):
