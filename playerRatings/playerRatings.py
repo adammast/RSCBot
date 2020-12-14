@@ -250,7 +250,7 @@ class PlayerRatings(commands.Cog):
                 return player
         return None
 
-    def match_info_helper(self, ctx):
+    async def match_info_helper(self, ctx):
         await self.load_players(ctx)
         if self.players:
             return True

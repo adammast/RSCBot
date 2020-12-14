@@ -115,7 +115,7 @@ class Match(commands.Cog):
 
         try:
             player_ratings = self.bot.get_cog("PlayerRatings")
-            if player_ratings.match_info_helper(ctx):
+            if await player_ratings.match_info_helper(ctx):
                 await ctx.send("Player rating cog set up for match info")
                 return
             else:
