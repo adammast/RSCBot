@@ -235,8 +235,8 @@ class PlayerRatings(commands.Cog):
         elo_dif = int(player_1_elo) - int(player_2_elo)
         exponent = -1 * (elo_dif / 100)
         expectation = 1 / (1 + pow(10, exponent))
-        player_1_new_elo = round(player_1_elo + (k_factor * (result - expectation)))
-        player_2_new_elo = round(player_2_elo + (k_factor * ((1 - result) - (1 - expectation))))
+        player_1_new_elo = round(int(player_1_elo) + (k_factor * (result - expectation)))
+        player_2_new_elo = round(int(player_2_elo) + (k_factor * ((1 - result) - (1 - expectation))))
         return player_1_new_elo, player_2_new_elo
     
     def update_player_info(self, player, new_wins, new_losses, new_elo_rating):
