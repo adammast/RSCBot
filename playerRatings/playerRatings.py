@@ -170,10 +170,10 @@ class PlayerRatings(commands.Cog):
         errors = []
         if not member:
             errors.append("Member not found.")
-        if not wins:
-            errors.append("Wins not found.")
-        if not losses:
-            errors.append("Losses not found.")
+        if wins < 0:
+            errors.append("Wins cannot be a negative number.")
+        if losses < 0:
+            errors.append("Losses cannot be a negative number.")
         if not elo_rating:
             errors.append("Elo rating not found.")
         if errors:
@@ -314,7 +314,7 @@ class PlayerRatings(commands.Cog):
     async  def _save_players(self, ctx, players):
         player_dict = {}
         for player in players:
-            player_dict[player.id] = player._to_dict()
+            player_dict[player.member.id] = player._to_dict()
         await self.config.guild(ctx.guild).Players.set(player_dict)
 
     #endregion
