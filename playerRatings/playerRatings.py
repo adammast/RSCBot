@@ -60,7 +60,7 @@ class PlayerRatings(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addPlayer(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating):
+    async def addPlayer(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating: int):
         """Add a single player and their info to the file system."""
         playerAdded = await self._add_player(ctx, member, wins, losses, elo_rating)
         if(playerAdded):
@@ -160,7 +160,7 @@ class PlayerRatings(commands.Cog):
 
     #region helper methods
 
-    async def _add_player(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating):
+    async def _add_player(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating: int):
         await self.load_players(ctx)
         players = self.players
         
@@ -321,7 +321,7 @@ class PlayerRatings(commands.Cog):
     #endregion
 
 class Player:
-    def __init__(self, member, wins, losses, elo_rating):
+    def __init__(self, member, wins: int, losses: int, elo_rating: int):
         self.member = member
         self.wins = wins
         self.losses = losses
