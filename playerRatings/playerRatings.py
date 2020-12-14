@@ -223,7 +223,7 @@ class PlayerRatings(commands.Cog):
     
     async def finish_game(self, ctx, player_1, player_2, player_1_wins: int, player_2_wins: int):
         player_1_new_elo, player_2_new_elo = self.update_elo(player_1.elo_rating, player_2.elo_rating, player_1_wins / (player_1_wins + player_2_wins))
-        await ctx.send(embed=self.embed_game_results(player_1, player_1_wins, player_2_wins, player_2, player_1_new_elo, player_2_new_elo))
+        await ctx.send(embed=self.embed_game_results(player_1, player_2, player_1_wins, player_2_wins, player_1_new_elo, player_2_new_elo))
         self.update_player_info(player_1, player_1_wins, player_2_wins, player_1_new_elo)
         self.update_player_info(player_2, player_2_wins, player_1_wins, player_2_new_elo)
         await self._save_players(ctx, self.players)
