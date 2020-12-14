@@ -205,7 +205,7 @@ class PlayerRatings(commands.Cog):
         await self._save_players(ctx, players)
         return True
 
-    async def verify_game_results(self, ctx, member_1: discord.Member, member_2: discord.Member, member_1_wins, member_2_wins, verifier: discord.Member):
+    async def verify_game_results(self, ctx, member_1: discord.Member, member_2: discord.Member, member_1_wins: int, member_2_wins: int, verifier: discord.Member):
         msg = await ctx.send("{0} Please verify the results:\n**{1}** {2} - {3} **{4}**".format(verifier.mention, member_1.name,
             member_1_wins, member_2_wins, member_2.name))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
@@ -221,14 +221,14 @@ class PlayerRatings(commands.Cog):
             await ctx.send(":x: Result not verified in time. To report the result you will need to use the `{0}reportResult` command again.".format(ctx.prefix))
             return False
     
-    async def finish_game(self, ctx, player_1, player_2, player_1_wins, player_2_wins):
+    async def finish_game(self, ctx, player_1, player_2, player_1_wins: int, player_2_wins: int):
         player_1_new_elo, player_2_new_elo = self.update_elo(player_1.elo_rating, player_2.elo_rating, player_1_wins / (player_1_wins + player_2_wins))
         await ctx.send(embed=self.embed_game_results(player_1, player_1_wins, player_2_wins, player_2, player_1_new_elo, player_2_new_elo))
         self.update_player_info(player_1, player_1_wins, player_2_wins, player_1_new_elo)
         self.update_player_info(player_2, player_2_wins, player_1_wins, player_2_new_elo)
         await self._save_players(ctx, self.players)
     
-    def update_elo(self, player_1_elo, player_2_elo, result):
+    def update_elo(self, player_1_elo: int, player_2_elo: int, result: float):
         """Calculates and returns the new Elo ratings for the two players based on their match results and the K-factor.
         Result param should be a decimal between 0 and 1 relating to the match results for player 1, i.e. a result of 1 
         means player 1 won all the games in the match, a result of .25 means player 1 won 25% of the games in the match, etc."""
