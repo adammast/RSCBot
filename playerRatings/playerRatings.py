@@ -246,7 +246,7 @@ class PlayerRatings(commands.Cog):
 
     def get_player_by_id(self, member_id):
         for player in self.players:
-            if player.id == member_id:
+            if player.member.id == member_id:
                 return player
         return None
 
