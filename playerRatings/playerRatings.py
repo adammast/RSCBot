@@ -287,8 +287,8 @@ class PlayerRatings(commands.Cog):
     def embed_game_results(self, player_1, player_2, player_1_wins: int, player_2_wins: int, player_1_new_elo, player_2_new_elo):
         embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.name, player_2.member.name), color=discord.Colour.blue())
         embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.name, player_1_wins, player_2_wins, player_2.member.name), inline=True)
-        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.name, player_1_new_elo, player_1_new_elo - player_1.elo_rating,
-            player_2.member.name, player_2_new_elo, player_2_new_elo - player_2.elo_rating), inline=True)
+        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.name, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
+            player_2.member.name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=True)
         return embed
 
     #endregion
