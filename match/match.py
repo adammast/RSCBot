@@ -18,6 +18,7 @@ class Match(commands.Cog):
     TEAM_DAY_INDEX_KEY = "TeamDays"
 
     def __init__(self, bot):
+        self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager = bot.get_cog("TeamManager")
@@ -111,6 +112,17 @@ class Match(commands.Cog):
                                "check the spelling. If not, you do not have "
                                "roles corresponding to a team.")
             return
+
+        try:
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            if player_ratings.match_info_helper(ctx):
+                await ctx.send("Player rating cog set up for match info")
+                return
+            else:
+                await ctx.send("Player rating cog not set up for match info")
+                return
+        except:
+            pass
 
         for team_name in team_names:
             team_name_for_info = team_name if user_team_names else None

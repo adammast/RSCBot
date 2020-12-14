@@ -20,6 +20,9 @@ class PlayerRatings(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567870, force_registration=True)
         self.config.register_guild(**defaults)
         self.players = []
+        self.team_manager = bot.get_cog("TeamManager")
+
+    #region commmands
 
     @commands.command()
     @commands.guild_only()
@@ -111,6 +114,24 @@ class PlayerRatings(commands.Cog):
             await ctx.send("Done.")
 
     @commands.guild_only()
+    @commands.command(aliases=["arr", "adminreportresult"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def adminReportResult(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
+        """Submits the result of the game between two players. There is no verification neccessary since this is an admin-only command."""
+        await self.load_players(ctx)
+        player_1 = self.get_player_by_id(member_1.id)
+        if not player_1:
+            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_1.name))
+            return
+        player_2 = self.get_player_by_id(member_2.id)
+        if not player_2:
+            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_2.name))
+            return
+
+        await self.finish_game(ctx, player_1, player_2, member_1_wins, member_2_wins)
+        await ctx.send("Done.")
+
+    @commands.guild_only()
     @commands.command(aliases=["pi"])
     async def playerInfo(self, ctx, member: discord.Member):
         """Gets all the info corresponding to a player. Shows the player's wins, losses, Elo rating, the team they play for, and their team's record."""
@@ -135,13 +156,17 @@ class PlayerRatings(commands.Cog):
         players.sort(key=lambda player: player.elo_rating, reverse=True)
         await ctx.send(embed=self.embed_leaderboard(ctx, players))
     
+    #endregion
+
+    #region helper methods
+
     async def _add_player(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating):
         await self.load_players(ctx)
         players = self.players
         
         # Validation of input
         # There are other validations we could do, but don't
-        #     - that there aren't extra args
+        #     - that there aren't extra args for example
         errors = []
         if not member:
             errors.append("Member not found.")
@@ -225,6 +250,16 @@ class PlayerRatings(commands.Cog):
                 return player
         return None
 
+    def match_info_helper(self, ctx):
+        await self.load_players(ctx)
+        if self.players:
+            return True
+        return False
+
+    #endregion
+
+    #region embed methods
+
     def embed_player_info(self, player):
         embed = discord.Embed(title="{0}".format(player.member.mention), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
@@ -255,6 +290,10 @@ class PlayerRatings(commands.Cog):
             player_2.member.name, player_2_new_elo, player_2_new_elo - player_2.elo_rating), inline=False)
         return embed
 
+    #endregion
+
+    #region load/save methods
+
     async def load_players(self, ctx, force_load = False):
         if self.players is None or self.players == [] or force_load:
             players = await self._players(ctx)
@@ -277,6 +316,8 @@ class PlayerRatings(commands.Cog):
         for player in players:
             player_dict[player.id] = player._to_dict()
         await self.config.guild(ctx.guild).Players.set(player_dict)
+
+    #endregion
 
 class Player:
     def __init__(self, member, wins, losses, elo_rating):
