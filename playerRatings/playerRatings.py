@@ -232,7 +232,7 @@ class PlayerRatings(commands.Cog):
         """Calculates and returns the new Elo ratings for the two players based on their match results and the K-factor.
         Result param should be a decimal between 0 and 1 relating to the match results for player 1, i.e. a result of 1 
         means player 1 won all the games in the match, a result of .25 means player 1 won 25% of the games in the match, etc."""
-        elo_dif = player_1_elo - player_2_elo
+        elo_dif = int(player_1_elo) - int(player_2_elo)
         exponent = -1 * (elo_dif / 100)
         expectation = 1 / (1 + pow(10, exponent))
         player_1_new_elo = round(player_1_elo + (k_factor * (result - expectation)))
