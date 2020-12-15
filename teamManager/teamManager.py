@@ -701,7 +701,7 @@ class TeamManager(commands.Cog):
             player_ratings = self.bot.get_cog("PlayerRatings")
             wins, losses, rating = await player_ratings.get_player_record_and_rating_by_id(ctx, member.id)
             if wins is not None:
-                recordString = " ({0} - {1}, {2})".format(wins, losses, rating)
+                recordString = " ({0}-{1}, {2})".format(wins, losses, rating)
         except:
             pass
         return "{0}{1}{2}".format(member.display_name, recordString, roleString)
