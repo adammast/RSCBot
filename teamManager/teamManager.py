@@ -579,14 +579,14 @@ class TeamManager(commands.Cog):
         if gm:
             if gm == captain:
                 message += "  {0}\n".format(
-                    await self._format_team_member_for_message(gm, "C"))
+                    await self._format_team_member_for_message(ctx, gm, "C"))
             else:
                 message += "  {0}\n".format(
-                    await self._format_team_member_for_message(gm))
+                    await self._format_team_member_for_message(ctx, gm))
         for member in team_members:
             role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(
-                await self._format_team_member_for_message(member, *role_tags))
+                await self._format_team_member_for_message(ctx, member, *role_tags))
         if not team_members:
             message += "\nNo other members found."
         message += "```"
@@ -686,7 +686,7 @@ class TeamManager(commands.Cog):
                 return None
         return await ctx.guild.create_role(name=role_name)
 
-    async def _format_team_member_for_message(self, member, *args):
+    async def _format_team_member_for_message(self, ctx, member, *args):
         extraRoles = list(args)
         if self.is_gm(member):
             extraRoles.insert(0, "GM")
@@ -701,8 +701,7 @@ class TeamManager(commands.Cog):
             wins, losses = await player_ratings.get_player_record_by_id(ctx, member.id)
             if wins is not None:
                 recordString = " ({0} - {1})".format(wins, losses)
-        except Exception as e:
-            await ctx.send(str(e))
+        except:
             pass
         return "{0}{1}{2}".format(member.display_name, roleString, recordString)
 
