@@ -254,7 +254,7 @@ class PlayerRatings(commands.Cog):
         await self.load_players(ctx)
         player = self.get_player_by_id(member_id)
         if player:
-            return player.wins, player.losses
+            return (player.wins, player.losses)
         return None
 
     async def match_info_helper(self, ctx):

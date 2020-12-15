@@ -701,7 +701,8 @@ class TeamManager(commands.Cog):
             wins, losses = await player_ratings.get_player_record_by_id(ctx, member.id)
             if wins is not None:
                 recordString = " ({0} - {1})".format(wins, losses)
-        except:
+        except Exception as e:
+            await ctx.send(str(e))
             pass
         return "{0}{1}{2}".format(member.display_name, roleString, recordString)
 
