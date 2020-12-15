@@ -579,14 +579,14 @@ class TeamManager(commands.Cog):
         if gm:
             if gm == captain:
                 message += "  {0}\n".format(
-                    self._format_team_member_for_message(gm, "C"))
+                    await self._format_team_member_for_message(gm, "C"))
             else:
                 message += "  {0}\n".format(
-                    self._format_team_member_for_message(gm))
+                    await self._format_team_member_for_message(gm))
         for member in team_members:
             role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(
-                self._format_team_member_for_message(member, *role_tags))
+                await self._format_team_member_for_message(member, *role_tags))
         if not team_members:
             message += "\nNo other members found."
         message += "```"
@@ -686,7 +686,7 @@ class TeamManager(commands.Cog):
                 return None
         return await ctx.guild.create_role(name=role_name)
 
-    def _format_team_member_for_message(self, member, *args):
+    async def _format_team_member_for_message(self, member, *args):
         extraRoles = list(args)
         if self.is_gm(member):
             extraRoles.insert(0, "GM")
