@@ -699,13 +699,12 @@ class TeamManager(commands.Cog):
         recordString = ""
         try:
             player_ratings = self.bot.get_cog("PlayerRatings")
-            wins, losses = await player_ratings.get_player_record_by_id(ctx, member.id)
+            wins, losses, rating = await player_ratings.get_player_record_and_rating_by_id(ctx, member.id)
             if wins is not None:
-                recordString = " ({0} - {1})".format(wins, losses)
-        except Exception as e:
-            await ctx.send(str(e))
+                recordString = " ({0} - {1}, {2})".format(wins, losses, rating)
+        except:
             pass
-        return "{0}{1}{2}".format(member.display_name, roleString, recordString)
+        return "{0}{1}{2}".format(member.display_name, recordString, roleString)
 
     async def _format_teams_for_franchise(self, ctx, franchise_role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)

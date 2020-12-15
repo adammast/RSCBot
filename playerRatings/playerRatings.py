@@ -250,11 +250,11 @@ class PlayerRatings(commands.Cog):
                 return player
         return None
 
-    async def get_player_record_by_id(self, ctx, member_id):
+    async def get_player_record_and_rating_by_id(self, ctx, member_id):
         await self.load_players(ctx)
         player = self.get_player_by_id(member_id)
         if player:
-            return (player.wins, player.losses)
+            return (player.wins, player.losses, player.elo_rating)
         return None
 
     async def match_info_helper(self, ctx):
