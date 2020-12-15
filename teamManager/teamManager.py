@@ -695,7 +695,15 @@ class TeamManager(commands.Cog):
         roleString = ""
         if extraRoles:
             roleString = " ({0})".format("|".join(extraRoles))
-        return "{0}{1}".format(member.display_name, roleString)
+        recordString = ""
+        try:
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            wins, losses = await player_ratings.get_player_record_by_id(ctx, member.id)
+            if wins is not None:
+                recordString = " ({0} - {1})".format(wins, losses)
+        except:
+            pass
+        return "{0}{1}{2}".format(member.display_name, roleString, recordString)
 
     async def _format_teams_for_franchise(self, ctx, franchise_role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)

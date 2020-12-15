@@ -9,7 +9,7 @@ from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions, menu, DEFAULT_CONTROLS
 
-k_factor = 30
+k_factor = 40
 
 defaults = {"Players": {}, "Results": []}
 
@@ -134,14 +134,14 @@ class PlayerRatings(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["pi"])
     async def playerInfo(self, ctx, member: discord.Member):
-        """Gets all the info corresponding to a player. Shows the player's wins, losses, Elo rating, the team they play for, and their team's record."""
+        """Gets all the info corresponding to a player. Shows the player's wins, losses, Elo rating, the team they play for."""
         await self.load_players(ctx)
         player = self.get_player_by_id(member.id)
         if not player:
             ctx.send("{} has no player information at this time".format(member.name))
             return
-        # TODO: Get team info for player
-        await ctx.send(embed=self.embed_player_info(player))
+        team_names = await self.team_manager.teams_for_user(ctx, member)
+        await ctx.send(embed=self.embed_player_info(player, team_names))
 
     @commands.guild_only()
     @commands.command(aliases=["plb"])
@@ -194,7 +194,7 @@ class PlayerRatings(commands.Cog):
         players = self.players
 
         try:
-            player = self.get_player_by_id(member.id)
+            player = await self.get_player_by_id(member.id)
             if not player:
                 await ctx.send("{0} does not seem to be a current player.".format(member.name))
                 return False
@@ -250,6 +250,13 @@ class PlayerRatings(commands.Cog):
                 return player
         return None
 
+    async def get_player_record_by_id(self, ctx, member_id):
+        await self.load_players(ctx)
+        player = self.get_player_by_id(member_id)
+        if player:
+            return player.wins, player.losses
+        return None
+
     async def match_info_helper(self, ctx):
         await self.load_players(ctx)
         if self.players:
@@ -260,12 +267,13 @@ class PlayerRatings(commands.Cog):
 
     #region embed methods
 
-    def embed_player_info(self, player):
+    def embed_player_info(self, player, team_names):
         embed = discord.Embed(title="{0}".format(player.member.name), color=discord.Colour.blue())
         embed.set_thumbnail(url=player.member.avatar_url)
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
         embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
         embed.add_field(name="Elo Rating", value="{}\n".format(player.elo_rating), inline=False)
+        embed.add_field(name="Team(s)", value="{}\n".format(", ".join([team for team in team_names])), inline=False)
         return embed
 
     def embed_leaderboard(self, ctx, sorted_players):
