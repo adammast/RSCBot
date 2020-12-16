@@ -11,7 +11,7 @@ from redbot.core.utils.menus import start_adding_reactions, menu, DEFAULT_CONTRO
 
 k_factor = 40
 
-defaults = {"Players": {}, "Results": []}
+defaults = {"Players": {}, "Results": [], "SelfReportFlag": False}
 
 class PlayerRatings(commands.Cog):
 
@@ -22,7 +22,7 @@ class PlayerRatings(commands.Cog):
         self.players = []
         self.team_manager = bot.get_cog("TeamManager")
 
-    #region commmands
+#region commmands
 
     @commands.command()
     @commands.guild_only()
@@ -96,7 +96,12 @@ class PlayerRatings(commands.Cog):
     @commands.command(aliases=["rr", "reportresult"])
     async def reportResult(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
         """Submits the result of the game between two players. Should be used in the score report channel for your tier.
-        Both players need to agree on the result before it is finalized."""
+        Both players need to agree on the result before it is finalized. 
+        
+        This command may be disabled by admins to prevent erroneous reporting."""
+        if not self._self_report_flag(ctx):
+            await ctx.send("Score reporting for this server is currently set to admin only.")
+            return
         await self.load_players(ctx)
         player_1 = self.get_player_by_id(member_1.id)
         if not player_1:
@@ -113,23 +118,48 @@ class PlayerRatings(commands.Cog):
             await self.finish_game(ctx, player_1, player_2, member_1_wins, member_2_wins)
             await ctx.send("Done.")
 
+    @commands.command()
+    @commands.guild_only(aliases=["arrs", "adminreportresults"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def adminReportResults(self, ctx, *match_results):
+        """Submits results for matches in bulk with no verification.
+
+        Arguments:
+
+        match_results -- One or more match results in the following format:
+        ```
+        "['<member_1>','<member_1_wins>', '<member_2_wins>', '<member_2>']"
+        ```
+        Each match should be separated by a space.
+        Members can be either their id number, their name, their name + descriminator, or a mention of the user.
+        Id number is preferred as it's guaranteed to be unique.
+
+        Examples:
+        ```
+        [p]adminReportResults "['123456789','2', '1', '987654321']"
+        [p]adminReportResults "['123456789','2', '1', '987654321']" "['234567890','1', '2', '098765432']"
+        ```
+        """
+        addedCount = 0
+        try:
+            for matchStr in match_results:
+                match = ast.literal_eval(matchStr)
+                matchSubmitted = await self._admin_report_result(ctx, *match)
+                if matchSubmitted:
+                    addedCount += 1
+                else:
+                    await ctx.send("Error submitting match: {0}".format(repr(match)))
+        finally:
+            await ctx.send("Submitted {0} match(es).".format(addedCount))
+        await ctx.send("Done.")
+
     @commands.guild_only()
     @commands.command(aliases=["arr", "adminreportresult"])
     @checks.admin_or_permissions(manage_guild=True)
     async def adminReportResult(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
         """Submits the result of the game between two players. There is no verification neccessary since this is an admin-only command."""
-        await self.load_players(ctx)
-        player_1 = self.get_player_by_id(member_1.id)
-        if not player_1:
-            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_1.name))
-            return
-        player_2 = self.get_player_by_id(member_2.id)
-        if not player_2:
-            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_2.name))
-            return
-
-        await self.finish_game(ctx, player_1, player_2, member_1_wins, member_2_wins)
-        await ctx.send("Done.")
+        if await self._admin_report_result(ctx, member_1, member_1_wins, member_2_wins, member_2):
+            await ctx.send("Done.")
 
     @commands.guild_only()
     @commands.command(aliases=["pi"])
@@ -155,10 +185,23 @@ class PlayerRatings(commands.Cog):
         # TODO: Filter list of players by tier if tier parameter is set
         players.sort(key=lambda player: player.elo_rating, reverse=True)
         await ctx.send(embed=self.embed_leaderboard(ctx, players))
-    
-    #endregion
 
-    #region helper methods
+    @commands.command(aliases=["toggleReport", "toggleSelfReporting", "toggleSR", "toggleselfreport", "togglesr", "tsr"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def toggleSelfReport(self, ctx):
+        """
+        Toggles the status of the self report flag. (Default: False)
+        If True, players can report their own results and results must be verified by the opposing player.
+        If False, only admins can report results and no verification is needed.
+        """
+        self_report_flag = await self._toggle_self_report_flag(ctx.guild)
+        self_report_str = "on" if self_report_flag else "off"
+        await ctx.send("Self reporting is now **{0}**.".format(self_report_str))
+    
+#endregion
+
+#region helper methods
 
     async def _add_player(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating: int):
         await self.load_players(ctx)
@@ -203,6 +246,20 @@ class PlayerRatings(commands.Cog):
             await ctx.send("{0} does not seem to be a current player.".format(member.name))
             return False
         await self._save_players(ctx, players)
+        return True
+
+    async def _admin_report_result(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
+        await self.load_players(ctx)
+        player_1 = self.get_player_by_id(member_1.id)
+        if not player_1:
+            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_1.name))
+            return False
+        player_2 = self.get_player_by_id(member_2.id)
+        if not player_2:
+            await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_2.name))
+            return False
+
+        await self.finish_game(ctx, player_1, player_2, member_1_wins, member_2_wins)
         return True
 
     async def verify_game_results(self, ctx, member_1: discord.Member, member_2: discord.Member, member_1_wins: int, member_2_wins: int, verifier: discord.Member):
@@ -263,9 +320,9 @@ class PlayerRatings(commands.Cog):
             return True
         return False
 
-    #endregion
+#endregion
 
-    #region embed methods
+#region embed methods
 
     def embed_player_info(self, player, team_names):
         embed = discord.Embed(title="{0}".format(player.member.name), color=discord.Colour.blue())
@@ -299,9 +356,9 @@ class PlayerRatings(commands.Cog):
             player_2.member.name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
         return embed
 
-    #endregion
+#endregion
 
-    #region load/save methods
+#region load/save methods
 
     async def load_players(self, ctx, force_load = False):
         if self.players is None or self.players == [] or force_load:
@@ -326,7 +383,15 @@ class PlayerRatings(commands.Cog):
             player_dict[player.member.id] = player._to_dict()
         await self.config.guild(ctx.guild).Players.set(player_dict)
 
-    #endregion
+    async def _toggle_self_report_flag(self, guild):
+        self_report_flag = not await self._self_report_flag(guild)
+        await self.config.guild(guild).SelfReportFlag.set(self_report_flag)
+        return self_report_flag
+
+    async def _self_report_flag(self, guild):
+        return await self.config.guild(guild).SelfReportFlag()
+
+#endregion
 
 class Player:
     def __init__(self, member, wins: int, losses: int, elo_rating: int):
