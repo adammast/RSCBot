@@ -172,7 +172,6 @@ class Match(commands.Cog):
         try:
             for matchStr in matches:
                 match = ast.literal_eval(matchStr)
-                await ctx.send("Adding match: {0}".format(repr(match)))
                 resultMatch = await self._add_match(ctx, *match)
                 if resultMatch:
                     addedCount += 1

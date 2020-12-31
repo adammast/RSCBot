@@ -151,7 +151,7 @@ class TeamManager(commands.Cog):
         # reassign roles for gm/franchise
         franchise_tier_roles = await self._find_franchise_tier_roles(ctx, franchise_role)
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
-        transfer_roles = [gm_role, franchise_role] + franchise_tier_roles
+        transfer_roles = [gm_role, franchise_role]
         await new_gm.add_roles(*transfer_roles)
 
         # If old GM is still in server:
@@ -375,7 +375,6 @@ class TeamManager(commands.Cog):
         try:
             for teamStr in teams_to_add:
                 team = ast.literal_eval(teamStr)
-                await ctx.send("Adding team: {0}".format(repr(team)))
                 teamAdded = await self._add_team(ctx, *team)
                 if teamAdded:
                     addedCount += 1
@@ -548,16 +547,16 @@ class TeamManager(commands.Cog):
         return teams
 
     def gm_and_members_from_team(self, ctx, franchise_role, tier_role):
-        """Retrieve tuple with the gm user and a list of other users that are
+        """Retrieve tuple with the gm user and a list of all users that are
         on the team indicated by the provided franchise_role and tier_role.
         """
         gm = None
         team_members = []
         for member in ctx.message.guild.members:
             if franchise_role in member.roles:
-                if self.is_gm(member):
+                if not GM and self.is_gm(member):
                     gm = member
-                elif tier_role in member.roles:
+                if tier_role in member.roles:
                     team_members.append(member)
         return (gm, team_members)
 
@@ -576,20 +575,13 @@ class TeamManager(commands.Cog):
         gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
         captain = await self._get_team_captain(ctx, franchise_role, tier_role)
 
-        message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
-        if gm:
-            if gm == captain:
-                message += "  {0}\n".format(
-                    await self._format_team_member_for_message(ctx, gm, "C"))
-            else:
-                message += "  {0}\n".format(
-                    await self._format_team_member_for_message(ctx, gm))
+        message = "```\n{0} ({1} - {2}):\n".format(team_name, tier_role.name, gm.name)
         for member in team_members:
             role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(
                 await self._format_team_member_for_message(ctx, member, *role_tags))
         if not team_members:
-            message += "\nNo other members found."
+            message += "\nNo members found."
         message += "```"
         return message
 
@@ -784,9 +776,6 @@ class TeamManager(commands.Cog):
             return False
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
-        gm = self._get_gm(ctx, franchise_role)
-        if gm:
-            await gm.add_roles(tier_role)
         return True
     
     async def _remove_team(self, ctx, team_name: str):
@@ -802,7 +791,6 @@ class TeamManager(commands.Cog):
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
         gm = self._get_gm(ctx, franchise_role)
-        await gm.remove_roles(tier_role)
         return True
 
     def _get_tier_role(self, ctx, tier: str):
