@@ -183,6 +183,8 @@ class PlayerRatings(commands.Cog):
             ctx.send("There are no players at this time")
             return
         
+        tier_role = None
+
         #Filter list by tier if given
         if tier:
             tier_role = self.team_manager._get_tier_role(ctx, tier)
@@ -194,7 +196,7 @@ class PlayerRatings(commands.Cog):
                 players = tier_players
 
         players.sort(key=lambda player: player.elo_rating, reverse=True)
-        await ctx.send(embed=self.embed_leaderboard(ctx, players))
+        await ctx.send(embed=self.embed_leaderboard(ctx, players, tier_role))
 
     @commands.guild_only()
     @commands.command(aliases=["toggleReport", "toggleSelfReporting", "toggleSR", "toggleselfreport", "togglesr", "tsr"])
@@ -368,8 +370,13 @@ class PlayerRatings(commands.Cog):
         embed.add_field(name="Team(s)", value="{}\n".format(", ".join([team for team in team_names])), inline=False)
         return embed
 
-    def embed_leaderboard(self, ctx, sorted_players):
-        embed = discord.Embed(title="{0} Player Leaderboard".format(ctx.guild.name), color=discord.Colour.blue())
+    def embed_leaderboard(self, ctx, sorted_players, tier_role):
+        embed_color = discord.Colour.blue()
+        embed_name = ctx.guild.name
+        if tier_role:
+            embed_color = tier_role.color
+            embed_name = tier_role.name
+        embed = discord.Embed(title="{0} Player Leaderboard".format(embed_name), color=embed_color)
         
         index = 1
         message = ""

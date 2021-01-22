@@ -554,7 +554,7 @@ class TeamManager(commands.Cog):
         team_members = []
         for member in ctx.message.guild.members:
             if franchise_role in member.roles:
-                if not gm and self.is_gm(member):
+                if self.is_gm(member):
                     gm = member
                 if tier_role in member.roles:
                     team_members.append(member)
