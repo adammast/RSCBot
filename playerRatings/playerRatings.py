@@ -118,8 +118,8 @@ class PlayerRatings(commands.Cog):
             await self.finish_game(ctx, player_1, player_2, member_1_wins, member_2_wins)
             await ctx.send("Done.")
 
-    @commands.command()
-    @commands.guild_only(aliases=["arrs", "adminreportresults"])
+    @commands.guild_only()
+    @commands.command(aliases=["arrs", "adminreportresults"])
     @checks.admin_or_permissions(manage_guild=True)
     async def adminReportResults(self, ctx, *match_results):
         """Submits results for matches in bulk with no verification.
@@ -196,8 +196,8 @@ class PlayerRatings(commands.Cog):
         players.sort(key=lambda player: player.elo_rating, reverse=True)
         await ctx.send(embed=self.embed_leaderboard(ctx, players))
 
-    @commands.command(aliases=["toggleReport", "toggleSelfReporting", "toggleSR", "toggleselfreport", "togglesr", "tsr"])
     @commands.guild_only()
+    @commands.command(aliases=["toggleReport", "toggleSelfReporting", "toggleSR", "toggleselfreport", "togglesr", "tsr"])
     @checks.admin_or_permissions(manage_guild=True)
     async def toggleSelfReport(self, ctx):
         """
@@ -209,8 +209,8 @@ class PlayerRatings(commands.Cog):
         self_report_str = "on" if self_report_flag else "off"
         await ctx.send("Self reporting is now **{0}**.".format(self_report_str))
 
-    @commands.command(aliases=["getallplayers", "gap", "getAllPlayerRatings", "listAllPlayers", "listAllPlayerRatings"])
     @commands.guild_only()
+    @commands.command(aliases=["getallplayers", "gap", "getAllPlayerRatings", "listAllPlayers", "listAllPlayerRatings"])
     @checks.admin_or_permissions(manage_guild=True)
     async def getAllPlayers(self, ctx):
         await self.load_players(ctx)
