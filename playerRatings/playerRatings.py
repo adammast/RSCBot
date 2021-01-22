@@ -182,7 +182,17 @@ class PlayerRatings(commands.Cog):
         if not players:
             ctx.send("There are no players at this time")
             return
-        # TODO: Filter list of players by tier if tier parameter is set
+        
+        #Filter list by tier if given
+        if tier:
+            tier_role = self.team_manager._get_tier_role(ctx, tier)
+            if tier_role:
+                tier_players = []
+                for player in players:
+                    if tier_role in player.member.roles:
+                        tier_players.append(player)
+                players = tier_players
+
         players.sort(key=lambda player: player.elo_rating, reverse=True)
         await ctx.send(embed=self.embed_leaderboard(ctx, players))
 
@@ -198,6 +208,31 @@ class PlayerRatings(commands.Cog):
         self_report_flag = await self._toggle_self_report_flag(ctx.guild)
         self_report_str = "on" if self_report_flag else "off"
         await ctx.send("Self reporting is now **{0}**.".format(self_report_str))
+
+    @commands.command(aliases=["getallplayers", "gap", "getAllPlayerRatings", "listAllPlayers", "listAllPlayerRatings"])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getAllPlayers(self, ctx):
+        await self.load_players(ctx)
+        players = self.players
+        if not players:
+            ctx.send("There are no players at this time")
+            return
+
+        messages = []
+        message = ""
+        for player in players:
+            player_string = "{0.member.id}:{0.wins}:{0.losses}:{0.elo_rating}\n".format(player)
+            if len(message + player_string) < 2000:
+                message += player_string
+            else:
+                messages.append(message)
+                message = player_string
+        messages.append(message)
+        for msg in messages:
+            if msg:
+                await ctx.send("{0}{1}{0}".format("```", msg))
+
     
 #endregion
 
