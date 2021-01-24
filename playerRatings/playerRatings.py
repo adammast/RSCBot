@@ -103,11 +103,11 @@ class PlayerRatings(commands.Cog):
             await ctx.send("Score reporting for this server is currently set to admin only.")
             return
         await self.load_players(ctx)
-        player_1 = self.get_player_by_id(member_1.id)
+        player_1 = self.get_player_by_id(self.players, member_1.id)
         if not player_1:
             await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_1.name))
             return
-        player_2 = self.get_player_by_id(member_2.id)
+        player_2 = self.get_player_by_id(self.players, member_2.id)
         if not player_2:
             await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_2.name))
             return
@@ -166,7 +166,7 @@ class PlayerRatings(commands.Cog):
     async def playerInfo(self, ctx, member: discord.Member):
         """Gets all the info corresponding to a player. Shows the player's wins, losses, Elo rating, the team they play for."""
         await self.load_players(ctx)
-        player = self.get_player_by_id(member.id)
+        player = self.get_player_by_id(self.players, member.id)
         if not player:
             ctx.send("{} has no player information at this time".format(member.name))
             return
@@ -274,7 +274,7 @@ class PlayerRatings(commands.Cog):
         players = self.players
 
         try:
-            player = await self.get_player_by_id(member.id)
+            player = await self.get_player_by_id(self.players, member.id)
             if not player:
                 await ctx.send("{0} does not seem to be a current player.".format(member.name))
                 return False
@@ -287,11 +287,11 @@ class PlayerRatings(commands.Cog):
 
     async def _admin_report_result(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
         await self.load_players(ctx)
-        player_1 = self.get_player_by_id(member_1.id)
+        player_1 = self.get_player_by_id(self.players, member_1.id)
         if not player_1:
             await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_1.name))
             return False
-        player_2 = self.get_player_by_id(member_2.id)
+        player_2 = self.get_player_by_id(self.players, member_2.id)
         if not player_2:
             await ctx.send("There was a problem finding player info for {}. Please verify that you have the correct member in your command. If this persists message an admin.".format(member_2.name))
             return False
@@ -338,15 +338,15 @@ class PlayerRatings(commands.Cog):
         player.losses += new_losses
         player.elo_rating = new_elo_rating
 
-    def get_player_by_id(self, member_id):
-        for player in self.players:
+    def get_player_by_id(self, players, member_id):
+        for player in players:
             if player.member.id == member_id:
                 return player
         return None
 
     async def get_player_record_and_rating_by_id(self, ctx, member_id):
         await self.load_players(ctx)
-        player = self.get_player_by_id(member_id)
+        player = self.get_player_by_id(self.players, member_id)
         if player:
             return (player.wins, player.losses, player.elo_rating)
         return None
@@ -356,6 +356,17 @@ class PlayerRatings(commands.Cog):
         if self.players:
             return True
         return False
+
+    async def sort_players_by_rating(self, ctx, member_list):
+        await self.load_players(ctx)
+        if not self.players:
+            return member_list
+        players = []
+        for member in member_list:
+            players.append(self.get_player_by_id(self.players, member.id))
+        players.sort(key=lambda player: player.elo_rating, reverse=True)
+        sorted_members = (player.member for player in players)
+        return sorted_members
 
 #endregion
 

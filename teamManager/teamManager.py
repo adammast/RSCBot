@@ -546,9 +546,9 @@ class TeamManager(commands.Cog):
                 teams.append(team_name)
         return teams
 
-    def gm_and_members_from_team(self, ctx, franchise_role, tier_role):
-        """Retrieve tuple with the gm user and a list of all users that are
-        on the team indicated by the provided franchise_role and tier_role.
+    def members_from_team(self, ctx, franchise_role, tier_role):
+        """Retrieve the list of all users that are on the team
+        indicated by the provided franchise_role and tier_role.
         """
         gm = None
         team_members = []
@@ -572,10 +572,17 @@ class TeamManager(commands.Cog):
 
     async def format_roster_info(self, ctx, team_name: str):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-        gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        team_members = self.members_from_team(ctx, franchise_role, tier_role)
         captain = await self._get_team_captain(ctx, franchise_role, tier_role)
 
-        message = "```\n{0} ({1} - {2}):\n".format(team_name, tier_role.name, gm.name)
+        # Sort team_members by player rating if the player ratings cog is used in this server
+        try:
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            team_members = await player_ratings.sort_players_by_rating(ctx, team_members)
+        except:
+            pass
+
+        message = "```\n{0} - {1} - {2}:\n".format(team_name, franchise_role.name, tier_role.name)
         for member in team_members:
             role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(
@@ -663,12 +670,10 @@ class TeamManager(commands.Cog):
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
         captain_role = self._find_role_by_name(ctx, "Captain")
-        gm, members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        members = self.members_from_team(ctx, franchise_role, tier_role)
         for member in members:
             if captain_role in member.roles:
                 return member
-        if gm and captain_role in gm.roles:
-            return gm
         return None
             
     async def _create_role(self, ctx, role_name: str):
