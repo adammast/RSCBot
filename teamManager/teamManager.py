@@ -550,15 +550,12 @@ class TeamManager(commands.Cog):
         """Retrieve the list of all users that are on the team
         indicated by the provided franchise_role and tier_role.
         """
-        gm = None
         team_members = []
         for member in ctx.message.guild.members:
             if franchise_role in member.roles:
-                if self.is_gm(member):
-                    gm = member
                 if tier_role in member.roles:
                     team_members.append(member)
-        return (gm, team_members)
+        return team_members
 
     async def create_roster_embed(self, ctx, team_name):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
