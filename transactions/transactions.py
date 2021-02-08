@@ -5,7 +5,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"TransChannel": None}
+defaults = {"TransChannel": None, "SubbedOutRole": None}
 
 class Transactions(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
@@ -143,7 +143,7 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
-    async def sub(self, ctx, user: discord.Member, team_name: str):
+    async def sub(self, ctx, user: discord.Member, team_name: str, subbed_out_user: discord.Member = None):
         """
         Adds the team roles to the user and posts to the assigned transaction channel
         
@@ -168,6 +168,12 @@ class Transactions(commands.Cog):
                         await user.remove_roles(team_tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
                     message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, team_tier_role.name)
+                    # Removed subbed out role from all team members on team
+                    subbed_out_role = self._subbed_out_role(ctx)
+                    if subbed_out_role:
+                        team_members = self.team_manager_cog.members_from_team(ctx, franchise_role, team_tier_role)
+                        for team_member in team_members:
+                            await team_member.remove_roles(subbed_out_role)
                 
                 # Begin Substitution:
                 else:
@@ -177,6 +183,12 @@ class Transactions(commands.Cog):
                     await user.add_roles(franchise_role, team_tier_role, leagueRole)
                     gm = self._get_gm_name(ctx, franchise_role)
                     message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, team_tier_role.name)
+                    # Give subbed out user the subbed out role if there is one
+                    subbed_out_role = self._subbed_out_role(ctx)
+                    if subbed_out_user and subbed_out_role:
+                        await subbed_out_user.add_roles(subbed_out_role)
+                    elif subbed_out_user:
+                        await ctx.send(":x: The subbed out role is not set in this server")
                 await trans_channel.send(message)
                 await ctx.send("Done")
 
@@ -307,3 +319,9 @@ class Transactions(commands.Cog):
 
     async def _save_trans_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
+
+    async def _subbed_out_role(self, ctx):
+        return ctx.guild.get_role(await self.config.guild(ctx.guild).SubbedOutRole())
+
+    async def _save_subbed_out_role(self, ctx, subbed_out_role):
+        await self.config.guild(ctx.guild).SubbedOutRole.set(subbed_out_role)
