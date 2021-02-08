@@ -25,6 +25,7 @@ class TeamManager(commands.Cog):
     CAPTAN_ROLE = "Captain"
     IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
+    SUBBED_OUT_ROLE = "Subbed Out"
 
     def __init__(self, bot):
         self.bot = bot
@@ -535,6 +536,12 @@ class TeamManager(commands.Cog):
                 return True
         return False
 
+    def is_subbed_out(self, member):
+        for role in member.roles:
+            if role.name == self.SUBBED_OUT_ROLE:
+                return True
+        return False
+
     async def teams_for_user(self, ctx, user):
         tiers = await self.tiers(ctx)
         teams = []
@@ -580,12 +587,20 @@ class TeamManager(commands.Cog):
             pass
 
         message = "```\n{0} - {1} - {2}:\n".format(team_name, franchise_role.name, tier_role.name)
+        subbed_out_message = ""
+        subbed_out_role = self._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
+        
         for member in team_members:
             role_tags = ["C"] if member == captain else []
-            message += "  {0}\n".format(
-                await self._format_team_member_for_message(ctx, member, *role_tags))
+            user_message = await self._format_team_member_for_message(ctx, member, *role_tags)
+            if subbed_out_role and self.is_subbed_out(member):
+                subbed_out_message += "  {0}\n".format(user_message)
+            else:
+                message += "  {0}\n".format(user_message)
         if not team_members:
             message += "\nNo members found."
+        if not subbed_out_message:
+            message += "\nSubbed Out:\n{0}".format(subbed_out_message)
         message += "```"
         return message
 

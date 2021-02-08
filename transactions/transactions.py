@@ -5,10 +5,12 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"TransChannel": None, "SubbedOutRole": None}
+defaults = {"TransChannel": None}
 
 class Transactions(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
+
+    SUBBED_OUT_ROLE = "Subbed Out"
 
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567895, force_registration=True)
@@ -169,7 +171,7 @@ class Transactions(commands.Cog):
                     gm = self._get_gm_name(ctx, franchise_role, True)
                     message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, team_tier_role.name)
                     # Removed subbed out role from all team members on team
-                    subbed_out_role = self._subbed_out_role(ctx)
+                    subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
                     if subbed_out_role:
                         team_members = self.team_manager_cog.members_from_team(ctx, franchise_role, team_tier_role)
                         for team_member in team_members:
@@ -184,7 +186,7 @@ class Transactions(commands.Cog):
                     gm = self._get_gm_name(ctx, franchise_role)
                     message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, team_tier_role.name)
                     # Give subbed out user the subbed out role if there is one
-                    subbed_out_role = self._subbed_out_role(ctx)
+                    subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
                     if subbed_out_user and subbed_out_role:
                         await subbed_out_user.add_roles(subbed_out_role)
                     elif subbed_out_user:
@@ -319,9 +321,3 @@ class Transactions(commands.Cog):
 
     async def _save_trans_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
-
-    async def _subbed_out_role(self, ctx):
-        return ctx.guild.get_role(await self.config.guild(ctx.guild).SubbedOutRole())
-
-    async def _save_subbed_out_role(self, ctx, subbed_out_role):
-        await self.config.guild(ctx.guild).SubbedOutRole.set(subbed_out_role)
