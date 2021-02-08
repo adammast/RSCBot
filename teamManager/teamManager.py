@@ -586,21 +586,25 @@ class TeamManager(commands.Cog):
         except:
             pass
 
+        subbed_out_members = []
+        for team_member in team_members:
+            if self.is_subbed_out(team_member):
+                team_members.remove(team_member)
+                subbed_out_members.append(team_member)
+
         message = "```\n{0} - {1} - {2}:\n".format(team_name, franchise_role.name, tier_role.name)
-        subbed_out_message = ""
-        subbed_out_role = self._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
+        subbed_out_message = "Subbed Out:"
         
         for member in team_members:
             role_tags = ["C"] if member == captain else []
-            user_message = await self._format_team_member_for_message(ctx, member, *role_tags)
-            if subbed_out_role and self.is_subbed_out(member):
-                subbed_out_message += "  {0}\n".format(user_message)
-            else:
-                message += "  {0}\n".format(user_message)
+            message += "  {0}\n".format(await self._format_team_member_for_message(ctx, member, *role_tags))
+        for member in subbed_out_members:
+            role_tags = ["C"] if member == captain else []
+            subbed_out_message += "  {0}\n".format(await self._format_team_member_for_message(ctx, member, *role_tags))
+        if subbed_out_members:
+            message += "\n{0}".format(subbed_out_message)
         if not team_members:
             message += "\nNo members found."
-        if not subbed_out_message == "":
-            message += "\nSubbed Out:\n{0}".format(subbed_out_message)
         message += "```"
         return message
 
