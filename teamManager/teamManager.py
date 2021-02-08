@@ -599,7 +599,7 @@ class TeamManager(commands.Cog):
                 message += "  {0}\n".format(user_message)
         if not team_members:
             message += "\nNo members found."
-        if not subbed_out_message:
+        if not subbed_out_message == "":
             message += "\nSubbed Out:\n{0}".format(subbed_out_message)
         message += "```"
         return message
