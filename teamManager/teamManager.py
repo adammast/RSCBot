@@ -589,6 +589,7 @@ class TeamManager(commands.Cog):
         subbed_out_members = []
         for team_member in team_members:
             if self.is_subbed_out(team_member):
+                await ctx.send("Subbed Team Member: " + team_member.name)
                 team_members.remove(team_member)
                 subbed_out_members.append(team_member)
 
