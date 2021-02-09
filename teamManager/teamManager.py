@@ -593,14 +593,16 @@ class TeamManager(commands.Cog):
                 subbed_out_members.append(team_member)
 
         message = "```\n{0} - {1} - {2}:\n".format(team_name, franchise_role.name, tier_role.name)
-        subbed_out_message = "Subbed Out:"
+        subbed_out_message = "Subbed Out:\n"
         
         for member in team_members:
             role_tags = ["C"] if member == captain else []
             message += "  {0}\n".format(await self._format_team_member_for_message(ctx, member, *role_tags))
+            await ctx.send("Team Member: " + member.name)
         for member in subbed_out_members:
             role_tags = ["C"] if member == captain else []
             subbed_out_message += "  {0}\n".format(await self._format_team_member_for_message(ctx, member, *role_tags))
+            await ctx.send("Subbed Team Member: " + member.name)
         if subbed_out_members:
             message += "\n{0}".format(subbed_out_message)
         if not team_members:
