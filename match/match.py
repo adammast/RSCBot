@@ -501,9 +501,11 @@ class Match(commands.Cog):
                 value=await self.team_manager.format_roster_info(ctx, away), inline=False)
         message = ""
         seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
+        await ctx.send(seed)
         if seed:
             if user_team_name.casefold() == home.casefold():
                 ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
+                await ctx.send(ordered_opponent_names)
                 message += solo_home_info.format(seed)
                 message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + seed, match['roomPass'] + seed)
                 message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
@@ -512,12 +514,14 @@ class Match(commands.Cog):
             else:
                 ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
                 message += solo_away_info.format(seed)
+                await ctx.send(ordered_opponent_names)
                 message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
                     match['roomName'] + ordered_opponent_seeds[0], match['roomPass'] + ordered_opponent_seeds[0]))
                 message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
                     match['roomName'] + ordered_opponent_seeds[1], match['roomPass'] + ordered_opponent_seeds[1]))
                 message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
                     match['roomName'] + ordered_opponent_seeds[2], match['roomPass'] + ordered_opponent_seeds[2]))
+        await ctx.send(message)
         embed.add_field(name="Match Info:", value=message)
         return embed
 
