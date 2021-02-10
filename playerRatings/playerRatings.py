@@ -351,13 +351,60 @@ class PlayerRatings(commands.Cog):
             return (player.wins, player.losses, player.elo_rating)
         return None
 
-    async def match_info_helper(self, ctx):
+    async def guild_has_players(self, ctx):
         await self.load_players(ctx)
         if self.players:
             return True
         return False
 
-    async def sort_players_by_rating(self, ctx, member_list):
+    async def get_player_seed(self, ctx, user_team_name):
+        user = ctx.author
+        if not self.team_manager.is_subbed_out(user):
+            active_members = await self.team_manager.get_active_members_by_team_name(ctx, user_team_name)
+            sorted_members = await self.sort_members_by_rating(ctx, active_members)
+            return sorted_members.index(user)
+        return None
+
+    async def get_ordered_opponent_names_and_seeds(self, ctx, seed, is_home, opposing_team_name):
+        ordered_opponent_names = []
+        ordered_opponent_seeds = []
+        active_opponents = await self.team_manager.get_active_members_by_team_name(ctx, opposing_team_name)
+        sorted_opponents = await self.sort_members_by_rating(ctx, active_opponents)
+        if is_home:
+            if seed == 1:
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_seeds = [3, 2, 1]
+            elif seed == 2:
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_seeds = [1, 3, 2]
+            else:
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_seeds = [2, 1, 3]
+        else:
+            if seed == 1:
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_seeds = [2, 3, 1]
+            elif seed == 2:
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_seeds = [3, 1, 2]
+            else:
+                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_seeds = [1, 2, 3]
+        return (ordered_opponent_names, ordered_opponent_seeds)
+
+    async def sort_members_by_rating(self, ctx, member_list):
         await self.load_players(ctx)
         if not self.players:
             return member_list

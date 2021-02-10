@@ -582,7 +582,7 @@ class TeamManager(commands.Cog):
         # Sort team_members by player rating if the player ratings cog is used in this server
         try:
             player_ratings = self.bot.get_cog("PlayerRatings")
-            team_members = await player_ratings.sort_players_by_rating(ctx, team_members)
+            team_members = await player_ratings.sort_members_by_rating(ctx, team_members)
         except:
             pass
 
@@ -1017,4 +1017,11 @@ class TeamManager(commands.Cog):
                 user_tier_roles.append(tier_role)
         return user_tier_roles
     
-    
+    async def get_active_members_by_team_name(self, ctx, team_name):
+        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+        team_members = self.members_from_team(ctx, franchise_role, tier_role)
+        active_members = []
+        for member in team_members:
+            if not self.team_manager.is_subbed_out(member):
+                active_members.append(member)
+        return active_members

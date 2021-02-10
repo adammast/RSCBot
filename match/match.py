@@ -113,17 +113,6 @@ class Match(commands.Cog):
                                "roles corresponding to a team.")
             return
 
-        try:
-            player_ratings = self.bot.get_cog("PlayerRatings")
-            if await player_ratings.match_info_helper(ctx):
-                await ctx.send("Player rating cog set up for match info")
-                return
-            else:
-                await ctx.send("Player rating cog not set up for match info")
-                return
-        except:
-            pass
-
         for team_name in team_names:
             team_name_for_info = team_name if user_team_names else None
             match_index = await self._team_day_match_index(ctx, team_name,
@@ -364,20 +353,17 @@ class Match(commands.Cog):
         description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
 
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
-        embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
-                                        .format(match['roomName'], match['roomPass']), inline=False)
-        embed.add_field(name="**Home Team:**",
-                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
-        embed.add_field(name="**Away Team:**",
-                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
         try:
-            additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
-        except KeyError:
-            additional_info = self._create_additional_info(user_team_name, home, away)
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            if await player_ratings.guild_has_players(ctx):
+                return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
+        except:
+            pass
+            
+        return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
 
-        embed.add_field(name="Additional Info:", value=additional_info)
-        return embed
+        
 
     async def _format_match_message(self, ctx, match_index, user_team_name=None):
         matches = await self._matches(ctx)
@@ -401,14 +387,16 @@ class Match(commands.Cog):
 
         message = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
-        message += "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
-        message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
-        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
-        
+
         try:
-            message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
-        except KeyError:
-            message += self._create_additional_info(user_team_name, home, away)
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            if await player_ratings.guild_has_players(ctx):
+                message += await self._create_solo_match_message(ctx, match, player_ratings, user_team_name, home, away)
+                return message
+        except:
+            pass
+            
+        message += await self._create_normal_match_message(ctx, match, user_team_name, home, away)
         return message
 
     async def get_match_from_day_team(self, ctx, match_day, team_name):
@@ -483,6 +471,84 @@ class Match(commands.Cog):
         #additional_info += playoff_info
         return additional_info
 
+    async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away):
+        embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
+                                        .format(match['roomName'], match['roomPass']), inline=False)
+        embed.add_field(name="**Home Team:**",
+                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+        embed.add_field(name="**Away Team:**",
+                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+
+        try:
+            additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+        except KeyError:
+            additional_info = self._create_additional_info(user_team_name, home, away)
+
+        embed.add_field(name="Additional Info:", value=additional_info)
+        return embed
+
+    async def _create_normal_match_message(self, ctx, match, user_team_name, home, away):
+        message = "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
+        message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
+        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
+
+        try:
+            message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+        except KeyError:
+            message += self._create_additional_info(user_team_name, home, away)
+
+        return message
+
+    async def _create_solo_match_embed(self, ctx, embed, match, player_ratings_cog, user_team_name, home, away):
+        embed.add_field(name="**Home Team:**",
+                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+        embed.add_field(name="**Away Team:**",
+                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+        message = ""
+        seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
+        if seed:
+            if user_team_name.casefold() == home.casefold():
+                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
+                message += solo_home_info.format(seed)
+                message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + seed, match['roomPass'] + seed)
+                message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
+                message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
+                message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
+            else:
+                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
+                message += solo_away_info.format(seed)
+                message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[0], match['roomPass'] + ordered_opponent_seeds[0]))
+                message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[1], match['roomPass'] + ordered_opponent_seeds[1]))
+                message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[2], match['roomPass'] + ordered_opponent_seeds[2]))
+        embed.add_field(name="Match Info:", value=message)
+        return embed
+
+    async def _create_solo_match_message(self, ctx, match, player_ratings_cog, user_team_name, home, away):
+        message = "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
+        message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
+        seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
+        if seed:
+            if user_team_name.casefold() == home.casefold():
+                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
+                message += solo_home_info.format(seed)
+                message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + seed, match['roomPass'] + seed)
+                message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
+                message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
+                message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
+            else:
+                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
+                message += solo_away_info.format(seed)
+                message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[0], match['roomPass'] + ordered_opponent_seeds[0]))
+                message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[1], match['roomPass'] + ordered_opponent_seeds[1]))
+                message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
+                    match['roomName'] + ordered_opponent_seeds[2], match['roomPass'] + ordered_opponent_seeds[2]))
+        return message
+
     def _generate_name_pass(self):
         return room_pass[random.randrange(len(room_pass))]
 
@@ -544,6 +610,33 @@ away_info = ("You are the **away** team. You will join the room "
             "using the above information once the other team "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
+
+solo_home_info = ("You are the **home** team. You are the {seed} seed. "
+            "You are responsible for hosting the lobby for all of "
+            "your matches with the following lobby information: ")
+
+solo_away_info = ("You are the **away** team. You are the {seed} seed. "
+            "You will participate in the following matchups: ")
+            
+
+solo_home_match_info = ("Your {match_descr} will be against `{opponent}` at {time}.")
+
+solo_away_match_info = ("Your {match_descr} will be against `{opponent}` at "
+            "{time} with the following lobby info: "
+            "\nName: **{name}**"
+            "\nPassword: **{pass}**")
+
+first_match_descr = ("first **one game** match")
+
+second_match_descr = ("second **one game** match")
+
+third_match_descr = ("**three game** series")
+
+first_match_time = ("10:00 pm ET")
+
+second_match_time = ("10:10 pm ET")
+
+third_match_time = ("10:20 pm ET")
 
 stream_info = ("**This match is scheduled to play on stream ** "
             "(Time slot {time_slot}: {time})"
