@@ -614,7 +614,7 @@ solo_away_info = ("You are the **away** team. You are the {0} seed. "
             "You will participate in the following matchups: ")
             
 
-solo_home_match_info = ("Your {0} will be against `{1}` at {2}.")
+solo_home_match_info = ("Your {0} will be against `{1}` at {2}.\n\n")
 
 solo_away_match_info = ("Your {0} will be against `{1}` at "
             "{2} with the following lobby info: "
