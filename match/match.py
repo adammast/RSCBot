@@ -355,7 +355,7 @@ class Match(commands.Cog):
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
 
         player_ratings = self.bot.get_cog("PlayerRatings")
-        if await player_ratings.guild_has_players(ctx):
+        if player_ratings and await player_ratings.guild_has_players(ctx):
             return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
             
         return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
@@ -385,13 +385,11 @@ class Match(commands.Cog):
         message = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
 
-        try:
-            player_ratings = self.bot.get_cog("PlayerRatings")
-            if await player_ratings.guild_has_players(ctx):
-                message += await self._create_solo_match_message(ctx, match, player_ratings, user_team_name, home, away)
-                return message
-        except:
-            pass
+
+        player_ratings = self.bot.get_cog("PlayerRatings")
+        if player_ratings and await player_ratings.guild_has_players(ctx):
+            message += await self._create_solo_match_message(ctx, match, player_ratings, user_team_name, home, away)
+            return message
             
         message += await self._create_normal_match_message(ctx, match, user_team_name, home, away)
         return message
