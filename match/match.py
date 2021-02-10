@@ -354,12 +354,9 @@ class Match(commands.Cog):
 
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
 
-        try:
-            player_ratings = self.bot.get_cog("PlayerRatings")
-            if await player_ratings.guild_has_players(ctx):
-                return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
-        except:
-            pass
+        player_ratings = self.bot.get_cog("PlayerRatings")
+        if await player_ratings.guild_has_players(ctx):
+            return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
             
         return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
 
