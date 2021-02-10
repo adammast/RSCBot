@@ -1022,6 +1022,6 @@ class TeamManager(commands.Cog):
         team_members = self.members_from_team(ctx, franchise_role, tier_role)
         active_members = []
         for member in team_members:
-            if not self.team_manager.is_subbed_out(member):
+            if not self.is_subbed_out(member):
                 active_members.append(member)
         return active_members
