@@ -378,35 +378,35 @@ class PlayerRatings(commands.Cog):
         sorted_opponents = await self.sort_members_by_rating(ctx, active_opponents)
         if is_home:
             if seed == 1:
-                ordered_opponent_names.append(sorted_opponents[2].name)
-                ordered_opponent_names.append(sorted_opponents[1].name)
-                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
                 ordered_opponent_seeds = [3, 2, 1]
             elif seed == 2:
-                ordered_opponent_names.append(sorted_opponents[0].name)
-                ordered_opponent_names.append(sorted_opponents[2].name)
-                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
                 ordered_opponent_seeds = [1, 3, 2]
             else:
-                ordered_opponent_names.append(sorted_opponents[1].name)
-                ordered_opponent_names.append(sorted_opponents[0].name)
-                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
                 ordered_opponent_seeds = [2, 1, 3]
         else:
             if seed == 1:
-                ordered_opponent_names.append(sorted_opponents[1].name)
-                ordered_opponent_names.append(sorted_opponents[2].name)
-                ordered_opponent_names.append(sorted_opponents[0].name)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
                 ordered_opponent_seeds = [2, 3, 1]
             elif seed == 2:
-                ordered_opponent_names.append(sorted_opponents[2].name)
-                ordered_opponent_names.append(sorted_opponents[0].name)
-                ordered_opponent_names.append(sorted_opponents[1].name)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
                 ordered_opponent_seeds = [3, 1, 2]
             else:
-                ordered_opponent_names.append(sorted_opponents[0].name)
-                ordered_opponent_names.append(sorted_opponents[1].name)
-                ordered_opponent_names.append(sorted_opponents[2].name)
+                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[2].nick)
                 ordered_opponent_seeds = [1, 2, 3]
         return (ordered_opponent_names, ordered_opponent_seeds)
 
