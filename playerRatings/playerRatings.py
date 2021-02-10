@@ -240,7 +240,7 @@ class PlayerRatings(commands.Cog):
 
 #region helper methods
 
-    async def _add_player(self, ctx, member: discord.Member, wins, losses, elo_rating):
+    async def _add_player(self, ctx, member, wins, losses, elo_rating):
         await self.load_players(ctx)
         players = self.players
         
@@ -252,8 +252,10 @@ class PlayerRatings(commands.Cog):
         # There are other validations we could do, but don't
         #     - that there aren't extra args for example
         errors = []
-        if not member:
-            errors.append("Member not found.")
+        try:
+            member = await commands.MemberConverter().convert(ctx, member)
+        except:
+            errors.append("Member {} not found.".format(member))
         if wins < 0:
             errors.append("Wins cannot be a negative number.")
         if losses < 0:
