@@ -240,10 +240,14 @@ class PlayerRatings(commands.Cog):
 
 #region helper methods
 
-    async def _add_player(self, ctx, member: discord.Member, wins: int, losses: int, elo_rating: int):
+    async def _add_player(self, ctx, member: discord.Member, wins, losses, elo_rating):
         await self.load_players(ctx)
         players = self.players
         
+        wins = int(wins)
+        losses = int(losses)
+        elo_rating = int(elo_rating)
+
         # Validation of input
         # There are other validations we could do, but don't
         #     - that there aren't extra args for example
