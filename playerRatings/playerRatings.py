@@ -418,7 +418,9 @@ class PlayerRatings(commands.Cog):
         for member in member_list:
             players.append(self.get_player_by_id(self.players, member.id))
         players.sort(key=lambda player: player.elo_rating, reverse=True)
-        sorted_members = (player.member for player in players)
+        sorted_members = []
+        for player in players:
+            sorted_members.append(player.member)
         return sorted_members
 
 #endregion
