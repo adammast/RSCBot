@@ -369,7 +369,10 @@ class PlayerRatings(commands.Cog):
         if not self.team_manager.is_subbed_out(user):
             active_members = await self.team_manager.get_active_members_by_team_name(ctx, user_team_name)
             sorted_members = await self.sort_members_by_rating(ctx, active_members)
-            return sorted_members.index(user) + 1
+            try:
+                return sorted_members.index(user) + 1
+            except:
+                return None
         return None
 
     async def get_ordered_opponent_names_and_seeds(self, ctx, seed, is_home, opposing_team_name):
