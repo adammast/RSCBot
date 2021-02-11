@@ -176,6 +176,10 @@ class Transactions(commands.Cog):
                         team_members = self.team_manager_cog.members_from_team(ctx, franchise_role, team_tier_role)
                         for team_member in team_members:
                             await team_member.remove_roles(subbed_out_role)
+                    # Reset player temp rating if the player rating cog is used
+                    player_ratings = self.bot.get_cog("PlayerRatings")
+                    if player_ratings:
+                        await player_ratings.reset_temp_rating(ctx, user)
                 
                 # Begin Substitution:
                 else:
@@ -189,6 +193,9 @@ class Transactions(commands.Cog):
                     subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
                     if subbed_out_user and subbed_out_role:
                         await subbed_out_user.add_roles(subbed_out_role)
+                        player_ratings = self.bot.get_cog("PlayerRatings")
+                        if player_ratings:
+                            await player_ratings.set_player_temp_rating(ctx, user, subbed_out_user)
                     elif subbed_out_user:
                         await ctx.send(":x: The subbed out role is not set in this server")
                 await trans_channel.send(message)

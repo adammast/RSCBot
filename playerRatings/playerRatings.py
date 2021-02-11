@@ -268,7 +268,7 @@ class PlayerRatings(commands.Cog):
             return
 
         try:
-            player = Player(member, wins, losses, elo_rating)
+            player = Player(member, wins, losses, elo_rating, -1)
             players.append(player)
         except:
             return False
@@ -417,11 +417,29 @@ class PlayerRatings(commands.Cog):
         players = []
         for member in member_list:
             players.append(self.get_player_by_id(self.players, member.id))
-        players.sort(key=lambda player: player.elo_rating, reverse=True)
+        players.sort(key=lambda player: max(player.elo_rating, player.temp_rating), reverse=True)
         sorted_members = []
         for player in players:
             sorted_members.append(player.member)
         return sorted_members
+
+    async def set_player_temp_rating(self, ctx, subbed_member, subbed_out_member):
+        await self.load_players(ctx)
+        if self.players:
+            subbed_player = self.get_player_by_id(self.players, subbed_member.id)
+            subbed_out_player = self.get_player_by_id(self.players, subbed_out_member.id)
+            if subbed_player and subbed_out_player:
+                subbed_player.temp_rating = subbed_out_player.elo_rating
+                return True
+        return False
+
+    async def reset_temp_rating(self, ctx, member):
+        await self.load_players(ctx)
+        if self.players:
+            player = self.get_player_by_id(self.players, member.id)
+            if player:
+                player.temp_rating = -1
+        return False
 
 #endregion
 
@@ -477,7 +495,8 @@ class PlayerRatings(commands.Cog):
                 wins = value["Wins"]
                 losses = value["Losses"]
                 elo_rating = value["EloRating"]
-                player = Player(member, wins, losses, elo_rating)
+                temp_rating = value["TempRating"]
+                player = Player(member, wins, losses, elo_rating, temp_rating)
                 player_list.append(player)
 
             self.players = player_list
@@ -502,16 +521,20 @@ class PlayerRatings(commands.Cog):
 #endregion
 
 class Player:
-    def __init__(self, member, wins: int, losses: int, elo_rating: int):
+    def __init__(self, member, wins: int, losses: int, elo_rating: int, temp_rating: int):
         self.member = member
         self.wins = wins
         self.losses = losses
         self.elo_rating = elo_rating
+        # Used for temp subs to ensure they take the same seed as the player they replace
+        # Default is -1, meaning there is no temp_rating set
+        self.temp_rating = temp_rating
 
     def _to_dict(self):
         return {
             "Id": self.member.id,
             "Wins": self.wins,
             "Losses": self.losses,
-            "EloRating": self.elo_rating
+            "EloRating": self.elo_rating,
+            "TempRating": self.temp_rating
         }
