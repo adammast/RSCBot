@@ -13,6 +13,7 @@ class Transactions(commands.Cog):
     SUBBED_OUT_ROLE = "Subbed Out"
 
     def __init__(self, bot):
+        self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567895, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("TeamManager")
