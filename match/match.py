@@ -540,30 +540,30 @@ class Match(commands.Cog):
 
     async def _create_generic_solo_matchups_message(self, ctx, player_ratings_cog, home, away):
         message = ""
-        try:
-            # First match
-            message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(first_match_time)
-            message += "```"
-            message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 3)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 1)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 2)
-            message += "```"
-            # Second match
-            message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(second_match_time)
-            message += "```"
-            message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 2)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 3)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 1)
-            message += "```"
-            # Third match
-            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
-            message += "```"
-            message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 1)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 2)
-            message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 3)
-            message += "```"
-        except:
-            message = "There was an error getting the matchups for this match."
+        #try:
+        # First match
+        message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(first_match_time)
+        message += "```"
+        message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 3)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 1)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 2)
+        message += "```"
+        # Second match
+        message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(second_match_time)
+        message += "```"
+        message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 2)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 3)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 1)
+        message += "```"
+        # Third match
+        message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
+        message += "```"
+        message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 1)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 2)
+        message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 3)
+        message += "```"
+        #except:
+        #    message = "There was an error getting the matchups for this match."
         return message
 
     async def _create_matchup_string(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
