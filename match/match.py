@@ -568,9 +568,8 @@ class Match(commands.Cog):
 
     async def _create_matchup_string(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
         away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick) # We convert to string to handle None cases
-        extra_spaces = " " * (20 - len(away_player_nick)) 
         home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick) # We convert to string to handle None cases
-        return solo_matchup.format(away_player = away_player_nick, spaces = extra_spaces, home_player = home_player_nick)
+        return solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)
 
     def _generate_name_pass(self):
         return room_pass[random.randrange(len(room_pass))]
@@ -661,7 +660,7 @@ second_match_time = ("10:10 pm ET")
 
 third_match_time = ("10:20 pm ET")
 
-solo_matchup = ("{away_player:20s} vs. {spaces}{home_player}")
+solo_matchup = ("{away_player:25s} vs.\t{home_player}")
 
 stream_info = ("**This match is scheduled to play on stream ** "
             "(Time slot {time_slot}: {time})"
