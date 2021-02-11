@@ -545,9 +545,9 @@ class Match(commands.Cog):
         message += "```"
         message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3)).nick)
         message += "```"
         # Second match
@@ -555,9 +555,9 @@ class Match(commands.Cog):
         message += "```"
         message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3)).nick)
         message += "```"
         # Third match
@@ -565,9 +565,9 @@ class Match(commands.Cog):
         message += "```"
         message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2)).nick)
-        message += solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3)).nick, 
+        message += "\n" + solo_matchup.format(away_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3)).nick, 
             home_player = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3)).nick)
         message += "```"
         return message

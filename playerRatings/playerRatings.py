@@ -378,6 +378,8 @@ class PlayerRatings(commands.Cog):
     async def get_member_by_team_and_seed(self, ctx, team_name, seed):
         active_members = await self.team_manager.get_active_members_by_team_name(ctx, team_name)
         sorted_members = await self.sort_members_by_rating(ctx, active_members)
+        await ctx.send(sorted_members)
+        await ctx.send(str(seed - 1))
         return sorted_members[seed - 1]
 
     async def get_ordered_opponent_names_and_seeds(self, ctx, seed, is_home, opposing_team_name):
