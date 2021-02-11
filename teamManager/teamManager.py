@@ -543,9 +543,11 @@ class TeamManager(commands.Cog):
         return False
 
     async def teams_for_user(self, ctx, user):
+        franchise_role = self.get_current_franchise_role(user)
+        if self.is_gm(user):
+            return await self._find_teams_for_franchise(ctx, franchise_role)
         tiers = await self.tiers(ctx)
         teams = []
-        franchise_role = self.get_current_franchise_role(user)
         for role in user.roles:
             if role.name in tiers:
                 tier_role = role
