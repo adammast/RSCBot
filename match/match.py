@@ -502,22 +502,9 @@ class Match(commands.Cog):
         message = ""
         seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
         if seed:
-            if user_team_name.casefold() == home.casefold():
-                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
-                message += solo_home_info.format(seed)
-                message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + str(seed), match['roomPass'] + str(seed))
-                message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
-                message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
-                message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
-            else:
-                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
-                message += solo_away_info.format(seed)
-                message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
-                message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
-                message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
+            message += await self._create_solo_user_matchups_message(ctx, match, player_ratings_cog, user_team_name, home, away, seed)
+        else:
+            message += await self._create_generic_solo_matchups_message(ctx, player_ratings_cog, home, away)
         embed.add_field(name="Match Info:", value=message)
         return embed
 
@@ -526,22 +513,66 @@ class Match(commands.Cog):
         message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
         seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
         if seed:
-            if user_team_name.casefold() == home.casefold():
-                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
-                message += solo_home_info.format(seed)
-                message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + str(seed), match['roomPass'] + str(seed))
-                message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
-                message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
-                message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
-            else:
-                ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
-                message += solo_away_info.format(seed)
-                message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
-                message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
-                message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
-                    match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
+            message += await self._create_solo_user_matchups_message(ctx, match, player_ratings_cog, user_team_name, home, away, seed)
+        else:
+            message += await self._create_generic_solo_matchups_message(ctx, player_ratings_cog, home, away)
+        return message
+
+    async def _create_solo_user_matchups_message(self, ctx, match, player_ratings_cog, user_team_name, home, away, seed):
+        message = ""
+        if user_team_name.casefold() == home.casefold():
+            ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
+            message += solo_home_info.format(seed)
+            message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + str(seed), match['roomPass'] + str(seed))
+            message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
+            message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
+            message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
+        else:
+            ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
+            message += solo_away_info.format(seed)
+            message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
+                match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
+            message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
+                match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
+            message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
+                match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
+        return message
+
+    async def _create_generic_solo_matchups_message(self, ctx, player_ratings_cog, home, away):
+        message = ""
+        try:
+            # First match
+            message += "\n\nThe first set of **one game** matchups will begin at {0} and will include the following matchups: ".format(first_match_time)
+            message += "```"
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+            message += "```"
+            # Second match
+            message += "\n\nThe second set of **one game** matchups will begin at {0} and will include the following matchups: ".format(second_match_time)
+            message += "```"
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+            message += "```"
+            # Third match
+            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
+            message += "```"
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+            message += "```"
+        except:
+            pass
         return message
 
     def _generate_name_pass(self):
@@ -632,6 +663,8 @@ first_match_time = ("10:00 pm ET")
 second_match_time = ("10:10 pm ET")
 
 third_match_time = ("10:20 pm ET")
+
+solo_matchup = ("{away_player} vs. {home_player}")
 
 stream_info = ("**This match is scheduled to play on stream ** "
             "(Time slot {time_slot}: {time})"
