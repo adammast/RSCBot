@@ -567,9 +567,9 @@ class Match(commands.Cog):
         return message
 
     async def _create_matchup_string(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
-        away_player_nick = (await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick
-        extra_spaces = " " * (32 - len(str(away_player_nick))) # We convert to string to handle None cases
-        home_player_nick = (await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick
+        away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick) # We convert to string to handle None cases
+        extra_spaces = " " * (32 - len(away_player_nick)) 
+        home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick) # We convert to string to handle None cases
         return solo_matchup.format(away_player = away_player_nick, spaces = extra_spaces, home_player = home_player_nick)
 
     def _generate_name_pass(self):
