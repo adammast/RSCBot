@@ -540,39 +540,36 @@ class Match(commands.Cog):
 
     async def _create_generic_solo_matchups_message(self, ctx, player_ratings_cog, home, away):
         message = ""
-        try:
-            # First match
-            message += "\n\nThe first set of **one game** matchups will begin at {0} and will include the following matchups: ".format(first_match_time)
-            message += "```"
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
-            message += "```"
-            # Second match
-            message += "\n\nThe second set of **one game** matchups will begin at {0} and will include the following matchups: ".format(second_match_time)
-            message += "```"
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
-            message += "```"
-            # Third match
-            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
-            message += "```"
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
-            message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
-                home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
-            message += "```"
-        except:
-            pass
+        # First match
+        message += "\n\nThe first set of **one game** matchups will begin at {0} and will include the following matchups: ".format(first_match_time)
+        message += "```"
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+        message += "```"
+        # Second match
+        message += "\n\nThe second set of **one game** matchups will begin at {0} and will include the following matchups: ".format(second_match_time)
+        message += "```"
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+        message += "```"
+        # Third match
+        message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
+        message += "```"
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 1).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 1).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 2).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 2).nick)
+        message += solo_matchup.format(away_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, away, 3).nick, 
+            home_player = await player_ratings_cog.get_member_by_team_and_seed(ctx, home, 3).nick)
+        message += "```"
         return message
 
     def _generate_name_pass(self):
