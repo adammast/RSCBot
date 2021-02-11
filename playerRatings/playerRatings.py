@@ -218,7 +218,7 @@ class PlayerRatings(commands.Cog):
         await self.load_players(ctx)
         players = self.players
         if not players:
-            ctx.send("There are no players at this time")
+            await ctx.send("There are no players at this time")
             return
 
         messages = []
@@ -252,10 +252,11 @@ class PlayerRatings(commands.Cog):
         # There are other validations we could do, but don't
         #     - that there aren't extra args for example
         errors = []
-        try:
-            member = await commands.MemberConverter().convert(ctx, member)
-        except:
-            errors.append("Member {} not found.".format(member))
+        if not isinstance(member, discord.Member):
+            try:
+                member = await commands.MemberConverter().convert(ctx, member)
+            except:
+                errors.append("Member {} not found.".format(member))
         if wins < 0:
             errors.append("Wins cannot be a negative number.")
         if losses < 0:
