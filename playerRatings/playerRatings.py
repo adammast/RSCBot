@@ -172,8 +172,8 @@ class PlayerRatings(commands.Cog):
         if not player:
             ctx.send("{} has no player information at this time".format(member.name))
             return
-        team_names = await self.team_manager.get_current_team_name(ctx, member)
-        await ctx.send(embed=self.embed_player_info(player, team_names))
+        team_name = await self.team_manager.get_current_team_name(ctx, member)
+        await ctx.send(embed=self.embed_player_info(player, team_name))
 
     @commands.guild_only()
     @commands.command(aliases=["plb"])
@@ -456,13 +456,13 @@ class PlayerRatings(commands.Cog):
 
 #region embed methods
 
-    def embed_player_info(self, player, team_names):
+    def embed_player_info(self, player, team_name):
         embed = discord.Embed(title="{0}".format(player.member.name), color=discord.Colour.blue())
         embed.set_thumbnail(url=player.member.avatar_url)
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
         embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
         embed.add_field(name="Elo Rating", value="{}\n".format(player.elo_rating), inline=False)
-        embed.add_field(name="Team(s)", value="{}\n".format(", ".join([team for team in team_names])), inline=False)
+        embed.add_field(name="Team", value="{}\n".format(team_name), inline=False)
         return embed
 
     def embed_leaderboard(self, ctx, sorted_players, tier_role):
