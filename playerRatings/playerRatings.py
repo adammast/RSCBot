@@ -163,14 +163,16 @@ class PlayerRatings(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["pi"])
-    async def playerInfo(self, ctx, member: discord.Member):
+    async def playerInfo(self, ctx, member: discord.Member = None):
         """Gets all the info corresponding to a player. Shows the player's wins, losses, Elo rating, the team they play for."""
         await self.load_players(ctx)
+        if not member:
+            member = ctx.author
         player = self.get_player_by_id(self.players, member.id)
         if not player:
             ctx.send("{} has no player information at this time".format(member.name))
             return
-        team_names = await self.team_manager.teams_for_user(ctx, member)
+        team_names = await self.team_manager.get_current_team_name(ctx, member)
         await ctx.send(embed=self.embed_player_info(player, team_names))
 
     @commands.guild_only()
