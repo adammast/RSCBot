@@ -633,11 +633,11 @@ away_info = ("You are the **away** team. You will join the room "
             "contacts you. Do not begin joining a team until "
             "your entire team is ready to begin playing.")
 
-solo_home_info = ("You are the **home** team. You are the {0} seed. "
+solo_home_info = ("You are on the **home** team. You are the {0} seed. "
             "You are responsible for hosting the lobby for all of "
             "your matches with the following lobby information: ")
 
-solo_away_info = ("You are the **away** team. You are the {0} seed. "
+solo_away_info = ("You are on the **away** team. You are the {0} seed. "
             "You will participate in the following matchups: ")
             
 
@@ -654,11 +654,11 @@ second_match_descr = ("second **one game** match")
 
 third_match_descr = ("**three game** series")
 
-first_match_time = ("10:00 pm ET")
+first_match_time = ("10:00 pm ET (7:00 pm PT)")
 
-second_match_time = ("10:10 pm ET")
+second_match_time = ("approximately 10:10 pm ET (7:10 pm PT)")
 
-third_match_time = ("10:20 pm ET")
+third_match_time = ("approximately 10:20 pm ET (7:20 pm PT)")
 
 solo_matchup = ("{away_player:25s} vs.\t{home_player}")
 

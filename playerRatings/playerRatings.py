@@ -457,7 +457,7 @@ class PlayerRatings(commands.Cog):
 #region embed methods
 
     def embed_player_info(self, player, team_name):
-        embed = discord.Embed(title="{0}".format(player.member.name), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0}".format(player.member.nick), color=discord.Colour.blue())
         embed.set_thumbnail(url=player.member.avatar_url)
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
         embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
@@ -476,7 +476,7 @@ class PlayerRatings(commands.Cog):
         index = 1
         message = ""
         for player in sorted_players:
-            message += "`{0}` __**{1}:**__ **Elo Rating:** {2}  **Record:** {3} - {4}  **Games Played:** {5}\n".format(index, player.member.mention, player.elo_rating, 
+            message += "`{0}` __**{1}:**__ **Elo Rating:** {2}  **Record:** {3} - {4}  **Games Played:** {5}\n".format(index, player.member.nick, player.elo_rating, 
             player.wins, player.losses, player.wins + player.losses)
             
             index += 1
@@ -487,10 +487,10 @@ class PlayerRatings(commands.Cog):
         return embed
 
     def embed_game_results(self, player_1, player_2, player_1_wins: int, player_2_wins: int, player_1_new_elo, player_2_new_elo):
-        embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.name, player_2.member.name), color=discord.Colour.blue())
-        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.name, player_1_wins, player_2_wins, player_2.member.name), inline=False)
-        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.name, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
-            player_2.member.name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
+        embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.nick, player_2.member.nick), color=discord.Colour.blue())
+        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.nick, player_1_wins, player_2_wins, player_2.member.nick), inline=False)
+        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.nick, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
+            player_2.member.nick, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
         return embed
 
 #endregion
