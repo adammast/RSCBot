@@ -10,7 +10,10 @@ defaults = {"TransChannel": None}
 class Transactions(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
 
+    SUBBED_OUT_ROLE = "Subbed Out"
+
     def __init__(self, bot):
+        self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567895, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager_cog = bot.get_cog("TeamManager")
@@ -143,7 +146,7 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
-    async def sub(self, ctx, user: discord.Member, team_name: str):
+    async def sub(self, ctx, user: discord.Member, team_name: str, subbed_out_user: discord.Member = None):
         """
         Adds the team roles to the user and posts to the assigned transaction channel
         
@@ -168,6 +171,16 @@ class Transactions(commands.Cog):
                         await user.remove_roles(team_tier_role)
                     gm = self._get_gm_name(ctx, franchise_role, True)
                     message = "{0} has finished their time as a substitute for the {1} ({2} - {3})".format(user.name, team_name, gm, team_tier_role.name)
+                    # Removed subbed out role from all team members on team
+                    subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
+                    if subbed_out_role:
+                        team_members = self.team_manager_cog.members_from_team(ctx, franchise_role, team_tier_role)
+                        for team_member in team_members:
+                            await team_member.remove_roles(subbed_out_role)
+                    # Reset player temp rating if the player rating cog is used
+                    player_ratings = self.bot.get_cog("PlayerRatings")
+                    if player_ratings:
+                        await player_ratings.reset_temp_rating(ctx, user)
                 
                 # Begin Substitution:
                 else:
@@ -177,6 +190,15 @@ class Transactions(commands.Cog):
                     await user.add_roles(franchise_role, team_tier_role, leagueRole)
                     gm = self._get_gm_name(ctx, franchise_role)
                     message = "{0} was signed to a temporary contract by the {1} ({2} - {3})".format(user.mention, team_name, gm, team_tier_role.name)
+                    # Give subbed out user the subbed out role if there is one
+                    subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
+                    if subbed_out_user and subbed_out_role:
+                        await subbed_out_user.add_roles(subbed_out_role)
+                        player_ratings = self.bot.get_cog("PlayerRatings")
+                        if player_ratings:
+                            await player_ratings.set_player_temp_rating(ctx, user, subbed_out_user)
+                    elif subbed_out_user:
+                        await ctx.send(":x: The subbed out role is not set in this server")
                 await trans_channel.send(message)
                 await ctx.send("Done")
 

@@ -371,7 +371,6 @@ class BulkRoleManager(commands.Cog):
         """Gets the id for any user that can be found from the userList"""
         found = []
         notFound = []
-        # message = ""
         for user in userList:
             try:
                 member = await commands.MemberConverter().convert(ctx, user)
@@ -406,7 +405,7 @@ class BulkRoleManager(commands.Cog):
                     message += member_line
                 else:
                     messages.append(message)
-                    message = ""
+                    message = member_line
             messages.append(message)
         for msg in messages:
             if msg:

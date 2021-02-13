@@ -25,8 +25,10 @@ class TeamManager(commands.Cog):
     CAPTAN_ROLE = "Captain"
     IR_ROLE = "IR"
     PERM_FA_ROLE = "PermFA"
+    SUBBED_OUT_ROLE = "Subbed Out"
 
     def __init__(self, bot):
+        self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
         self.config.register_guild(**defaults)
         self.prefix_cog = bot.get_cog("PrefixManager")
@@ -150,7 +152,7 @@ class TeamManager(commands.Cog):
         # reassign roles for gm/franchise
         franchise_tier_roles = await self._find_franchise_tier_roles(ctx, franchise_role)
         gm_role = self._find_role_by_name(ctx, TeamManager.GM_ROLE)
-        transfer_roles = [gm_role, franchise_role] + franchise_tier_roles
+        transfer_roles = [gm_role, franchise_role]
         await new_gm.add_roles(*transfer_roles)
 
         # If old GM is still in server:
@@ -374,7 +376,6 @@ class TeamManager(commands.Cog):
         try:
             for teamStr in teams_to_add:
                 team = ast.literal_eval(teamStr)
-                await ctx.send("Adding team: {0}".format(repr(team)))
                 teamAdded = await self._add_team(ctx, *team)
                 if teamAdded:
                     addedCount += 1
@@ -535,10 +536,18 @@ class TeamManager(commands.Cog):
                 return True
         return False
 
+    def is_subbed_out(self, member):
+        for role in member.roles:
+            if role.name == self.SUBBED_OUT_ROLE:
+                return True
+        return False
+
     async def teams_for_user(self, ctx, user):
+        franchise_role = self.get_current_franchise_role(user)
+        if self.is_gm(user):
+            return await self._find_teams_for_franchise(ctx, franchise_role)
         tiers = await self.tiers(ctx)
         teams = []
-        franchise_role = self.get_current_franchise_role(user)
         for role in user.roles:
             if role.name in tiers:
                 tier_role = role
@@ -546,19 +555,16 @@ class TeamManager(commands.Cog):
                 teams.append(team_name)
         return teams
 
-    def gm_and_members_from_team(self, ctx, franchise_role, tier_role):
-        """Retrieve tuple with the gm user and a list of other users that are
-        on the team indicated by the provided franchise_role and tier_role.
+    def members_from_team(self, ctx, franchise_role, tier_role):
+        """Retrieve the list of all users that are on the team
+        indicated by the provided franchise_role and tier_role.
         """
-        gm = None
         team_members = []
         for member in ctx.message.guild.members:
             if franchise_role in member.roles:
-                if self.is_gm(member):
-                    gm = member
-                elif tier_role in member.roles:
+                if tier_role in member.roles:
                     team_members.append(member)
-        return (gm, team_members)
+        return team_members
 
     async def create_roster_embed(self, ctx, team_name):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
@@ -572,23 +578,30 @@ class TeamManager(commands.Cog):
 
     async def format_roster_info(self, ctx, team_name: str):
         franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
-        gm, team_members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        team_members = self.members_from_team(ctx, franchise_role, tier_role)
         captain = await self._get_team_captain(ctx, franchise_role, tier_role)
 
-        message = "```\n{0} ({1}):\n".format(team_name, tier_role.name)
-        if gm:
-            if gm == captain:
-                message += "  {0}\n".format(
-                    self._format_team_member_for_message(gm, "C"))
-            else:
-                message += "  {0}\n".format(
-                    self._format_team_member_for_message(gm))
+        # Sort team_members by player rating if the player ratings cog is used in this server
+        try:
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            team_members = await player_ratings.sort_members_by_rating(ctx, team_members)
+        except:
+            pass
+
+        message = "```\n{0} - {1} - {2}:\n".format(team_name, franchise_role.name, tier_role.name)
+        subbed_out_message = ""
+        
         for member in team_members:
             role_tags = ["C"] if member == captain else []
-            message += "  {0}\n".format(
-                self._format_team_member_for_message(member, *role_tags))
+            user_message = await self._format_team_member_for_message(ctx, member, *role_tags)
+            if self.is_subbed_out(member):
+                subbed_out_message += "  {0}\n".format(user_message)
+            else:
+                message += "  {0}\n".format(user_message)
         if not team_members:
-            message += "\nNo other members found."
+            message += "\nNo members found."
+        if not subbed_out_message == "":
+            message += "\nSubbed Out:\n{0}".format(subbed_out_message)
         message += "```"
         return message
 
@@ -670,12 +683,10 @@ class TeamManager(commands.Cog):
 
     async def _get_team_captain(self, ctx, franchise_role: discord.Role, tier_role: discord.Role):
         captain_role = self._find_role_by_name(ctx, "Captain")
-        gm, members = self.gm_and_members_from_team(ctx, franchise_role, tier_role)
+        members = self.members_from_team(ctx, franchise_role, tier_role)
         for member in members:
             if captain_role in member.roles:
                 return member
-        if gm and captain_role in gm.roles:
-            return gm
         return None
             
     async def _create_role(self, ctx, role_name: str):
@@ -686,7 +697,7 @@ class TeamManager(commands.Cog):
                 return None
         return await ctx.guild.create_role(name=role_name)
 
-    def _format_team_member_for_message(self, member, *args):
+    async def _format_team_member_for_message(self, ctx, member, *args):
         extraRoles = list(args)
         if self.is_gm(member):
             extraRoles.insert(0, "GM")
@@ -695,7 +706,15 @@ class TeamManager(commands.Cog):
         roleString = ""
         if extraRoles:
             roleString = " ({0})".format("|".join(extraRoles))
-        return "{0}{1}".format(member.display_name, roleString)
+        recordString = ""
+        try:
+            player_ratings = self.bot.get_cog("PlayerRatings")
+            wins, losses, rating = await player_ratings.get_player_record_and_rating_by_id(ctx, member.id)
+            if wins is not None:
+                recordString = " ({0}-{1}, {2})".format(wins, losses, rating)
+        except:
+            pass
+        return "{0}{1}{2}".format(member.display_name, recordString, roleString)
 
     async def _format_teams_for_franchise(self, ctx, franchise_role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)
@@ -775,8 +794,6 @@ class TeamManager(commands.Cog):
             return False
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
-        gm = self._get_gm(ctx, franchise_role)
-        await gm.add_roles(tier_role)
         return True
     
     async def _remove_team(self, ctx, team_name: str):
@@ -792,7 +809,6 @@ class TeamManager(commands.Cog):
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
         gm = self._get_gm(ctx, franchise_role)
-        await gm.remove_roles(tier_role)
         return True
 
     def _get_tier_role(self, ctx, tier: str):
@@ -1003,4 +1019,11 @@ class TeamManager(commands.Cog):
                 user_tier_roles.append(tier_role)
         return user_tier_roles
     
-    
+    async def get_active_members_by_team_name(self, ctx, team_name):
+        franchise_role, tier_role = await self._roles_for_team(ctx, team_name)
+        team_members = self.members_from_team(ctx, franchise_role, tier_role)
+        active_members = []
+        for member in team_members:
+            if not self.is_subbed_out(member):
+                active_members.append(member)
+        return active_members
