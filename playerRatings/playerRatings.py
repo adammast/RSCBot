@@ -498,19 +498,18 @@ class PlayerRatings(commands.Cog):
 #region load/save methods
 
     async def load_players(self, ctx, force_load = False):
-        if self.players is None or self.players == [] or force_load:
-            players = await self._players(ctx)
-            player_list = []
-            for value in players.values():
-                member = ctx.guild.get_member(value["Id"])
-                wins = value["Wins"]
-                losses = value["Losses"]
-                elo_rating = value["EloRating"]
-                temp_rating = value["TempRating"]
-                player = Player(member, wins, losses, elo_rating, temp_rating)
-                player_list.append(player)
+        players = await self._players(ctx)
+        player_list = []
+        for value in players.values():
+            member = ctx.guild.get_member(value["Id"])
+            wins = value["Wins"]
+            losses = value["Losses"]
+            elo_rating = value["EloRating"]
+            temp_rating = value["TempRating"]
+            player = Player(member, wins, losses, elo_rating, temp_rating)
+            player_list.append(player)
 
-            self.players = player_list
+        self.players = player_list
 
     async def _players(self, ctx):
         return await self.config.guild(ctx.guild).Players()
