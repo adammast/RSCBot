@@ -441,6 +441,7 @@ class PlayerRatings(commands.Cog):
             subbed_out_player = self.get_player_by_id(self.players, subbed_out_member.id)
             if subbed_player and subbed_out_player:
                 subbed_player.temp_rating = subbed_out_player.elo_rating
+                await self._save_players(ctx, self.players)
                 return True
         return False
 
@@ -450,6 +451,7 @@ class PlayerRatings(commands.Cog):
             player = self.get_player_by_id(self.players, member.id)
             if player:
                 player.temp_rating = -1
+                await self._save_players(ctx, self.players)
         return False
 
 #endregion
@@ -500,8 +502,14 @@ class PlayerRatings(commands.Cog):
     async def load_players(self, ctx, force_load = False):
         players = await self._players(ctx)
         player_list = []
+        remove_player = False
         for value in players.values():
             member = ctx.guild.get_member(value["Id"])
+            if not member:
+                # Member not found in server, don't add to list of players and 
+                # re-save list at the end to ensure they get removed
+                remove_player = True
+                continue
             wins = value["Wins"]
             losses = value["Losses"]
             elo_rating = value["EloRating"]
@@ -510,6 +518,8 @@ class PlayerRatings(commands.Cog):
             player_list.append(player)
 
         self.players = player_list
+        if remove_player:
+            await self._save_players(ctx, self.players)
 
     async def _players(self, ctx):
         return await self.config.guild(ctx.guild).Players()

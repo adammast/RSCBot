@@ -114,15 +114,14 @@ class Match(commands.Cog):
             return
 
         for team_name in team_names:
-            team_name_for_info = team_name if user_team_names else None
             match_index = await self._team_day_match_index(ctx, team_name,
                                                      match_day)
             if match_index is not None:
                 if ctx.message.author.is_on_mobile():
-                    message = await self._format_match_message(ctx, match_index, team_name_for_info)
+                    message = await self._format_match_message(ctx, match_index, team_name)
                     await ctx.message.author.send(message)
                 else:
-                    embed = await self._format_match_embed(ctx, match_index, team_name_for_info)
+                    embed = await self._format_match_embed(ctx, match_index, team_name)
                     await ctx.message.author.send(embed=embed)
             else:
                 await ctx.message.author.send(
@@ -331,7 +330,7 @@ class Match(commands.Cog):
     def _team_day_key(self, team, match_day):
         return "{0}|{1}".format(team, match_day)
 
-    async def _format_match_embed(self, ctx, match_index, user_team_name=None):
+    async def _format_match_embed(self, ctx, match_index, user_team_name):
         matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:
@@ -362,7 +361,7 @@ class Match(commands.Cog):
 
         
 
-    async def _format_match_message(self, ctx, match_index, user_team_name=None):
+    async def _format_match_message(self, ctx, match_index, user_team_name):
         matches = await self._matches(ctx)
         match = matches[match_index]
         # Match format:
