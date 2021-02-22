@@ -502,14 +502,13 @@ class PlayerRatings(commands.Cog):
     async def load_players(self, ctx, force_load = False):
         players = await self._players(ctx)
         player_list = []
-        removed_player = False
+        remove_player = False
         for value in players.values():
-            try:
-                member = await commands.MemberConverter().convert(ctx, value["Id"])
-            except:
+            member = ctx.guild.get_member(value["Id"])
+            if not member:
                 # Member not found in server, don't add to list of players and 
                 # re-save list at the end to ensure they get removed
-                removed_player = True
+                remove_player = True
                 continue
             wins = value["Wins"]
             losses = value["Losses"]
@@ -519,7 +518,7 @@ class PlayerRatings(commands.Cog):
             player_list.append(player)
 
         self.players = player_list
-        if removed_player:
+        if remove_player:
             await self._save_players(ctx, self.players)
 
     async def _players(self, ctx):
