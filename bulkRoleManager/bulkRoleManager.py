@@ -13,6 +13,8 @@ defaults = {"DraftEligibleMessage": None}
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
+    
+    PERM_FA_ROLE = "PermFA"
 
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567897, force_registration=True)
@@ -227,12 +229,12 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
     
-    @commands.command(aliases=["getID", "getid"])
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def makePermFA(self, ctx, tier: str, *userList):
         """Makes each member that can be found from the userList a permanent Free Agent for the given tier"""
-        role_names_to_add = ["permFA", "League", tier, "{0}FA".format(tier)]
+        role_names_to_add = ["self.PERM_FA_ROLE", "League", tier, "{0}FA".format(tier)]
         roles_to_add = []
         tiers = await self.team_manager_cog.tiers(ctx)
         for role in ctx.guild.roles:
@@ -327,7 +329,7 @@ class BulkRoleManager(commands.Cog):
         roles_to_remove = [
             self.team_manager_cog._find_role_by_name(ctx, "League"),
             self.team_manager_cog._find_role_by_name(ctx, "Free Agent"),
-            self.team_manager_cog._find_role_by_name(ctx, "permFA")
+            self.team_manager_cog._find_role_by_name(ctx, self.PERM_FA_ROLE)
         ]
         tiers = await self.team_manager_cog.tiers(ctx)
         for tier in tiers:
