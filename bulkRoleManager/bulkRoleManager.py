@@ -234,7 +234,7 @@ class BulkRoleManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def makePermFA(self, ctx, tier: str, *userList):
         """Makes each member that can be found from the userList a permanent Free Agent for the given tier"""
-        role_names_to_add = ["self.PERM_FA_ROLE", "League", tier, "{0}FA".format(tier)]
+        role_names_to_add = [self.PERM_FA_ROLE, "League", tier, "{0}FA".format(tier)]
         roles_to_add = []
         tiers = await self.team_manager_cog.tiers(ctx)
         for role in ctx.guild.roles:
