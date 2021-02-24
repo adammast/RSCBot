@@ -265,13 +265,11 @@ class BulkRoleManager(commands.Cog):
                 if leagueRole in member.roles:
                     tier_changed = False
                     old_tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
-                    
                     if (old_tier_role in member.roles and (not old_tier_role in roles_to_add)) or not old_tier_role:
                         tier_changed = True
                     elif old_tier_role in member.roles and old_tier_role in roles_to_add:
                         had += 1
-                        added -= 1  # remove double count of had/added
-                        
+                        added -= 1  # remove double count of had/added 
 
                     if tier_changed:
                         action = "assigned"
@@ -293,9 +291,8 @@ class BulkRoleManager(commands.Cog):
                         except discord.errors.Forbidden:
                             await ctx.send("Cannot set nickname for {0}".format(member.name))
 
-                    await member.add_roles(*roles_to_add)
-                    added += 1
-                empty = False
+                await member.add_roles(*roles_to_add)
+                added += 1
         
         if len([userList]) and not empty:
             message = "{0} members processed...\n".format(len([userList])) + message
