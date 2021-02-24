@@ -263,6 +263,7 @@ class BulkRoleManager(commands.Cog):
             if member in ctx.guild.members:
                 empty = False
                 tier_changed = True
+                old_tier_role = None
                 if leagueRole in member.roles:
                     old_tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
                     if old_tier_role in member.roles and old_tier_role in roles_to_add:
@@ -272,7 +273,7 @@ class BulkRoleManager(commands.Cog):
 
                 if tier_changed:
                     action = "assigned"
-                    if old_tier_role not in roles_to_add:
+                    if old_tier_role and old_tier_role not in roles_to_add:
                         old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
                         rm_roles = [old_tier_role, old_tier_fa_role]
                         await member.remove_roles(*rm_roles)
@@ -284,10 +285,10 @@ class BulkRoleManager(commands.Cog):
                     "out and then `[p]ci` to check in again for your new tier.").format(action, tier)
                     await self._send_member_message(ctx, member, tier_change_msg)
                 
-                if not member.nick or member.nick[:5] != "FA | ":
+                if self.get_player_nickname(member)[:5] != "FA | ":
                     try:
                         await member.edit(nick="{0} | {1}".format("FA", self.get_player_nickname(member)))
-                    except discord.errors.Forbidden:
+                    except (discord.errors.Forbidden, discord.errors.HTTPException):
                         await ctx.send("Cannot set nickname for {0}".format(member.name))
 
                 await member.add_roles(*roles_to_add)
