@@ -170,7 +170,7 @@ class PlayerRatings(commands.Cog):
             member = ctx.author
         player = self.get_player_by_id(self.players, member.id)
         if not player:
-            ctx.send("{} has no player information at this time".format(member.name))
+            await ctx.send("{} has no player information at this time".format(member.name))
             return
         team_name = await self.team_manager.get_current_team_name(ctx, member)
         franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
@@ -484,7 +484,7 @@ class PlayerRatings(commands.Cog):
         statStrings = []
         for player in sorted_players:
             playerStrings.append("`{0}` **{1}:**".format(index, player.member.nick))
-            statStrings.append("**Elo Rating:** {2:4s}  **Record:** {3:2s} - {4:2s}  **Games Played:** {5:2s}".format(str(player.elo_rating),
+            statStrings.append("**Elo Rating:** {0:4s}  **Record:** {1:2s} - {2:2s}  **Games Played:** {3:2s}".format(str(player.elo_rating),
                 str(player.wins), str(player.losses), str(player.wins + player.losses)))
             
             index += 1
