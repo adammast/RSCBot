@@ -173,7 +173,7 @@ class PlayerRatings(commands.Cog):
             ctx.send("{} has no player information at this time".format(member.name))
             return
         team_name = await self.team_manager.get_current_team_name(ctx, member)
-        franchise_role, tier_role = self.team_manager._roles_for_team(ctx, team_name)
+        franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
         await ctx.send(embed=self.embed_player_info(player, team_name, tier_role))
 
     @commands.guild_only()
@@ -484,7 +484,8 @@ class PlayerRatings(commands.Cog):
         statStrings = []
         for player in sorted_players:
             playerStrings.append("`{0}` **{1}:**".format(index, player.member.nick))
-            statStrings.append("**Elo Rating:** {2:4s}  **Record:** {3:2s} - {4:2s}  **Games Played:** {5:2s}".format(player.elo_rating, player.wins, player.losses, player.wins + player.losses))
+            statStrings.append("**Elo Rating:** {2:4s}  **Record:** {3:2s} - {4:2s}  **Games Played:** {5:2s}".format(str(player.elo_rating),
+                str(player.wins), str(player.losses), str(player.wins + player.losses)))
             
             index += 1
             if index > 10:
