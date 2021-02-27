@@ -484,8 +484,8 @@ class PlayerRatings(commands.Cog):
         statStrings = []
         for player in sorted_players:
             playerStrings.append("`{0}` **{1}:**".format(index, player.member.nick))
-            statStrings.append("Elo Rating: `{0:4s}`  Record: `{1:2s} - {2:2s}`  Games Played: `{3:2s}`".format(str(player.elo_rating),
-                str(player.wins), str(player.losses), str(player.wins + player.losses)))
+            statStrings.append("Elo Rating: `{0:4d}`  Record: `{1:2d} - {2:2d}`  Games Played: `{3:2d}`".format(player.elo_rating,
+                player.wins, player.losses, player.wins + player.losses))
             
             index += 1
             if index > 10:
