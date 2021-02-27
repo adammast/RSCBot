@@ -25,7 +25,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -174,7 +174,7 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self._format_queue_info(ctx, six_mans_queue))
 
     @commands.guild_only()
-    @commands.command(aliases=["cq"])
+    @commands.command(aliases=["cq", "status"])
     async def checkQueue(self, ctx):
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
@@ -217,6 +217,29 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: You are already in a game")
                 return
 
+        await self._add_to_queue(player, six_mans_queue)
+        if six_mans_queue._queue_full():
+            await self._randomize_teams(ctx, six_mans_queue)
+
+    @commands.guild_only()
+    @commands.command(aliases=["forcequeue"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def fq(self, ctx, *, member: discord.Member):
+        """Adds a specific member to the queue [Testing only]"""
+        await self._pre_load_queues(ctx)
+        await self._pre_load_games(ctx, False)
+        six_mans_queue = self._get_queue(ctx)
+        player = member
+
+        if player in six_mans_queue.queue.queue:
+            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
+            return
+        for game in self.games:
+            if player in game:
+                await ctx.send(":x: You are already in a game")
+                return
+
+        automove = await self._get_automove(ctx)
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
             await self._randomize_teams(ctx, six_mans_queue)
@@ -591,6 +614,18 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
+    async def toggleAutoMove(self, ctx):
+        """Toggle whether or not bot moves members to their assigned 6-mans team voice channel"""
+        new_automove_status = not await self._get_automove(ctx)
+        await self._save_automove(ctx, new_automove_status)
+
+        action = "will move" if new_automove_status else "will not move"
+        message = "Popped 6-mans queues **{}** members to their team voice channel.".format(action)
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
     async def setCategory(self, ctx, category_channel: discord.CategoryChannel):
         """Sets the 6 mans category channel where all 6 mans channels will be created under"""
         await self._save_category(ctx, category_channel.id)
@@ -915,6 +950,21 @@ class SixMans(commands.Cog):
 
         await self._display_game_info(ctx, game, six_mans_queue)
 
+        # if sixMans is configured to automove, moves members to their team vcs.
+        if await self._get_automove(ctx):
+            team_vcs = game.get_voice_channels()
+            for player in blue:
+                try:
+                    await player.move_to(team_vcs[0])
+                except:
+                    pass
+            for player in orange:
+                try:
+                    await player.move_to(team_vcs[1])
+                except:
+                    pass
+
+
         self.games.append(game)
         await self._save_games(ctx, self.games)
         return True
@@ -947,8 +997,12 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
+
+        
+
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
+
         return Game(players, text_channel, voice_channels, six_mans_queue.id)
 
     async def _create_game_channels(self, ctx, six_mans_queue):
@@ -974,8 +1028,8 @@ class SixMans(commands.Cog):
         text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
             category= await self._category(ctx))
         voice_channels = [
-            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx)),
-            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx))
+            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx)),
+            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx))
         ]
         return text_channel, voice_channels
 
@@ -1125,6 +1179,12 @@ class SixMans(commands.Cog):
     async def _category(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
 
+    async def _get_automove(self, ctx):
+        return await self.config.guild(ctx.guild).AutoMove()
+
+    async def _save_automove(self, ctx, automove: bool):
+        await self.config.guild(ctx.guild).AutoMove.set(automove)
+
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
@@ -1164,6 +1224,9 @@ class Game:
         self.captains = []
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
+
+    def get_voice_channels(self):
+        return self.voiceChannels
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
