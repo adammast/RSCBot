@@ -13,6 +13,8 @@ defaults = {"DraftEligibleMessage": None}
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
+    
+    PERM_FA_ROLE = "PermFA"
 
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567897, force_registration=True)
@@ -227,12 +229,12 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
     
-    @commands.command(aliases=["getID", "getid"])
+    @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def makePermFA(self, ctx, tier: str, *userList):
         """Makes each member that can be found from the userList a permanent Free Agent for the given tier"""
-        role_names_to_add = ["permFA", "League", tier, "{0}FA".format(tier)]
+        role_names_to_add = [self.PERM_FA_ROLE, "League", tier, "{0}FA".format(tier)]
         roles_to_add = []
         tiers = await self.team_manager_cog.tiers(ctx)
         for role in ctx.guild.roles:
@@ -260,40 +262,37 @@ class BulkRoleManager(commands.Cog):
                 continue
             if member in ctx.guild.members:
                 empty = False
+                tier_changed = True
+                old_tier_role = None
                 if leagueRole in member.roles:
-                    tier_changed = False
                     old_tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
-                    
-                    if (old_tier_role in member.roles and (not old_tier_role in roles_to_add)) or not old_tier_role:
-                        tier_changed = True
-                    elif old_tier_role in member.roles and old_tier_role in roles_to_add:
+                    if old_tier_role in member.roles and old_tier_role in roles_to_add:
+                        tier_changed = False
                         had += 1
                         added -= 1  # remove double count of had/added
-                        
 
-                    if tier_changed:
-                        action = "assigned"
-                        if old_tier_role:
-                            old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
-                            rm_roles = [old_tier_role, old_tier_fa_role]
-                            await member.remove_roles(*rm_roles)
-                            action = "promoted"
-                        tier_change_msg = ("Congrats! Due to your recent ranks you've been {0} to our {1} tier! "
-                        "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
-                        "season. If you have any questions please let an admin know."
-                        "\n\nIf you checked in already for the next match day, please use the commands `[p]co` to check "
-                        "out and then `[p]ci` to check in again for your new tier.").format(action, tier)
-                        await self._send_member_message(ctx, member, tier_change_msg)
-                    
-                    if member.nick[:5] != "FA | ":  # this would theoretically not work if someone's actual name had that as their prefix
-                        try: 
-                            await member.edit(nick="{0} | {1}".format("FA", self.get_player_nickname(member)))
-                        except discord.errors.Forbidden:
-                            await ctx.send("Cannot set nickname for {0}".format(member.name))
+                if tier_changed:
+                    action = "assigned"
+                    if old_tier_role and old_tier_role not in roles_to_add:
+                        old_tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(old_tier_role.name))
+                        rm_roles = [old_tier_role, old_tier_fa_role]
+                        await member.remove_roles(*rm_roles)
+                        action = "promoted"
+                    tier_change_msg = ("Congrats! Due to your recent ranks you've been {0} to our {1} tier! "
+                    "You'll only be allowed to play in that tier or any tier above it for the remainder of this "
+                    "season. If you have any questions please let an admin know."
+                    "\n\nIf you checked in already for the next match day, please use the commands `[p]co` to check "
+                    "out and then `[p]ci` to check in again for your new tier.").format(action, tier)
+                    await self._send_member_message(ctx, member, tier_change_msg)
+                
+                if self.get_player_nickname(member)[:5] != "FA | ":
+                    try:
+                        await member.edit(nick="{0} | {1}".format("FA", self.get_player_nickname(member)))
+                    except (discord.errors.Forbidden, discord.errors.HTTPException):
+                        await ctx.send("Cannot set nickname for {0}".format(member.name))
 
-                    await member.add_roles(*roles_to_add)
-                    added += 1
-                empty = False
+                await member.add_roles(*roles_to_add)
+                added += 1
         
         if len([userList]) and not empty:
             message = "{0} members processed...\n".format(len([userList])) + message
@@ -327,7 +326,7 @@ class BulkRoleManager(commands.Cog):
         roles_to_remove = [
             self.team_manager_cog._find_role_by_name(ctx, "League"),
             self.team_manager_cog._find_role_by_name(ctx, "Free Agent"),
-            self.team_manager_cog._find_role_by_name(ctx, "permFA")
+            self.team_manager_cog._find_role_by_name(ctx, self.PERM_FA_ROLE)
         ]
         tiers = await self.team_manager_cog.tiers(ctx)
         for tier in tiers:
