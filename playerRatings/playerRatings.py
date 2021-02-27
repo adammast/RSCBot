@@ -173,7 +173,8 @@ class PlayerRatings(commands.Cog):
             ctx.send("{} has no player information at this time".format(member.name))
             return
         team_name = await self.team_manager.get_current_team_name(ctx, member)
-        await ctx.send(embed=self.embed_player_info(player, team_name))
+        franchise_role, tier_role = self.team_manager._roles_for_team(ctx, team_name)
+        await ctx.send(embed=self.embed_player_info(player, team_name, tier_role))
 
     @commands.guild_only()
     @commands.command(aliases=["plb"])
@@ -458,8 +459,11 @@ class PlayerRatings(commands.Cog):
 
 #region embed methods
 
-    def embed_player_info(self, player, team_name):
-        embed = discord.Embed(title="{0}".format(player.member.nick), color=discord.Colour.blue())
+    def embed_player_info(self, player, team_name, tier_role):
+        embed_color = discord.Colour.blue()
+        if tier_role:
+            embed_color = tier_role.color
+        embed = discord.Embed(title="{0}".format(player.member.nick), color=embed_color)
         embed.set_thumbnail(url=player.member.avatar_url)
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
         embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
@@ -476,16 +480,18 @@ class PlayerRatings(commands.Cog):
         embed = discord.Embed(title="{0} Player Leaderboard".format(embed_name), color=embed_color)
         
         index = 1
-        message = ""
+        playerStrings = []
+        statStrings = []
         for player in sorted_players:
-            message += "`{0}` __**{1}:**__ **Elo Rating:** {2}  **Record:** {3} - {4}  **Games Played:** {5}\n".format(index, player.member.nick, player.elo_rating, 
-            player.wins, player.losses, player.wins + player.losses)
+            playerStrings.append("`{0}` **{1}:**".format(index, player.member.nick))
+            statStrings.append("**Elo Rating:** {2:4s}  **Record:** {3:2s} - {4:2s}  **Games Played:** {5:2s}".format(player.elo_rating, player.wins, player.losses, player.wins + player.losses))
             
             index += 1
             if index > 10:
                 break
 
-        embed.add_field(name="Highest Elo Rating", value=message, inline=False)
+        embed.add_field(name="Player", value="{}\n".format("\n".join(playerStrings)), inline=True)
+        embed.add_field(name="Stats", value="{}\n".format("\n".join(statStrings)), inline=True)
         return embed
 
     def embed_game_results(self, player_1, player_2, player_1_wins: int, player_2_wins: int, player_1_new_elo, player_2_new_elo):
