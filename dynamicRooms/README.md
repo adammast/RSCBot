@@ -19,7 +19,3 @@ The `dynamicRooms` cog is independant from all other cogs. No prerequisites are 
   Lists all Categories that have been set as dynamic.
 - `<p>clearDynamicCategories`
   Disables dynamic behavior of a given category
-
-#### Roles involved:
-
-- Muted
