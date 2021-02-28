@@ -239,7 +239,6 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: You are already in a game")
                 return
 
-        automove = await self._get_automove(ctx)
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
             await self._randomize_teams(ctx, six_mans_queue)
@@ -997,8 +996,6 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
-
-        
 
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
