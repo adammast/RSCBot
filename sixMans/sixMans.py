@@ -830,7 +830,6 @@ class SixMans(commands.Cog):
         elif opposing_captain in game.orange:
             game.captains[1] = random.sample(list(game.orange), 1)[0] #Swap Orange team captain
 
-
     def _give_points(self, players_dict, score):
         player_id = score["Player"]
         points_earned = score["Points"]
@@ -936,33 +935,18 @@ class SixMans(commands.Cog):
 
         orange = random.sample(game.players, 3)
         for player in orange:
-            game.add_to_orange(player)
+            await game.add_to_orange(player)
             await game.voiceChannels[1].set_permissions(player, connect=True)
         
         blue = list(game.players)
         for player in blue:
-            game.add_to_blue(player)
+            await game.add_to_blue(player)
             await game.voiceChannels[0].set_permissions(player, connect=True)
 
         game.reset_players()
         game.get_new_captains_from_teams()
 
         await self._display_game_info(ctx, game, six_mans_queue)
-
-        # if sixMans is configured to automove, moves members to their team vcs.
-        if await self._get_automove(ctx):
-            team_vcs = game.get_voice_channels()
-            for player in blue:
-                try:
-                    await player.move_to(team_vcs[0])
-                except:
-                    pass
-            for player in orange:
-                try:
-                    await player.move_to(team_vcs[1])
-                except:
-                    pass
-
 
         self.games.append(game)
         await self._save_games(ctx, self.games)
@@ -1000,7 +984,8 @@ class SixMans(commands.Cog):
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
 
-        return Game(players, text_channel, voice_channels, six_mans_queue.id)
+        automove = await self._get_automove(ctx)
+        return Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
@@ -1192,7 +1177,7 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
 class Game:
-    def __init__(self, players, text_channel, voice_channels, queue_id):
+    def __init__(self, players, text_channel, voice_channels, queue_id, automove=False):
         self.id = uuid.uuid4().int
         self.players = set(players)
         self.captains = []
@@ -1204,14 +1189,29 @@ class Game:
         self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
         self.queueId = queue_id
         self.scoreReported = False
+        self.automove = automove
 
-    def add_to_blue(self, player):
+    async def add_to_blue(self, player):
         self.players.remove(player)
         self.blue.add(player)
 
-    def add_to_orange(self, player):
+        if self.automove:
+            team_vcs = self.voiceChannels
+            try:
+                await player.move_to(team_vcs[0])
+            except:
+                pass
+
+    async def add_to_orange(self, player):
         self.players.remove(player)
         self.orange.add(player)
+
+        if self.automove:
+            team_vcs = self.voiceChannels
+            try:
+                await player.move_to(team_vcs[1])
+            except:
+                pass
 
     def reset_players(self):
         self.players.update(self.orange)
@@ -1222,8 +1222,8 @@ class Game:
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
 
-    def get_voice_channels(self):
-        return self.voiceChannels
+    # def get_voice_channels(self):
+    #     return self.voiceChannels
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
