@@ -101,12 +101,13 @@ class Transactions(commands.Cog):
         if trans_channel is not None:
             try:
                 await self.remove_player_from_team(ctx, user, team_name)
-                if tier_fa_role is None:
-                    role_name = "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name)
-                    tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, role_name)
-                fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
-                await self.team_manager_cog._set_user_nickname_prefix(ctx, "FA", user)
-                await user.add_roles(tier_fa_role, fa_role)
+                if not self.team_manager_cog.is_gm(user):
+                    if tier_fa_role is None:
+                        role_name = "{0}FA".format((await self.team_manager_cog.get_current_tier_role(ctx, user)).name)
+                        tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, role_name)
+                    fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
+                    await self.team_manager_cog._set_user_nickname_prefix(ctx, "FA", user)
+                    await user.add_roles(tier_fa_role, fa_role)
                 gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await trans_channel.send(message)
@@ -254,10 +255,6 @@ class Transactions(commands.Cog):
 
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
-        # if franchise_role in user.roles and tier_role in user.roles:
-        #     await ctx.send(":x: {0} is already on the {1}".format(user.mention, team_name))
-        #     return
-
         leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
         if leagueRole is not None:
             prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
@@ -274,10 +271,12 @@ class Transactions(commands.Cog):
             await ctx.send(":x: {0} is not on the {1}".format(user.mention, team_name))
             return
 
-        if franchise_role is not None:
-            prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
-            if prefix is not None:
-                await user.remove_roles(franchise_role)
+        if self.team_manager_cog.is_gm(user):
+            # For GMs remove the tier role
+            await user.remove_roles(tier_role)
+        elif franchise_role is not None:
+            # For regular players remove the franchise role
+            await user.remove_roles(franchise_role)
 
     async def find_user_free_agent_roles(self, ctx, user):
         free_agent_roles = await self.get_free_agent_roles(ctx)

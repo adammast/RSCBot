@@ -655,9 +655,9 @@ third_match_descr = ("**three game** series")
 
 first_match_time = ("10:00 pm ET (7:00 pm PT)")
 
-second_match_time = ("approximately 10:10 pm ET (7:10 pm PT)")
+second_match_time = ("approximately 10:15 pm ET (7:15 pm PT)")
 
-third_match_time = ("approximately 10:20 pm ET (7:20 pm PT)")
+third_match_time = ("approximately 10:30 pm ET (7:30 pm PT)")
 
 solo_matchup = ("{away_player:25s} vs.\t{home_player}")
 
