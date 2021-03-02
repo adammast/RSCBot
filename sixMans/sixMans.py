@@ -222,28 +222,6 @@ class SixMans(commands.Cog):
             await self._randomize_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
-    @commands.command(aliases=["forcequeue"])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def fq(self, ctx, *, member: discord.Member):
-        """Adds a specific member to the queue [Testing only]"""
-        await self._pre_load_queues(ctx)
-        await self._pre_load_games(ctx, False)
-        six_mans_queue = self._get_queue(ctx)
-        player = member
-
-        if player in six_mans_queue.queue.queue:
-            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
-            return
-        for game in self.games:
-            if player in game:
-                await ctx.send(":x: You are already in a game")
-                return
-
-        await self._add_to_queue(player, six_mans_queue)
-        if six_mans_queue._queue_full():
-            await self._randomize_teams(ctx, six_mans_queue)
-
-    @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
     async def dequeue(self, ctx):
         """Remove yourself from the queue"""
