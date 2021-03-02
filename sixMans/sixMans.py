@@ -25,7 +25,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -174,7 +174,7 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self._format_queue_info(ctx, six_mans_queue))
 
     @commands.guild_only()
-    @commands.command(aliases=["cq"])
+    @commands.command(aliases=["cq", "status"])
     async def checkQueue(self, ctx):
         await self._pre_load_queues(ctx)
         six_mans_queue = self._get_queue(ctx)
@@ -591,6 +591,18 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
+    async def toggleAutoMove(self, ctx):
+        """Toggle whether or not bot moves members to their assigned 6-mans team voice channel"""
+        new_automove_status = not await self._get_automove(ctx)
+        await self._save_automove(ctx, new_automove_status)
+
+        action = "will move" if new_automove_status else "will not move"
+        message = "Popped 6-mans queues **{}** members to their team voice channel.".format(action)
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
     async def setCategory(self, ctx, category_channel: discord.CategoryChannel):
         """Sets the 6 mans category channel where all 6 mans channels will be created under"""
         await self._save_category(ctx, category_channel.id)
@@ -796,7 +808,6 @@ class SixMans(commands.Cog):
         elif opposing_captain in game.orange:
             game.captains[1] = random.sample(list(game.orange), 1)[0] #Swap Orange team captain
 
-
     def _give_points(self, players_dict, score):
         player_id = score["Player"]
         points_earned = score["Points"]
@@ -902,12 +913,12 @@ class SixMans(commands.Cog):
 
         orange = random.sample(game.players, 3)
         for player in orange:
-            game.add_to_orange(player)
+            await game.add_to_orange(player)
             await game.voiceChannels[1].set_permissions(player, connect=True)
         
         blue = list(game.players)
         for player in blue:
-            game.add_to_blue(player)
+            await game.add_to_blue(player)
             await game.voiceChannels[0].set_permissions(player, connect=True)
 
         game.reset_players()
@@ -947,9 +958,12 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
         text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
+
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
-        return Game(players, text_channel, voice_channels, six_mans_queue.id)
+
+        automove = await self._get_automove(ctx)
+        return Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         guild = ctx.message.guild
@@ -974,8 +988,8 @@ class SixMans(commands.Cog):
         text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
             category= await self._category(ctx))
         voice_channels = [
-            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx)),
-            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites= voice_overwrites, category= await self._category(ctx))
+            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx)),
+            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx))
         ]
         return text_channel, voice_channels
 
@@ -1125,6 +1139,12 @@ class SixMans(commands.Cog):
     async def _category(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
 
+    async def _get_automove(self, ctx):
+        return await self.config.guild(ctx.guild).AutoMove()
+
+    async def _save_automove(self, ctx, automove: bool):
+        await self.config.guild(ctx.guild).AutoMove.set(automove)
+
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
@@ -1135,7 +1155,7 @@ class SixMans(commands.Cog):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
 class Game:
-    def __init__(self, players, text_channel, voice_channels, queue_id):
+    def __init__(self, players, text_channel, voice_channels, queue_id, automove=False):
         self.id = uuid.uuid4().int
         self.players = set(players)
         self.captains = []
@@ -1147,14 +1167,29 @@ class Game:
         self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
         self.queueId = queue_id
         self.scoreReported = False
+        self.automove = automove
 
-    def add_to_blue(self, player):
+    async def add_to_blue(self, player):
         self.players.remove(player)
         self.blue.add(player)
 
-    def add_to_orange(self, player):
+        if self.automove:
+            team_vcs = self.voiceChannels
+            try:
+                await player.move_to(team_vcs[0])
+            except:
+                pass
+
+    async def add_to_orange(self, player):
         self.players.remove(player)
         self.orange.add(player)
+
+        if self.automove:
+            team_vcs = self.voiceChannels
+            try:
+                await player.move_to(team_vcs[1])
+            except:
+                pass
 
     def reset_players(self):
         self.players.update(self.orange)
@@ -1164,6 +1199,9 @@ class Game:
         self.captains = []
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
+
+    # def get_voice_channels(self):
+    #     return self.voiceChannels
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
