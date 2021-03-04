@@ -1032,7 +1032,8 @@ class SixMans(commands.Cog):
             await text_channel.set_permissions(player, read_messages=True)
 
         automove = await self._get_automove(ctx)
-        return Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
+        game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
+        await game.append_short_code_vc()
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
@@ -1246,6 +1247,10 @@ class Game:
         self.scoreReported = False
         self.automove = automove
 
+    async def append_short_code_vc(self):
+        for vc in self.voiceChannels:
+            await vc.edit(name="{} | {}".format(vc.name, str(self.id)[-3:]))
+
     async def add_to_blue(self, player):
         self.players.remove(player)
         self.blue.add(player)
@@ -1276,9 +1281,6 @@ class Game:
         self.captains = []
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
-
-    # def get_voice_channels(self):
-    #     return self.voiceChannels
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
