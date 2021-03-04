@@ -674,7 +674,8 @@ class SixMans(commands.Cog):
         """Sets the 6 mans helper role. Anyone with this role will be able to see all the game channels that are created"""
         await self._save_helper_role(ctx, helper_role.id)
         category = await self._category(ctx)
-        await category.edit(overwrites={helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True, connect=True)})
+        # await category.edit(overwrites={helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True, connect=True)})
+        await category.set_permissions(helper_role, read_messages=True, manage_channels=True, connect=True)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -686,7 +687,6 @@ class SixMans(commands.Cog):
             await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
         except:
             await ctx.send(":x: 6 mans helper role not set")
-
 
     @commands.guild_only()
     @commands.command()
@@ -1035,37 +1035,29 @@ class SixMans(commands.Cog):
         return Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
 
     async def _create_game_channels(self, ctx, six_mans_queue):
+        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         guild = ctx.message.guild
         helper_role = await self._helper_role(ctx)
-        if helper_role:
-            text_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
-            }
-            voice_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(connect=False),
-                helper_role: discord.PermissionOverwrite(connect=True, manage_channels=True)
-            }
-        else:
-            text_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False)
-            }
-            voice_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(connect=False)
-            }
-        
+        category = await self._category(ctx)
         text_channel = await guild.create_text_channel(
             "{0} 6 Mans".format(six_mans_queue.name), 
             permissions_synced=True,
-            category=await self._category(ctx)
+            category=category
         )
-        await text_channel.edit(overwrites=text_overwrites)
+        await text_channel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
         
         blue_vc = await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), category=await self._category(ctx))
+        await blue_vc.set_permissions(guild.default_role, connect=False)
         oran_vc = await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name),  permissions_synced=True, category=await self._category(ctx))
+        await oran_vc.set_permissions(guild.default_role, connect=False)
+        
+        # manually add helper role perms if there is not an associated 6mans category
+        if helper_role and not category:
+            await text_channel.set_permissions(helper_role, view_channel=True, read_messages=True)
+            await blue_vc.set_permissions(helper_role, connect=True)
+            await oran_vc.set_permissions(helper_role, connect=True)
+        
         voice_channels = [blue_vc, oran_vc]
-        # await blue_vc.edit(overwrites=voice_overwrites)
-        # await oran_vc.edit(overwrites=voice_overwrites)
         return text_channel, voice_channels
 
     async def _get_info(self, ctx):
