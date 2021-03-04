@@ -713,6 +713,7 @@ class SixMans(commands.Cog):
 
         await ctx.channel.send(embed=embed)
 
+
     async def has_perms(self, ctx):
         helper_role = await self._helper_role(ctx)
         if ctx.author.guild_permissions.administrator:
@@ -815,7 +816,20 @@ class SixMans(commands.Cog):
         await self._save_players(ctx, _players)
         await self._save_games_played(ctx, _games_played)
 
+        if await self._get_automove(ctx): # game.automove not working?
+            qlobby_vc = await self._get_q_lobby_vc(ctx)
+            if qlobby_vc:
+                await self._move_to_voice(qlobby_vc, game.voiceChannels[0].members)
+                await self._move_to_voice(qlobby_vc, game.voiceChannels[1].members)
+
         await self._remove_game(ctx, game)
+
+    async def _move_to_voice(self, vc: discord.VoiceChannel, members):
+        for member in members:
+            try:
+                await member.move_to(vc)
+            except:
+                pass
 
     async def _remove_game(self, ctx, game):
         self.games.remove(game)
