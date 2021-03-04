@@ -185,14 +185,14 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self._format_queue(ctx, six_mans_queue))
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["setQueueLobby"])
     @checks.admin_or_permissions(manage_guild=True)
     async def setQLobby(self, ctx, lobby_voice: discord.VoiceChannel):
         await self._save_q_lobby_vc(ctx, lobby_voice.id)
         await ctx.send("Done")
     
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=["unsetQueueLobby, unsetQLobby"])
     @checks.admin_or_permissions(manage_guild=True)
     async def clearQLobby(self, ctx):
         await self._save_q_lobby_vc(ctx, None)
