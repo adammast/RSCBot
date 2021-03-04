@@ -188,14 +188,14 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def setQLobby(self, ctx, lobby_voice: discord.VoiceChannel):
-        await self._save_q_lobby(ctx, lobby_voice.id)
+        await self._save_q_lobby_vc(ctx, lobby_voice.id)
         await ctx.send("Done")
     
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearQLobby(self, ctx):
-        await self._save_q_lobby(ctx, None)
+        await self._save_q_lobby_vc(ctx, None)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -821,12 +821,19 @@ class SixMans(commands.Cog):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
         await asyncio.sleep(30)
+        q_lobby_vc = await self._get_q_lobby_vc(ctx)
         try:
             await game.textChannel.delete()
         except:
             pass
         for vc in game.voiceChannels:
             try:
+                try:
+                    if q_lobby_vc:
+                        for player in vc.members:
+                            await player.move_to(q_lobby_vc)
+                except:
+                    pass
                 await vc.delete()
             except:
                 pass
@@ -1185,11 +1192,15 @@ class SixMans(commands.Cog):
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
-    async def _save_q_lobby(self, ctx, vc):
+    async def _save_q_lobby_vc(self, ctx, vc):
         await self.config.guild(ctx.guild).QLobby.set(vc)
     
-    async def _get_q_lobby(self, ctx, vc):
-        await self.config.guild(ctx.guild).QLobby()
+    async def _get_q_lobby_vc(self, ctx):
+        lobby_voice = await self.config.guild(ctx.guild).QLobby()
+        for vc in ctx.guild.voice_channels:
+            if vc.id == lobby_voice:
+                return vc
+        return None
 
     async def _helper_role(self, ctx):
         return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
