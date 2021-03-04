@@ -660,6 +660,10 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetCategory(self, ctx):
         """Unsets the 6 mans category channel. 6 mans channels will not be created if this is not set"""
+        category = await self._category(ctx)
+        old_helper_role = await self._helper_role(ctx)
+        if old_helper_role and category:
+            await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
@@ -669,6 +673,8 @@ class SixMans(commands.Cog):
     async def setHelperRole(self, ctx, helper_role: discord.Role):
         """Sets the 6 mans helper role. Anyone with this role will be able to see all the game channels that are created"""
         await self._save_helper_role(ctx, helper_role.id)
+        category = await self._category(ctx)
+        await category.edit(overwrites={helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True, connect=True)})
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -681,11 +687,16 @@ class SixMans(commands.Cog):
         except:
             await ctx.send(":x: 6 mans helper role not set")
 
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetHelperRole(self, ctx):
         """Unsets the 6 mans helper role."""
+        category = await self._category(ctx)
+        old_helper_role = await self._helper_role(ctx)
+        if old_helper_role and category:
+            await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
@@ -1043,12 +1054,18 @@ class SixMans(commands.Cog):
                 guild.default_role: discord.PermissionOverwrite(connect=False)
             }
         
-        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
-            category= await self._category(ctx))
-        voice_channels = [
-            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx)),
-            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx))
-        ]
+        text_channel = await guild.create_text_channel(
+            "{0} 6 Mans".format(six_mans_queue.name), 
+            permissions_synced=True,
+            category=await self._category(ctx)
+        )
+        await text_channel.edit(overwrites=text_overwrites)
+        
+        blue_vc = await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), category=await self._category(ctx))
+        oran_vc = await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name),  permissions_synced=True, category=await self._category(ctx))
+        voice_channels = [blue_vc, oran_vc]
+        # await blue_vc.edit(overwrites=voice_overwrites)
+        # await oran_vc.edit(overwrites=voice_overwrites)
         return text_channel, voice_channels
 
     async def _get_info(self, ctx):
