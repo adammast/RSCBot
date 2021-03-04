@@ -1034,6 +1034,7 @@ class SixMans(commands.Cog):
         automove = await self._get_automove(ctx)
         game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
         await game.append_short_code_vc()
+        return game
 
     async def _create_game_channels(self, ctx, six_mans_queue):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
