@@ -25,7 +25,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "QLobby": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -185,6 +185,44 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self._format_queue(ctx, six_mans_queue))
 
     @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setQLobby(self, ctx, lobby_voice: discord.VoiceChannel):
+        await self._save_q_lobby(ctx, lobby_voice.id)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearQLobby(self, ctx):
+        await self._save_q_lobby(ctx, None)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["smMove", "moveme"])
+    async def moveMe(self, ctx):
+        if ctx.message.channel.category != await self._category(ctx):
+            return False
+
+        game = self._get_game(ctx)
+        player = ctx.message.author
+        if game:
+            try:
+                if player in game.blue:
+                    await player.move_to(game.voiceChannels[0])
+                if player in game.orange:
+                    await player.move_to(game.voiceChannels[1])
+                await ctx.message.add_reaction("\U00002705") # white_check_mark
+            except:
+                await ctx.message.add_reaction("\U0000274E") # negative_squared_cross_mark
+                if not player.voice:
+                    await ctx.send("{}, you must be connected to a voice channel to be moved to your Six Man's team channel.".format(player.mention))
+        else:
+            await ctx.message.add_reaction("\U0000274E") # negative_squared_cross_mark
+            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
+            # TODO: determine a workaround from filtering through all active games
+
+    @commands.guild_only()
     @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueAll(self, ctx, *members: discord.Member):
@@ -322,8 +360,7 @@ class SixMans(commands.Cog):
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
-            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
-            
+            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))   
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
@@ -1147,6 +1184,12 @@ class SixMans(commands.Cog):
 
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
+
+    async def _save_q_lobby(self, ctx, vc):
+        await self.config.guild(ctx.guild).QLobby.set(vc)
+    
+    async def _get_q_lobby(self, ctx, vc):
+        await self.config.guild(ctx.guild).QLobby()
 
     async def _helper_role(self, ctx):
         return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
