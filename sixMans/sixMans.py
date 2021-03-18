@@ -25,7 +25,7 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "QLobby": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
 
 class SixMans(commands.Cog):
 
@@ -185,6 +185,44 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self._format_queue(ctx, six_mans_queue))
 
     @commands.guild_only()
+    @commands.command(aliases=["setQueueLobby"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setQLobby(self, ctx, lobby_voice: discord.VoiceChannel):
+        await self._save_q_lobby_vc(ctx, lobby_voice.id)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command(aliases=["unsetQueueLobby, unsetQLobby"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearQLobby(self, ctx):
+        await self._save_q_lobby_vc(ctx, None)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["smMove", "moveme"])
+    async def moveMe(self, ctx):
+        if ctx.message.channel.category != await self._category(ctx):
+            return False
+
+        game = self._get_game(ctx)
+        player = ctx.message.author
+        if game:
+            try:
+                if player in game.blue:
+                    await player.move_to(game.voiceChannels[0])
+                if player in game.orange:
+                    await player.move_to(game.voiceChannels[1])
+                await ctx.message.add_reaction("\U00002705") # white_check_mark
+            except:
+                await ctx.message.add_reaction("\U0000274E") # negative_squared_cross_mark
+                if not player.voice:
+                    await ctx.send("{}, you must be connected to a voice channel to be moved to your Six Man's team channel.".format(player.mention))
+        else:
+            await ctx.message.add_reaction("\U0000274E") # negative_squared_cross_mark
+            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
+            # TODO: determine a workaround from filtering through all active games
+
+    @commands.guild_only()
     @commands.command(aliases=["qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueAll(self, ctx, *members: discord.Member):
@@ -322,8 +360,7 @@ class SixMans(commands.Cog):
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
-            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
-            
+            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))   
 
     @commands.guild_only()
     @commands.command(aliases=["fr"])
@@ -623,6 +660,10 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetCategory(self, ctx):
         """Unsets the 6 mans category channel. 6 mans channels will not be created if this is not set"""
+        category = await self._category(ctx)
+        old_helper_role = await self._helper_role(ctx)
+        if old_helper_role and category:
+            await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_category(ctx, None)
         await ctx.send("Done")
 
@@ -632,6 +673,9 @@ class SixMans(commands.Cog):
     async def setHelperRole(self, ctx, helper_role: discord.Role):
         """Sets the 6 mans helper role. Anyone with this role will be able to see all the game channels that are created"""
         await self._save_helper_role(ctx, helper_role.id)
+        category = await self._category(ctx)
+        # await category.edit(overwrites={helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True, connect=True)})
+        await category.set_permissions(helper_role, read_messages=True, manage_channels=True, connect=True)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -649,6 +693,10 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetHelperRole(self, ctx):
         """Unsets the 6 mans helper role."""
+        category = await self._category(ctx)
+        old_helper_role = await self._helper_role(ctx)
+        if old_helper_role and category:
+            await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_helper_role(ctx, None)
         await ctx.send("Done")
 
@@ -675,6 +723,7 @@ class SixMans(commands.Cog):
             embed.add_field(name="{}:".format(queue_name), value="{}".format("\n".join(["{0}\n{1}".format(str(game.id), ", ".join([player.mention for player in game.players])) for game in queue_games])), inline=False)
 
         await ctx.channel.send(embed=embed)
+
 
     async def has_perms(self, ctx):
         helper_role = await self._helper_role(ctx)
@@ -778,18 +827,38 @@ class SixMans(commands.Cog):
         await self._save_players(ctx, _players)
         await self._save_games_played(ctx, _games_played)
 
+        if await self._get_automove(ctx): # game.automove not working?
+            qlobby_vc = await self._get_q_lobby_vc(ctx)
+            if qlobby_vc:
+                await self._move_to_voice(qlobby_vc, game.voiceChannels[0].members)
+                await self._move_to_voice(qlobby_vc, game.voiceChannels[1].members)
+
         await self._remove_game(ctx, game)
+
+    async def _move_to_voice(self, vc: discord.VoiceChannel, members):
+        for member in members:
+            try:
+                await member.move_to(vc)
+            except:
+                pass
 
     async def _remove_game(self, ctx, game):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
         await asyncio.sleep(30)
+        q_lobby_vc = await self._get_q_lobby_vc(ctx)
         try:
             await game.textChannel.delete()
         except:
             pass
         for vc in game.voiceChannels:
             try:
+                try:
+                    if q_lobby_vc:
+                        for player in vc.members:
+                            await player.move_to(q_lobby_vc)
+                except:
+                    pass
                 await vc.delete()
             except:
                 pass
@@ -963,34 +1032,34 @@ class SixMans(commands.Cog):
             await text_channel.set_permissions(player, read_messages=True)
 
         automove = await self._get_automove(ctx)
-        return Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
+        game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
+        await game.append_short_code_vc()
+        return game
 
     async def _create_game_channels(self, ctx, six_mans_queue):
+        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         guild = ctx.message.guild
         helper_role = await self._helper_role(ctx)
-        if helper_role:
-            text_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                helper_role: discord.PermissionOverwrite(read_messages=True, manage_channels=True)
-            }
-            voice_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(connect=False),
-                helper_role: discord.PermissionOverwrite(connect=True, manage_channels=True)
-            }
-        else:
-            text_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False)
-            }
-            voice_overwrites = {
-                guild.default_role: discord.PermissionOverwrite(connect=False)
-            }
+        category = await self._category(ctx)
+        text_channel = await guild.create_text_channel(
+            "{0} 6 Mans".format(six_mans_queue.name), 
+            permissions_synced=True,
+            category=category
+        )
+        await text_channel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
         
-        text_channel = await guild.create_text_channel("{0} 6 Mans".format(six_mans_queue.name), overwrites= text_overwrites,
-            category= await self._category(ctx))
-        voice_channels = [
-            await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx)),
-            await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name), overwrites=voice_overwrites, category=await self._category(ctx))
-        ]
+        blue_vc = await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), category=await self._category(ctx))
+        await blue_vc.set_permissions(guild.default_role, connect=False)
+        oran_vc = await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name),  permissions_synced=True, category=await self._category(ctx))
+        await oran_vc.set_permissions(guild.default_role, connect=False)
+        
+        # manually add helper role perms if there is not an associated 6mans category
+        if helper_role and not category:
+            await text_channel.set_permissions(helper_role, view_channel=True, read_messages=True)
+            await blue_vc.set_permissions(helper_role, connect=True)
+            await oran_vc.set_permissions(helper_role, connect=True)
+        
+        voice_channels = [blue_vc, oran_vc]
         return text_channel, voice_channels
 
     async def _get_info(self, ctx):
@@ -1148,6 +1217,16 @@ class SixMans(commands.Cog):
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
 
+    async def _save_q_lobby_vc(self, ctx, vc):
+        await self.config.guild(ctx.guild).QLobby.set(vc)
+    
+    async def _get_q_lobby_vc(self, ctx):
+        lobby_voice = await self.config.guild(ctx.guild).QLobby()
+        for vc in ctx.guild.voice_channels:
+            if vc.id == lobby_voice:
+                return vc
+        return None
+
     async def _helper_role(self, ctx):
         return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
 
@@ -1168,6 +1247,10 @@ class Game:
         self.queueId = queue_id
         self.scoreReported = False
         self.automove = automove
+
+    async def append_short_code_vc(self):
+        for vc in self.voiceChannels:
+            await vc.edit(name="{} | {}".format(vc.name, str(self.id)[-3:]))
 
     async def add_to_blue(self, player):
         self.players.remove(player)
@@ -1199,9 +1282,6 @@ class Game:
         self.captains = []
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
-
-    # def get_voice_channels(self):
-    #     return self.voiceChannels
 
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
