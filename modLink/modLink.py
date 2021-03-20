@@ -70,10 +70,10 @@ class ModeratorLink(commands.Cog):
     async def _process_role_update(self, before, after):
         removed_roles = before.roles
         added_roles = after.roles
-        for b_role in removed_roles:
-            if b_role in added_roles:
-                removed_roles.remove(b_role)
-                added_roles.remove(b_role)
+        unchanged_roles = list(set(removed_roles)&set(added_roles))
+        for r in unchanged_roles:
+            removed_roles.remove(r)
+            added_roles.remove(r)
         
         # member_instances = await self._shared_guild_member_instances(before.mutual_guilds, before)
 
@@ -84,25 +84,41 @@ class ModeratorLink(commands.Cog):
         if not event_log_channel:
             return False
 
-        await event_log_channel("Here")
+        await event_log_channel.send("Here")
+        mutual_guilds = self._member_mutual_guilds(before) # before.mutual_guilds not working
+        mutual_guilds.remove(before.guild)
 
+        for guild in mutual_guilds:
+            channel = await self._event_log_channel(guild)
+            if removed_roles:
+                await channel.send("Removed Roles ({}): {}".format(len(removed_roles), ', '.join(role.name for role in removed_roles)))
+            if added_roles:
+                await channel.send("Added Roles ({}): {}".format(len(added_roles), ', '.join(role.name for role in added_roles)))
+        
+        return
+
+        
         # Shared role removal
         for role in removed_roles:
             # for member in member_instances:
             #     await member.remove_roles(role)
-            roles_to_remove = await self._shared_guild_role_instances(before.mutual_guilds, role.name) if role.name in shared_role_names else None
+            
+            roles_to_remove = await self._shared_guild_role_instances(mutual_guilds, role) if role.name in shared_role_names else None
             if roles_to_remove:
                 await after.remove_roles(*roles_to_remove)
-                await event_log_channel.send("Removed shared role across all shared servers ({}): {}".format(len(before.mutual_guilds), ', '.join(roles_to_remove)))
+                await event_log_channel.send("Removed shared role across all shared servers ({}): {}".format(len(mutual_guilds)+1, ', '.join(roles_to_remove)))
         
         # Shared role addition
         for role in added_roles:
             # for member in member_instances:
             #     await member.add_roles(role)
-            roles_to_add = await self._shared_guild_role_instances(before.mutual_guilds, role.name) if role.name in shared_role_names else None
-            if roles_to_add:
-                await after.add_roles(*roles_to_add)
-                await event_log_channel.send("Added shared role across all shared servers ({}): {}".format(len(before.mutual_guilds), ', '.join(roles_to_add)))
+            # roles_to_add = await self._shared_guild_role_instances(mutual_guilds, role) if role.name in shared_role_names else None
+            # if roles_to_add:
+            #     await after.add_roles(*roles_to_add)
+            if role.name in shared_role_names:
+                shared = await self._add_shared_role(mutual_guilds, before, role)
+                if shared:
+                    await event_log_channel.send("Added shared role across all shared servers ({}): {}".format(len(mutual_guilds)+1, ', '.join(guild.name for guild in mutual_guilds)))
         
         await event_log_channel.send("Done.")
 
@@ -117,11 +133,35 @@ class ModeratorLink(commands.Cog):
                         return member_matches
         return member_matches
     
-    async def _shared_guild_role_instances(self, mutual_guilds, target_role_name):
+    def _member_mutual_guilds(self, member):
+        mutual_guilds = []
+        for guild in self.bot.guilds:
+            if member in guild.members:
+                mutual_guilds.append(guild)
+        return mutual_guilds
+
+    async def _add_shared_role(self, mutual_guilds, target_member, target_role):
+        shared = 0
+        for guild in mutual_guilds:
+            guild_role = None
+            guild_member = None
+            for role in guild.roles:
+                if role.name == target_role.name:
+                    guild_role = role
+            for member in guild.members:
+                if member.id == target_member.id:
+                    guild_member = member
+            
+            if target_member and target_role:
+                await target_member.add_roles(guild_role)
+                shared += 1
+        return shared
+
+    async def _shared_guild_role_instances(self, mutual_guilds, target_role):
         role_matches = []
         for guild in mutual_guilds:
             for role in guild.roles:
-                if role.name == target_role_name:
+                if role.name == target_role.name and role != target_role:
                     role_matches.append(role)
                     if len(role_matches) == len(mutual_guilds):
                         return role_matches
@@ -130,7 +170,7 @@ class ModeratorLink(commands.Cog):
     async def _process_nickname_update(self, before, after):
         pass
 
-    async def _add_shared_role(self, guild, role_name: str):
+    async def _add_shared_role_WHY_IS_THIS_HERE_IDK(self, guild, role_name: str):
         roles = self._get_shared_roles(guild)
         roles.append(role_name)
         await self.config.guild(guild).Roles.set(roles)
