@@ -1023,7 +1023,26 @@ class SixMans(commands.Cog):
         await self._save_games(ctx, self.games)
         return True
 
-    
+    async def _get_game_info_embed(self, ctx, game, six_mans_queue):
+        helper_role = await self._helper_role(ctx)
+        await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
+        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
+        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
+        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+            "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
+            "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+            "cancel the game.".format(ctx.prefix), inline=False)
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
+        return embed
 
     # here
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
