@@ -36,6 +36,10 @@ class SixMans(commands.Cog):
         self.queues = []
         self.games = []
         self.task = self.bot.loop.create_task(self.timeout_queues())
+        self.SHUFFLE_REACT = "\U0001F500" # :twisted_rightwards_arrows:
+        self.WHITE_X_REACT = "\U0000274E" # :negative_squared_cross_mark:
+        self.WHITE_CHECK_REACT = "\U00002705" # :white_check_mark:
+
 
     def cog_unload(self):
         """Clean up when cog shuts down."""
@@ -725,6 +729,34 @@ class SixMans(commands.Cog):
         await ctx.channel.send(embed=embed)
 
 
+    @commands.Cog.listener("on_reaction_add")
+    async def process_shuffle_vote(self, reaction, user):
+        message = reaction.message
+        channel = reaction.message.channel
+        action_emojis = [self.SHUFFLE_REACT]
+        if reaction.emoji not in action_emojis or user.id == self.bot.user.id:
+            return False
+        # await reaction.remove(user)
+        # await reaction.message.add_reaction(self.SHUFFLE_REACT)
+        
+        # Find Game and Queue
+        game, queue = self._get_game_and_queue(channel)
+        
+        if message != game.teams_message:
+            return False
+        # Is vote enough?
+        # if user not in game.voted_remake:
+        #     game.voted_remake.append(user)
+        guild = reaction.message.channel.guild
+        
+        if reaction.count > int(len(game.players)/2):
+            await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
+            await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
+            await game.shuffle_players()
+            embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
+            await self._display_teams(game, embed)
+
+
     async def has_perms(self, ctx):
         helper_role = await self._helper_role(ctx)
         if ctx.author.guild_permissions.administrator:
@@ -1019,6 +1051,32 @@ class SixMans(commands.Cog):
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
         await game.textChannel.send(embed=embed)
+    
+    # here
+    async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
+        helper_role = await self._helper_role_from_guild(guild)
+        sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
+        if invalid:
+            sm_title += " :x: [Teams Changed]"
+        embed = discord.Embed(title=sm_title, color=discord.Colour.blue())
+        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
+        if not invalid:
+            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
+        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
+        if not invalid:
+            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
+                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+                "cancel the game.".format(prefix), inline=False)
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
+        return embed
 
     async def _create_game(self, ctx, six_mans_queue):
         if not six_mans_queue._queue_full():
