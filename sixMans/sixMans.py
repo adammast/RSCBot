@@ -1033,7 +1033,7 @@ class SixMans(commands.Cog):
 
         automove = await self._get_automove(ctx)
         game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
-        await game.append_short_code_vc()
+        await game.append_channel_short_codes()
         return game
 
     async def _create_game_channels(self, ctx, six_mans_queue):
@@ -1248,9 +1248,16 @@ class Game:
         self.scoreReported = False
         self.automove = automove
 
+    async def append_channel_short_codes(self):
+        await self.append_short_code_tc()
+        await self.append_short_code_vc()
+
+    async def append_short_code_tc(self):
+        await self.textChannel.edit(name="{}-{}".format(str(self.id)[-3:], self.textChannel.name))
+
     async def append_short_code_vc(self):
         for vc in self.voiceChannels:
-            await vc.edit(name="{} | {}".format(vc.name, str(self.id)[-3:]))
+            await vc.edit(name="{} | {}".format(str(self.id)[-3:], vc.name))
 
     async def add_to_blue(self, player):
         self.players.remove(player)
