@@ -1023,6 +1023,11 @@ class SixMans(commands.Cog):
         await self._save_games(ctx, self.games)
         return True
 
+    async def _display_teams(self, game, embed):
+        lobby_info_msg = await game.textChannel.send(embed=embed)
+        await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
+        game.teams_message = lobby_info_msg
+
     async def _get_game_info_embed(self, ctx, game, six_mans_queue):
         helper_role = await self._helper_role(ctx)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
