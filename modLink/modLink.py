@@ -39,14 +39,14 @@ class ModeratorLink(commands.Cog):
             await ctx.send(":x: Event log channel not set")
     
 
-    @bot.event
+    @commands.Cog.listener("on_user_update")
     async def on_user_update(before, after):
         if before.username != after.username:
             pass
         if before.discriminator != after.discriminator:
             pass
 
-    @bot.event
+    @commands.Cog.listener("on_member_update")
     async def on_member_update(before, after):
         if before.roles != after.roles:
             await self._process_role_update(before, after)
@@ -54,11 +54,11 @@ class ModeratorLink(commands.Cog):
             await self._process_nickname_change(before, after)
             
 
-    @bot.event
+    @commands.Cog.listener("on_member_ban")
     async def on_member_ban(guild, user):
         pass
     
-    @bot.event
+    @commands.Cog.listener("on_member_unban")
     async def on_member_unban(guild, user):
         pass
 
