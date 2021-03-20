@@ -34,32 +34,36 @@ class ModeratorLink(commands.Cog):
     async def getEventChannel(self, ctx):
         """Gets the channel currently assigned as the event log channel"""
         try:
-            await ctx.send("Event log channel set to: {0}".format((await self._event_log_channel(ctx.guild)).mention))
+            channel = await self._event_log_channel(ctx.guild)
+            if channel:
+                await ctx.send("Event log channel set to: {0}".format((channel).mention))
+            else:
+                await ctx.send("PepeHands.")
         except:
             await ctx.send(":x: Event log channel not set")
     
 
     @commands.Cog.listener("on_user_update")
-    async def on_user_update(before, after):
+    async def on_user_update(self, before, after):
         if before.username != after.username:
             pass
         if before.discriminator != after.discriminator:
             pass
 
     @commands.Cog.listener("on_member_update")
-    async def on_member_update(before, after):
+    async def on_member_update(self, before, after):
         if before.roles != after.roles:
             await self._process_role_update(before, after)
-        if before.nickname != after.nickname:
-            await self._process_nickname_change(before, after)
+        # if before.nickname != after.nickname:
+        #     await self._process_nickname_change(before, after)
             
 
     @commands.Cog.listener("on_member_ban")
-    async def on_member_ban(guild, user):
+    async def on_member_ban(self, guild, user):
         pass
     
     @commands.Cog.listener("on_member_unban")
-    async def on_member_unban(guild, user):
+    async def on_member_unban(self, guild, user):
         pass
 
 
@@ -80,6 +84,8 @@ class ModeratorLink(commands.Cog):
         if not event_log_channel:
             return False
 
+        await event_log_channel("Here")
+
         # Shared role removal
         for role in removed_roles:
             # for member in member_instances:
@@ -97,6 +103,8 @@ class ModeratorLink(commands.Cog):
             if roles_to_add:
                 await after.add_roles(*roles_to_add)
                 await event_log_channel.send("Added shared role across all shared servers ({}): {}".format(len(before.mutual_guilds), ', '.join(roles_to_add)))
+        
+        await event_log_channel.send("Done.")
 
     # TODO: remove
     async def _shared_guild_member_instances(self, mutual_guilds, target_member):
@@ -132,13 +140,14 @@ class ModeratorLink(commands.Cog):
             event_log_channel = await self._event_log_channel()
 
     async def _save_event_log_channel(self, guild, event_channel):
-        await self.config.guild(ctx.guild).TransChannel.set(event_channel)
+        await self.config.guild(guild).EventLogChannel.set(event_channel)
+        # await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
 
     async def _event_log_channel(self, guild):
-        await self.config.guild(guild).event_channel()
+        return guild.get_channel(await self.config.guild(guild).EventLogChannel())
 
     async def _save_shared_roles(self, guild, shared_role_names):
-        await self.config.guild(ctx.guild).SharedRoles.set(shared_roles)
+        await self.config.guild(guild).SharedRoles.set(shared_roles)
 
     async def _get_shared_role_names(self, guild):
         return await self.config.guild(guild).SharedRoles()
