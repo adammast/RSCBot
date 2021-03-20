@@ -75,8 +75,6 @@ class ModeratorLink(commands.Cog):
             removed_roles.remove(r)
             added_roles.remove(r)
         
-        
-
         # # this will try to add a role from one guild to another. TODO: get matching role from each guild as well.
         shared_role_names = await self._get_shared_role_names(before.guild)
         event_log_channel = await self._event_log_channel(before.guild)
@@ -91,16 +89,7 @@ class ModeratorLink(commands.Cog):
             if r.name not in shared_role_names:
                 added_roles.remove(r)
 
-        await event_log_channel.send("Here")
         mutual_guilds = self._member_mutual_guilds(before) # before.mutual_guilds not working
-
-        for guild in mutual_guilds:
-            channel = await self._event_log_channel(guild)
-            if removed_roles:
-                await channel.send("Removing Shared Roles ({}): {}".format(len(removed_roles), ', '.join(role.name for role in removed_roles)))
-            if added_roles:
-                await channel.send("Adding Shared Roles ({}): {}".format(len(added_roles), ', '.join(role.name for role in added_roles)))
-        
         mutual_guilds.remove(before.guild)
         member_instances = await self._shared_guild_member_instances(mutual_guilds, before)
 
@@ -109,14 +98,20 @@ class ModeratorLink(commands.Cog):
             for guild_role in guild_role_instances:
                 for guild_member in member_instances:
                     if guild_member.guild == guild_role.guild:
-                        await guild_member.remove_roles(guild_role)
+                        if guild_role in guild_member.roles:
+                            await guild_member.remove_roles(guild_role)
+                            channel = await self._event_log_channel(guild_member.guild)
+                            await channel.send("Shared role **{}** removed from **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
 
         for role in added_roles:
             guild_role_instances = await self._shared_guild_role_instances(mutual_guilds, role)
             for guild_role in guild_role_instances:
                 for guild_member in member_instances:
                     if guild_member.guild == guild_role.guild:
-                        await guild_member.add_roles(guild_role)
+                        if guild_role not in guild_member.roles:
+                            await guild_member.add_roles(guild_role)
+                            channel = await self._event_log_channel(guild_member.guild)
+                            await channel.send("Shared role **{}** added to **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
         
         await event_log_channel.send("Done.")
 
