@@ -874,7 +874,7 @@ class SixMans(commands.Cog):
         await self._save_games_played(ctx, _games_played)
 
         if await self._get_automove(ctx): # game.automove not working?
-            qlobby_vc = await self._get_q_lobby_vc(ctx)
+            qlobby_vc = await self._get_q_lobby_vc(ctx.guild)
             if qlobby_vc:
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[0].members)
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[1].members)
@@ -892,7 +892,7 @@ class SixMans(commands.Cog):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
         await asyncio.sleep(30)
-        q_lobby_vc = await self._get_q_lobby_vc(ctx)
+        q_lobby_vc = await self._get_q_lobby_vc(ctx.guild)
         try:
             await game.textChannel.delete()
         except:
@@ -1301,9 +1301,9 @@ class SixMans(commands.Cog):
     async def _save_q_lobby_vc(self, ctx, vc):
         await self.config.guild(ctx.guild).QLobby.set(vc)
     
-    async def _get_q_lobby_vc(self, ctx):
-        lobby_voice = await self.config.guild(ctx.guild).QLobby()
-        for vc in ctx.guild.voice_channels:
+    async def _get_q_lobby_vc(self, guild):
+        lobby_voice = await self.config.guild(guild).QLobby()
+        for vc in guild.voice_channels:
             if vc.id == lobby_voice:
                 return vc
         return None
@@ -1317,5 +1317,5 @@ class SixMans(commands.Cog):
     async def _save_default_team_selection(self, ctx, team_selection):
         await self.config.guild(ctx.guild).DefaultTeamSelection.set(team_selection)
     
-    async def _get_q_lobby_vc(self, guild):
+    async def _default_team_selection(self, guild):
         return await self.config.guild(guild).DefaultTeamSelection()
