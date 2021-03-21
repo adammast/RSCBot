@@ -45,17 +45,29 @@ class ModeratorLink(commands.Cog):
 
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
-        if before.username != after.username:
+        """Catches when a user changes their discord name or discriminator."""
+        if before.name != after.name:
             pass
         if before.discriminator != after.discriminator:
             pass
 
     @commands.Cog.listener("on_member_update")
     async def on_member_update(self, before, after):
+        """Processes updates for roles or nicknames, and shares them across the guild network."""
         if before.roles != after.roles:
             await self._process_role_update(before, after)
-        # if before.nickname != after.nickname:
-        #     await self._process_nickname_change(before, after)
+        
+        try:
+            before_name = before.nick
+        except:
+            before_name = before.name
+        try:
+            after_name = after.nick
+        except:
+            after_name = after.name
+        
+        if before_name != after_name:
+            await self._process_nickname_update(before, after)
             
 
     @commands.Cog.listener("on_member_ban")
@@ -82,6 +94,7 @@ class ModeratorLink(commands.Cog):
         if not event_log_channel:
             return False
 
+        # Filter role updates by shared roles
         for r in removed_roles:
             if r.name not in shared_role_names:
                 removed_roles.remove(r)
@@ -91,40 +104,41 @@ class ModeratorLink(commands.Cog):
 
         mutual_guilds = self._member_mutual_guilds(before) # before.mutual_guilds not working
         mutual_guilds.remove(before.guild)
-        member_instances = await self._shared_guild_member_instances(mutual_guilds, before)
 
+        if not removed_roles and not added_roles:
+            return
+
+        # Process Role Removals
         for role in removed_roles:
             guild_role_instances = await self._shared_guild_role_instances(mutual_guilds, role)
             for guild_role in guild_role_instances:
-                for guild_member in member_instances:
-                    if guild_member.guild == guild_role.guild:
-                        if guild_role in guild_member.roles:
-                            await guild_member.remove_roles(guild_role)
-                            channel = await self._event_log_channel(guild_member.guild)
-                            await channel.send("Shared role **{}** removed from **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
+                guild_member = self._guild_member_from_id(guild_role.guild, before.id)
+                if guild_role in guild_member.roles:
+                    await guild_member.remove_roles(guild_role)
+                    channel = await self._event_log_channel(guild_member.guild)
+                    await channel.send("Shared role **{}** removed from **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
 
+        # Process Role Additions
         for role in added_roles:
             guild_role_instances = await self._shared_guild_role_instances(mutual_guilds, role)
             for guild_role in guild_role_instances:
-                for guild_member in member_instances:
-                    if guild_member.guild == guild_role.guild:
-                        if guild_role not in guild_member.roles:
-                            await guild_member.add_roles(guild_role)
-                            channel = await self._event_log_channel(guild_member.guild)
-                            await channel.send("Shared role **{}** added to **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
+                guild_member = self._guild_member_from_id(guild_role.guild, before.id)
+                if guild_role not in guild_member.roles:
+                    await guild_member.add_roles(guild_role)
+                    channel = await self._event_log_channel(guild_member.guild)
+                    await channel.send("Shared role **{}** added to **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
         
         await event_log_channel.send("Done.")
 
-    # TODO: remove
-    async def _shared_guild_member_instances(self, mutual_guilds, target_member):
-        member_matches = []
-        for guild in mutual_guilds:
-            for member in guild.members:
-                if member.id == target_member.id:
-                    member_matches.append(member)
-                    if len(member_matches) == len(mutual_guilds):
-                        return member_matches
-        return member_matches
+    def _guild_member_from_id(self, guild, member_id):
+        for member in guild.members:
+            if member.id == member_id:
+                return member
+    
+    def _guild_role_from_name(self, guild, role_name):
+        for member in guild.roles:
+            if role.name == role_name:
+                return role
     
     def _member_mutual_guilds(self, member):
         mutual_guilds = []
@@ -161,12 +175,39 @@ class ModeratorLink(commands.Cog):
         return role_matches   
 
     async def _process_nickname_update(self, before, after):
-        pass
+        before_name = before.nick if before.nick else before.name
+        after_name = after.nick if after.nick else after.name
+        
+        event_log_channel = await self._event_log_channel(before.guild)
 
-    async def _add_shared_role_WHY_IS_THIS_HERE_IDK(self, guild, role_name: str):
-        roles = self._get_shared_roles(guild)
-        roles.append(role_name)
-        await self.config.guild(guild).Roles.set(roles)
+        # await event_log_channel.send("Name changed from **{}** to **{}**".format(before_name, after_name))
+
+        before_nick = before_name[before_name.index(' | ')+3:] if ' | ' in before_name else before_name
+        after_nick = after_name[after_name.index(' | ')+3:] if ' | ' in after_name else after_name
+
+        if before_nick == after_nick or not event_log_channel:
+            return
+        
+        mutual_guilds = self._member_mutual_guilds(before) # before.mutual_guilds not working
+        mutual_guilds.remove(before.guild)
+
+        for guild in mutual_guilds:
+            member = self._guild_member_from_id(guild, before.id)
+            name = member.nick if member.nick else member.name
+            
+            try:
+                prefix = name[0:name.index(' | ')] if ' | ' in name else ''
+                guild_before_name = member.nick if member.nick else member.name
+                guild_before_name = guild_before_name[guild_before_name.index(' | ')+3:] if ' | ' in guild_before_name else guild_before_name
+
+                if guild_before_name != after_nick:
+                    if prefix:
+                        await member.edit(nick='{} | {}'.format(prefix, after_nick))
+                    else:
+                        await member.edit(nick=after_nick)
+                    await event_log_channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
+            except:
+                pass
 
     async def _log_linked_event(self, source_guild, member, action: str):
         for guild in self.bot.guilds:
