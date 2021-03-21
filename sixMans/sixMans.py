@@ -13,6 +13,9 @@ from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
+from .game import Game
+from .queue import SixMansQueue
+
 team_size = 6
 minimum_game_time = 600     # Seconds (10 Minutes)
 player_timeout_time = 14400 # How long players can be in a queue in seconds (4 Hours)
@@ -25,7 +28,18 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "QLobby": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {
+    "CategoryChannel": None,
+    "HelperRole": None,
+    "AutoMove": False,
+    "QLobby": None,
+    "DefaultTeamSelection": "Random",
+    "Games": {},
+    "Queues": {},
+    "GamesPlayed": 0,
+    "Players": {},
+    "Scores": []
+}
 
 class SixMans(commands.Cog):
 
@@ -1049,7 +1063,6 @@ class SixMans(commands.Cog):
         embed.add_field(name="Help", value=help_message, inline=False)
         return embed
 
-    # here
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
         helper_role = await self._helper_role_from_guild(guild)
         sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
@@ -1288,255 +1301,8 @@ class SixMans(commands.Cog):
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
-class Game:
-    def __init__(self, players, text_channel, voice_channels, queue_id, automove=False):
-        self.id = uuid.uuid4().int
-        self.players = set(players)
-        self.captains = []
-        self.blue = set()
-        self.orange = set()
-        self.roomName = self._generate_name_pass()
-        self.roomPass = self._generate_name_pass()
-        self.textChannel = text_channel
-        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
-        self.queueId = queue_id
-        self.scoreReported = False
-        self.automove = automove
-        self.teams_message = None
-        # self.voted_remake = []
-        # self.remake_embed = None
-
+    async def _save_default_team_selection(self, ctx, team_selection):
+        await self.config.guild(ctx.guild).DefaultTeamSelection.set(team_selection)
     
-    async def append_channel_short_codes(self):
-        await self.append_short_code_tc()
-        await self.append_short_code_vc()
-
-    async def append_short_code_tc(self):
-        await self.textChannel.edit(name="{}-{}".format(str(self.id)[-3:], self.textChannel.name))
-
-    async def append_short_code_vc(self):
-        for vc in self.voiceChannels:
-            await vc.edit(name="{} | {}".format(str(self.id)[-3:], vc.name))
-
-    async def add_to_blue(self, player):
-        self.players.remove(player)
-        self.blue.add(player)
-
-        if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=True)
-            await orange_vc.set_permissions(player, connect=False)
-            try:
-                await player.move_to(blue)
-            except:
-                pass
-
-    async def add_to_orange(self, player):
-        self.players.remove(player)
-        self.orange.add(player)
-
-        if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=False)
-            await orange_vc.set_permissions(player, connect=True)
-            try:
-                await player.move_to(orange_vc)
-            except:
-                pass
-    
-    async def shuffle_players(self):
-        self.blue = set()
-        self.orange = set()
-        for player in random.sample(self.players, int(len(self.players)/2)):
-            await self.add_to_orange(player)
-        blue = [player for player in self.players]
-        for player in blue:
-            await self.add_to_blue(player)
-        self.reset_players()
-        self.get_new_captains_from_teams()
-        
-    def reset_players(self):
-        self.players.update(self.orange)
-        self.players.update(self.blue)
-
-    def get_new_captains_from_teams(self):
-        self.captains = []
-        self.captains.append(random.sample(list(self.blue), 1)[0])
-        self.captains.append(random.sample(list(self.orange), 1)[0])
-
-    def __contains__(self, item):
-        return item in self.players or item in self.orange or item in self.blue
-
-    def _to_dict(self):
-        return {
-            "Players": [x.id for x in self.players],
-            "Captains": [x.id for x in self.captains],
-            "Blue": [x.id for x in self.blue],
-            "Orange": [x.id for x in self.orange],
-            "RoomName": self.roomName,
-            "RoomPass": self.roomPass,
-            "TextChannel": self.textChannel.id,
-            "VoiceChannels": [x.id for x in self.voiceChannels],
-            "QueueId": self.queueId,
-            "ScoreReported": self.scoreReported,
-        }
-
-    def _generate_name_pass(self):
-        return room_pass[random.randrange(len(room_pass))]
-
-class OrderedSet(collections.MutableSet):
-    def __init__(self, iterable=None):
-        self.end = end = []
-        end += [None, end, end]  # sentinel node for doubly linked list
-        self.map = {}  # key --> [key, prev, next]
-        if iterable is not None:
-            self |= iterable
-
-    def __len__(self):
-        return len(self.map)
-
-    def __contains__(self, key):
-        return key in self.map
-
-    def add(self, key):
-        if key not in self.map:
-            end = self.end
-            curr = end[1]
-            curr[2] = end[1] = self.map[key] = [key, curr, end]
-
-    def discard(self, key):
-        if key in self.map:
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
-
-    def __iter__(self):
-        end = self.end
-        curr = end[2]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[2]
-
-    def __reversed__(self):
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-
-    def __repr__(self):
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
-
-    def __eq__(self, other):
-        if isinstance(other, OrderedSet):
-            return len(self) == len(other) and list(self) == list(other)
-        return set(self) == set(other)
-
-
-class PlayerQueue(Queue):
-    def _init(self, maxsize):
-        self.queue = OrderedSet()
-
-    def _put(self, item):
-        self.queue.add(item)
-
-    def _get(self):
-        return self.queue.pop()
-
-    def _remove(self, value):
-        self.queue.remove(value)
-
-    def __contains__(self, item):
-        with self.mutex:
-            return item in self.queue
-
-class SixMansQueue:
-    def __init__(self, name, guild, channels, points, players, gamesPlayed):
-        self.id = uuid.uuid4().int
-        self.name = name
-        self.queue = PlayerQueue()
-        self.guild = guild
-        self.channels = channels
-        self.points = points
-        self.players = players
-        self.gamesPlayed = gamesPlayed
-        self.activeJoinLog = {}
-
-    def _put(self, player):
-        self.queue.put(player)
-        self.activeJoinLog[player.id] = datetime.datetime.now()
-
-    def _get(self):
-        player = self.queue.get()
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-        return player
-
-    def _remove(self, player):
-        self.queue._remove(player)
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-
-    def _queue_full(self):
-        return self.queue.qsize() >= team_size
-
-    def _to_dict(self):
-        return {
-            "Name": self.name,
-            "Channels": [x.id for x in self.channels],
-            "Points": self.points,
-            "Players": self.players,
-            "GamesPlayed": self.gamesPlayed
-        }
-
-# TODO: Load from file?
-room_pass = [
-    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-    'vulcan', 'zippy',
-
-    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-    'dunkhouse', 'throwback', 'underpass', 'badlands',
-
-    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-    'stormwatch', 'tora', 'trigon', 'wetpaint',
-
-    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-    'voltaic', 'wonderment', 'zomba',
-
-    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-    'platinum', 'diamond',
-
-    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-    'doubles', 'standard', 'chaos',
-
-    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-]
+    async def _get_q_lobby_vc(self, guild):
+        return await self.config.guild(guild).DefaultTeamSelection()
