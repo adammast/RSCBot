@@ -679,7 +679,7 @@ class SixMans(commands.Cog):
     async def unsetCategory(self, ctx):
         """Unsets the 6 mans category channel. 6 mans channels will not be created if this is not set"""
         category = await self._category(ctx)
-        old_helper_role = await self._helper_role(ctx)
+        old_helper_role = await self._helper_role(ctx.guild)
         if old_helper_role and category:
             await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_category(ctx, None)
@@ -702,7 +702,7 @@ class SixMans(commands.Cog):
     async def getHelperRole(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
+            await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx.guild)).name))
         except:
             await ctx.send(":x: 6 mans helper role not set")
 
@@ -712,7 +712,7 @@ class SixMans(commands.Cog):
     async def unsetHelperRole(self, ctx):
         """Unsets the 6 mans helper role."""
         category = await self._category(ctx)
-        old_helper_role = await self._helper_role(ctx)
+        old_helper_role = await self._helper_role(ctx.guild)
         if old_helper_role and category:
             await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_helper_role(ctx, None)
@@ -763,7 +763,7 @@ class SixMans(commands.Cog):
         #     game.voted_remake.append(user)
         guild = reaction.message.channel.guild
         
-        if reaction.count > int(len(game.players)/2):
+        if reaction.count >= int(len(game.players)/6)+1:
             await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
             await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
             await game.shuffle_players()
@@ -772,7 +772,7 @@ class SixMans(commands.Cog):
 
 
     async def has_perms(self, ctx):
-        helper_role = await self._helper_role(ctx)
+        helper_role = await self._helper_role(ctx.guild)
         if ctx.author.guild_permissions.administrator:
             return True
         elif helper_role and helper_role in ctx.author.roles:
@@ -1043,7 +1043,7 @@ class SixMans(commands.Cog):
         game.teams_message = lobby_info_msg
 
     async def _get_game_info_embed(self, ctx, game, six_mans_queue):
-        helper_role = await self._helper_role(ctx)
+        helper_role = await self._helper_role(ctx.guild)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
@@ -1064,7 +1064,7 @@ class SixMans(commands.Cog):
         return embed
 
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
-        helper_role = await self._helper_role_from_guild(guild)
+        helper_role = await self._helper_role(guild)
         sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
         if invalid:
             sm_title += " :x: [Teams Changed]"
@@ -1107,7 +1107,7 @@ class SixMans(commands.Cog):
     async def _create_game_channels(self, ctx, six_mans_queue):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         guild = ctx.message.guild
-        helper_role = await self._helper_role(ctx)
+        helper_role = await self._helper_role(ctx.guild)
         category = await self._category(ctx)
         text_channel = await guild.create_text_channel(
             "{0} 6 Mans".format(six_mans_queue.name), 
@@ -1308,8 +1308,8 @@ class SixMans(commands.Cog):
                 return vc
         return None
 
-    async def _helper_role(self, ctx):
-        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
+    async def _helper_role(self, guild):
+        return guild.get_role(await self.config.guild(guild).HelperRole())
 
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
