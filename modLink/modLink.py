@@ -194,6 +194,7 @@ class ModeratorLink(commands.Cog):
         for guild in mutual_guilds:
             member = self._guild_member_from_id(guild, before.id)
             name = member.nick if member.nick else member.name
+            channel = await self._event_log_channel(guild)
             
             try:
                 prefix = name[0:name.index(' | ')] if ' | ' in name else ''
@@ -205,7 +206,7 @@ class ModeratorLink(commands.Cog):
                         await member.edit(nick='{} | {}'.format(prefix, after_nick))
                     else:
                         await member.edit(nick=after_nick)
-                    await event_log_channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
+                    await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
             except:
                 pass
 
