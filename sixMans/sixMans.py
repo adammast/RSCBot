@@ -1147,6 +1147,19 @@ class SixMans(commands.Cog):
         
         return game, six_mans_queue
 
+    def _get_game_and_queue(self, channel: discord.TextChannel):
+        game = None
+        for g in self.games:
+            if g.textChannel == channel:
+                game = g
+                break
+        queue = None
+        for q in self.queues:
+            if q.id == game.queueId:
+                queue = q
+                return game, queue     
+        return game, queue
+
     def _get_game(self, ctx):
         for game in self.games:
             if game.textChannel == ctx.channel:
