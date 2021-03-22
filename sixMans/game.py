@@ -94,7 +94,10 @@ class Game:
                 await player.move_to(orange_vc)
             except:
                 pass
-    
+
+    async def pick_random_teams(self):
+        self.shuffle_players()
+
     async def shuffle_players(self):
         self.blue = set()
         self.orange = set()
@@ -105,7 +108,13 @@ class Game:
             await self.add_to_blue(player)
         self.reset_players()
         self.get_new_captains_from_teams()
-        
+
+    async def captains_pick_teams(self):
+        pass
+
+    async def pick_balanced_teams(self):
+        pass
+
     def reset_players(self):
         self.players.update(self.orange)
         self.players.update(self.blue)

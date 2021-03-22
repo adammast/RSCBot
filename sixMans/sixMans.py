@@ -677,7 +677,7 @@ class SixMans(commands.Cog):
         if team_selection_method in ['captains', 'balanced']:
             return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
         
-        await self._save_default_team_selection(ctx, team_selection_method)
+        await self._save_team_selection(ctx, team_selection_method)
 
         await ctx.send("Done.")
 
@@ -686,7 +686,7 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def getTeamSelection(self, ctx):
         """Get method for Six Mans team selection (Default: Random)"""
-        team_selection = await self._default_team_selection(ctx.guild)
+        team_selection = await self._team_selection(ctx.guild)
         await ctx.send("Six Mans team selection is currently set to **{}**.".format(team_selection))
 
     @commands.guild_only()
@@ -1060,8 +1060,16 @@ class SixMans(commands.Cog):
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
 
-        if True: # TODO: add other methods of player selection (i.e. captains)
+
+        team_selection = await self._team_selection(ctx.guild) # TODO: add other methods of player selection (i.e. captains)
+        if team_selection == 'random':
+            await game.pick_random_teams()
+        elif team_selection == 'shuffle':
             await game.shuffle_players()
+        elif team_selection == 'captains':
+            await game.captains_pick_teams()
+        elif team_selection == 'balanced':
+            await game.pick_balanced_teams()
 
         # Display teams
         embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
@@ -1348,8 +1356,8 @@ class SixMans(commands.Cog):
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
-    async def _save_default_team_selection(self, ctx, team_selection):
+    async def _save_team_selection(self, ctx, team_selection):
         await self.config.guild(ctx.guild).DefaultTeamSelection.set(team_selection)
     
-    async def _default_team_selection(self, guild):
+    async def _team_selection(self, guild):
         return await self.config.guild(guild).DefaultTeamSelection()
