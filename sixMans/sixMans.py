@@ -6,6 +6,7 @@ import asyncio
 import datetime
 import uuid
 
+from datetime import datetime
 from queue import Queue
 from redbot.core import Config
 from redbot.core import commands
@@ -654,8 +655,6 @@ class SixMans(commands.Cog):
         action = "will move" if new_automove_status else "will not move"
         message = "Popped 6-mans queues **{}** members to their team voice channel.".format(action)
         await ctx.send(message)
-
-        @commands.guild_only()
     
     @commands.guild_only()
     @commands.command()
@@ -792,17 +791,29 @@ class SixMans(commands.Cog):
         
         if message != game.teams_message:
             return False
+
+        now = datetime.now()
+        time_since_last_team = (now - message.created_at).seconds
+        time_since_q_pop = (now - message.channel.created_at).seconds
+        if time_since_q_pop > 300:
+            await reaction.clear()
+            return await reaction.message.channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
+        if time_since_last_team > 180:
+            await reaction.clear()
+            return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
+        
         # Is vote enough?
         # if user not in game.voted_remake:
         #     game.voted_remake.append(user)
         guild = reaction.message.channel.guild
         
-        if reaction.count >= int(len(game.players)/6)+1:
+        if reaction.count >= int(len(game.players)/2)+1:
             await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
             await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
             await game.shuffle_players()
             embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
-            await self._display_teams(game, embed)
+            lobby_info_message = await self._display_teams(game, embed)
+            await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
 
 
     async def has_perms(self, ctx):
@@ -1073,7 +1084,9 @@ class SixMans(commands.Cog):
 
         # Display teams
         embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
-        await self._display_teams(game, embed)
+        lobby_info_message = await self._display_teams(game, embed)
+        if team_selection == 'shuffle':
+            await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
         
         self.games.append(game)
         await self._save_games(ctx, self.games)
@@ -1081,36 +1094,22 @@ class SixMans(commands.Cog):
 
     async def _display_teams(self, game, embed):
         lobby_info_msg = await game.textChannel.send(embed=embed)
-        await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
         game.teams_message = lobby_info_msg
+        return lobby_info_msg
 
     async def _get_game_info_embed(self, ctx, game, six_mans_queue):
         helper_role = await self._helper_role(ctx.guild)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
-        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
-        embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
-        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
-        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
-            .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
-        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-            "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-            "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-            "cancel the game.".format(ctx.prefix), inline=False)
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
-        if helper_role:
-            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
-        embed.add_field(name="Help", value=help_message, inline=False)
-        return embed
+        return await self._get_updated_game_info_embed(self, ctx.guild, game, six_mans_queue)
 
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
         helper_role = await self._helper_role(guild)
         sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
+        embed_color = discord.Colour.blue()
         if invalid:
             sm_title += " :x: [Teams Changed]"
-        embed = discord.Embed(title=sm_title, color=discord.Colour.blue())
+            embed_color = discord.Colour.red()
+        embed = discord.Embed(title=sm_title, color=embed_color)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         if not invalid:

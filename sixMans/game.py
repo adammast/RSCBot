@@ -110,6 +110,7 @@ class Game:
         self.get_new_captains_from_teams()
 
     async def captains_pick_teams(self):
+        captains = random.sample(self.players, 2)
         pass
 
     async def pick_balanced_teams(self):
