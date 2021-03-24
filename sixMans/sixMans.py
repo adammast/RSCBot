@@ -776,12 +776,12 @@ class SixMans(commands.Cog):
         await ctx.channel.send(embed=embed)
 
 
+    @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def process_shuffle_vote(self, reaction, user):
         message = reaction.message
         channel = reaction.message.channel
-        action_emojis = [self.SHUFFLE_REACT]
-        if reaction.emoji not in action_emojis or user.id == self.bot.user.id:
+        if user.id == self.bot.user.id:
             return False
         
         # Find Game and Queue
@@ -792,11 +792,15 @@ class SixMans(commands.Cog):
 
         team_selection_mode = await self._team_selection(user.guild)
 
-        if team_selection_method == 'captains':
-            await game.process_captains_pick(reaction, user)
+        if team_selection_mode == 'captains':
+            teams_complete = await game.process_captains_pick(reaction, user)
+            if teams_complete:
+                embed = await self._get_updated_game_info_embed(user.guild, game, queue)
+                await self._display_teams(game, embed)
 
-        if team_selection_method == 'shuffle':
-
+        elif team_selection_mode == 'shuffle':
+            if reaction.emoji is not self.SHUFFLE_REACT:
+                return
             now = datetime.datetime.utcnow()
             time_since_last_team = (now - message.created_at).seconds
             time_since_q_pop = (now - message.channel.created_at).seconds

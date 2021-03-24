@@ -1,44 +1,14 @@
 import discord
-import collections
-import operator
 import random
-import asyncio
-import datetime
 import uuid
 import struct
 
-from queue import Queue
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.predicates import ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions
+# from redbot.core import Config
+# from redbot.core import commands
+# from redbot.core import checks
+# from redbot.core.utils.predicates import ReactionPredicate
+# from redbot.core.utils.menus import start_adding_reactions
 
-
-team_size = 6
-minimum_game_time = 600     # Seconds (10 Minutes)
-player_timeout_time = 14400 # How long players can be in a queue in seconds (4 Hours)
-loop_time = 5               # How often to check the queues in seconds
-verify_timeout = 15
-pp_play_key = "Play"
-pp_win_key = "Win"
-player_points_key = "Points"
-player_gp_key = "GamesPlayed"
-player_wins_key = "Wins"
-queues_key = "Queues"
-
-defaults = {
-    "CategoryChannel": None,
-    "HelperRole": None,
-    "AutoMove": False,
-    "QLobby": None,
-    "DefaultTeamSelection": "Random",
-    "Games": {},
-    "Queues": {},
-    "GamesPlayed": 0,
-    "Players": {},
-    "Scores": []
-}
 
 class Game:
     def __init__(self, players, text_channel: discord.TextChannel, voice_channels, queue_id, automove=False):
@@ -111,52 +81,124 @@ class Game:
         self.get_new_captains_from_teams()
 
     async def captains_pick_teams(self):
+        # Pick captains
         self.captains = random.sample(self.players, 2)
         self.blue.add(self.captains[0])
         self.orange.add(self.captains[1])
 
         pick_order = ['blue', 'orange', 'orange']
 
-        # for pick in pick_order:
-        pick = 'orange'
-        team_color = discord.Colour.blue() if pick == 'blue' else discord.Colour.orange()
-        player = self.captains[0]
-        embed = discord.Embed(
-            title="{} Game | Team Selection".format(self.textChannel.name),
-            color=team_color,
-            description="**{}**, pick a player to join the **{}** team.".format(player.name, pick)  
-        )
-        embed.set_thumbnail(url=player.avatar_url)
-        embed.add_field(name="Blue Team", value=', '.join(p.mention for p in self.blue), inline=False)
-        embed.add_field(name="Orange Team", value=', '.join(p.mention for p in self.orange), inline=False)
-
         pickable = list(self.players)
         pickable.remove(self.captains[0])
         pickable.remove(self.captains[1])
-        
+
+        # Assign reactions to remaining players
         self.react_player_picks = {}
         react_hex = 0x1F1E6
         for i in range(len(pickable)):
             react_hex_i = hex(react_hex+i)
-            react_i = struct.pack('<I', react_hex+i).decode('utf-32le')
-            self.react_player_picks[react_i] = pickable[i]
-
-        reactions, pickable_players = self._get_pickable_players_str()
-        embed.add_field(name="Available Players", value=pickable_players, inline=False)
+            self.react_player_picks[react_hex_i] = pickable[i]
+        
+        # Get player pick embed
+        embed = self._get_captains_embed('blue')
         self.teams_message = await self.textChannel.send(embed=embed)
-        for reaction in reactions:
-            await self.teams_message.add_reaction(reaction)
+        
+        for react_hex in self.react_player_picks.keys():
+            react = struct.pack('<I', int(react_hex, base=16)).decode('utf-32le')
+            await self.teams_message.add_reaction(react)
 
+    # here
     async def process_captains_pick(self, reaction, user):
-        pass
+        teams_complete = False
+        pick_i = len(self.blue)+len(self.orange)-2
+        pick_order = ['blue', 'orange', 'orange', 'blue']
+        pick = pick_order[pick_i]
+        captain_picking = self.captains[0] if pick == 'blue' else self.captains[1]
+        
+        if user != captain_picking and user.id != 302079469882179585:
+            return False
+        
+        # get player from reaction
+        player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
+        await self.teams_message.clear_reaction(reaction.emoji)
+        
+        # add to correct team, update teams embed
+        self.blue.add(player_picked) if pick == 'blue' else self.orange.add(player_picked)
+        
+        # TODO: automatically process last pick
+        picks_remaining = list(self.react_player_picks.keys())
+        if len(picks_remaining) > 1:
+            embed = self._get_captains_embed(pick_order[pick_i+1])
+            await self.teams_message.edit(embed=embed)
+        
+        elif len(picks_remaining) == 1:
+            last_pick = 'blue' if len(self.orange) > len(self.blue) else 'orange'
+            last_pick_key = picks_remaining[0]
+            last_player = self.react_player_picks[last_pick_key]
+            await self.teams_message.clear_reactions()
+            self.blue.add(last_player) if last_pick == 'blue' else self.orange.add(last_player)
+            teams_complete = True
+            embed = self._get_captains_embed(None)
+            await self.teams_message.edit(embed=embed)
+        return teams_complete
 
+    def _get_captains_embed(self, pick):
+        # Determine who picks next
+        if pick:
+            team_color = discord.Colour.blue() if pick == 'blue' else discord.Colour.orange()
+            player = self.captains[0] if pick == 'blue' else self.captains[1]
+            description = "**{}**, pick a player to join the **{}** team.".format(player.name, pick)
+
+        else:
+            team_color = discord.Colour.green()
+            description="Teams have been set!"
+
+        embed = discord.Embed(
+            title="{} Game | Team Selection".format(self.textChannel.name),
+            color=team_color,
+            description=description
+        )
+
+        if pick:
+            embed.set_thumbnail(url=player.avatar_url)
+
+        # List teams as they stand
+        embed.add_field(name="Blue Team", value=', '.join(p.mention for p in self.blue), inline=False)
+        embed.add_field(name="Orange Team", value=', '.join(p.mention for p in self.orange), inline=False)
+
+        # List available players
+        pickable_players = self._get_pickable_players_str()
+        if pickable_players:
+            embed.add_field(name="Available Players", value=pickable_players, inline=False)
+        return embed
+
+    def _get_player_from_reaction_emoji(self, emoji):
+        target_key = None
+        target_value = None
+        for e, player in self.react_player_picks.items():
+            if emoji == int(e, base=16): # or ord(emoji) == ord(e) or str(emoji) == str(e):
+                target_key = e
+                target_value = player
+                break
+        if target_key:
+            del self.react_player_picks[target_key]
+        return target_value
+
+    def _get_pick_reaction(self, int_or_hex):
+        try:
+            if type(int_or_hex) == int:
+                return struct.pack('<I', int_or_hex).decode('utf-32le')
+            if type(int_or_hex) == str:
+                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
+        except:
+            return None
+    
     def _get_pickable_players_str(self):
-        reactions = []
         players = ""
-        for react, player in self.react_player_picks.items():
-            reactions.append(react)
+        for react_hex, player in self.react_player_picks.items():
+            react = self._get_pick_reaction(int(react_hex, base=16))
             players += "{} {}\n".format(react, player.mention)
-        return reactions, players
+        return players
 
     async def pick_balanced_teams(self):
         pass
