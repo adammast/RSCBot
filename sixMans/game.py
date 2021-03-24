@@ -5,6 +5,7 @@ import random
 import asyncio
 import datetime
 import uuid
+import struct
 
 from queue import Queue
 from redbot.core import Config
@@ -110,8 +111,52 @@ class Game:
         self.get_new_captains_from_teams()
 
     async def captains_pick_teams(self):
-        captains = random.sample(self.players, 2)
+        self.captains = random.sample(self.players, 2)
+        self.blue.add(self.captains[0])
+        self.orange.add(self.captains[1])
+
+        pick_order = ['blue', 'orange', 'orange']
+
+        # for pick in pick_order:
+        pick = 'orange'
+        team_color = discord.Colour.blue() if pick == 'blue' else discord.Colour.orange()
+        player = self.captains[0]
+        embed = discord.Embed(
+            title="{} Game | Team Selection".format(self.textChannel.name),
+            color=team_color,
+            description="**{}**, pick a player to join the **{}** team.".format(player.name, pick)  
+        )
+        embed.set_thumbnail(url=player.avatar_url)
+        embed.add_field(name="Blue Team", value=', '.join(p.mention for p in self.blue), inline=False)
+        embed.add_field(name="Orange Team", value=', '.join(p.mention for p in self.orange), inline=False)
+
+        pickable = list(self.players)
+        pickable.remove(self.captains[0])
+        pickable.remove(self.captains[1])
+        
+        self.react_player_picks = {}
+        react_hex = 0x1F1E6
+        for i in range(len(pickable)):
+            react_hex_i = hex(react_hex+i)
+            react_i = struct.pack('<I', react_hex+i).decode('utf-32le')
+            self.react_player_picks[react_i] = pickable[i]
+
+        reactions, pickable_players = self._get_pickable_players_str()
+        embed.add_field(name="Available Players", value=pickable_players, inline=False)
+        self.teams_message = await self.textChannel.send(embed=embed)
+        for reaction in reactions:
+            await self.teams_message.add_reaction(reaction)
+
+    async def process_captains_pick(self, reaction, user):
         pass
+
+    def _get_pickable_players_str(self):
+        reactions = []
+        players = ""
+        for react, player in self.react_player_picks.items():
+            reactions.append(react)
+            players += "{} {}\n".format(react, player.mention)
+        return reactions, players
 
     async def pick_balanced_teams(self):
         pass

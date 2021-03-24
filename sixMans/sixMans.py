@@ -6,7 +6,6 @@ import asyncio
 import datetime
 import uuid
 
-from datetime import datetime
 from queue import Queue
 from redbot.core import Config
 from redbot.core import commands
@@ -34,7 +33,7 @@ defaults = {
     "HelperRole": None,
     "AutoMove": False,
     "QLobby": None,
-    "DefaultTeamSelection": "Shuffle",
+    "DefaultTeamSelection": "shuffle",
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -657,23 +656,24 @@ class SixMans(commands.Cog):
         await ctx.send(message)
     
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['setTeamSelection'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def setTeamSelection(self, ctx, team_selection_method):
+    async def setDefaultTeamSelection(self, ctx, team_selection_method):
         """Set method for Six Mans team selection (Default: Random)
         
-        Valid options:
-        - random: selects random teams
+        Valid team selecion methods options:
+        - **random**: selects random teams
         - shuffle: selects random teams, but allows re-shuffling teams after they have been set
         - captains: selects a captain for each team
         - balanced: creates balanced teams from all participating players
+        - option: choose from the methods listed above when a queue pops
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
         if team_selection_method not in ['random', 'shuffle', 'captains', 'balanced']:
             return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
 
-        if team_selection_method in ['captains', 'balanced']:
+        if team_selection_method in ['option', 'balanced']:
             return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
         
         await self._save_team_selection(ctx, team_selection_method)
@@ -681,9 +681,9 @@ class SixMans(commands.Cog):
         await ctx.send("Done.")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['getTeamSelection'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def getTeamSelection(self, ctx):
+    async def getDefaultTeamSelection(self, ctx):
         """Get method for Six Mans team selection (Default: Random)"""
         team_selection = await self._team_selection(ctx.guild)
         await ctx.send("Six Mans team selection is currently set to **{}**.".format(team_selection))
@@ -783,8 +783,6 @@ class SixMans(commands.Cog):
         action_emojis = [self.SHUFFLE_REACT]
         if reaction.emoji not in action_emojis or user.id == self.bot.user.id:
             return False
-        # await reaction.remove(user)
-        # await reaction.message.add_reaction(self.SHUFFLE_REACT)
         
         # Find Game and Queue
         game, queue = self._get_game_and_queue(channel)
@@ -792,28 +790,35 @@ class SixMans(commands.Cog):
         if message != game.teams_message:
             return False
 
-        now = datetime.now()
-        time_since_last_team = (now - message.created_at).seconds
-        time_since_q_pop = (now - message.channel.created_at).seconds
-        if time_since_q_pop > 300:
-            await reaction.clear()
-            return await reaction.message.channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
-        if time_since_last_team > 180:
-            await reaction.clear()
-            return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
-        
-        # Is vote enough?
-        # if user not in game.voted_remake:
-        #     game.voted_remake.append(user)
-        guild = reaction.message.channel.guild
-        
-        if reaction.count >= int(len(game.players)/2)+1:
-            await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
-            await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
-            await game.shuffle_players()
-            embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
-            lobby_info_message = await self._display_teams(game, embed)
-            await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
+        team_selection_mode = await self._team_selection(user.guild)
+
+        if team_selection_method == 'captains':
+            await game.process_captains_pick(reaction, user)
+
+        if team_selection_method == 'shuffle':
+
+            now = datetime.datetime.utcnow()
+            time_since_last_team = (now - message.created_at).seconds
+            time_since_q_pop = (now - message.channel.created_at).seconds
+            if time_since_q_pop > 300:
+                await reaction.clear()
+                return await reaction.message.channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
+            if time_since_last_team > 180:
+                await reaction.clear()
+                return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
+            
+            # Is vote enough?
+            # if user not in game.voted_remake:
+            #     game.voted_remake.append(user)
+            guild = reaction.message.channel.guild
+            
+            if reaction.count >= int(len(game.players)/2)+1:
+                await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
+                await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
+                await game.shuffle_players()
+                embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
+                lobby_info_message = await self._display_teams(game, embed)
+                await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
 
 
     async def has_perms(self, ctx):
@@ -1071,22 +1076,27 @@ class SixMans(commands.Cog):
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
 
-
         team_selection = await self._team_selection(ctx.guild) # TODO: add other methods of player selection (i.e. captains)
+        
         if team_selection == 'random':
             await game.pick_random_teams()
         elif team_selection == 'shuffle':
             await game.shuffle_players()
+        elif team_selection == 'optional':
+            pass
         elif team_selection == 'captains':
             await game.captains_pick_teams()
         elif team_selection == 'balanced':
             await game.pick_balanced_teams()
+        else:
+            return print("you messed up fool")
 
         # Display teams
-        embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
-        lobby_info_message = await self._display_teams(game, embed)
-        if team_selection == 'shuffle':
-            await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
+        if team_selection in ['shuffle', 'random']:
+            embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
+            lobby_info_message = await self._display_teams(game, embed)
+            if team_selection == 'shuffle':
+                await lobby_info_message.add_reaction(self.SHUFFLE_REACT)
         
         self.games.append(game)
         await self._save_games(ctx, self.games)
@@ -1100,7 +1110,7 @@ class SixMans(commands.Cog):
     async def _get_game_info_embed(self, ctx, game, six_mans_queue):
         helper_role = await self._helper_role(ctx.guild)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        return await self._get_updated_game_info_embed(self, ctx.guild, game, six_mans_queue)
+        return await self._get_updated_game_info_embed(ctx.guild, game, six_mans_queue)
 
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
         helper_role = await self._helper_role(guild)
@@ -1349,7 +1359,7 @@ class SixMans(commands.Cog):
                 return vc
         return None
 
-    async def _helper_role(self, guild):
+    async def _helper_role(self, guild: discord.Guild):
         return guild.get_role(await self.config.guild(guild).HelperRole())
 
     async def _save_helper_role(self, ctx, helper_role):
