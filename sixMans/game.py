@@ -135,14 +135,15 @@ class Game:
             last_pick = 'blue' if len(self.orange) > len(self.blue) else 'orange'
             last_pick_key = picks_remaining[0]
             last_player = self.react_player_picks[last_pick_key]
+            del self.react_player_picks[last_pick_key]
             await self.teams_message.clear_reactions()
             self.blue.add(last_player) if last_pick == 'blue' else self.orange.add(last_player)
             teams_complete = True
-            embed = self._get_captains_embed(None)
+            embed = self._get_captains_embed(None, guild=last_player.guild)
             await self.teams_message.edit(embed=embed)
         return teams_complete
 
-    def _get_captains_embed(self, pick):
+    def _get_captains_embed(self, pick, guild=None):
         # Determine who picks next
         if pick:
             team_color = discord.Colour.blue() if pick == 'blue' else discord.Colour.orange()
@@ -161,6 +162,8 @@ class Game:
 
         if pick:
             embed.set_thumbnail(url=player.avatar_url)
+        elif guild:
+            embed.set_thumbnail(url=guild.icon_url)
 
         # List teams as they stand
         embed.add_field(name="Blue Team", value=', '.join(p.mention for p in self.blue), inline=False)

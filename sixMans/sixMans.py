@@ -1119,11 +1119,12 @@ class SixMans(commands.Cog):
     async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
         helper_role = await self._helper_role(guild)
         sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
-        embed_color = discord.Colour.blue()
+        embed_color = discord.Colour.green()
         if invalid:
             sm_title += " :x: [Teams Changed]"
             embed_color = discord.Colour.red()
         embed = discord.Embed(title=sm_title, color=embed_color)
+        embed.set_thumbnail(url=guild.icon_url)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
         if not invalid:
