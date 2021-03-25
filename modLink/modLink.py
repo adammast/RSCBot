@@ -131,9 +131,7 @@ class ModeratorLink(commands.Cog):
         await event_log_channel.send("Done.")
 
     def _guild_member_from_id(self, guild, member_id):
-        for member in guild.members:
-            if member.id == member_id:
-                return member
+        return guild.get_member(member_id)
     
     def _guild_role_from_name(self, guild, role_name):
         for member in guild.roles:
