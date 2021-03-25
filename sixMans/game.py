@@ -4,13 +4,6 @@ import uuid
 import struct
 from .config import config
 
-# from redbot.core import Config
-# from redbot.core import commands
-# from redbot.core import checks
-# from redbot.core.utils.predicates import ReactionPredicate
-# from redbot.core.utils.menus import start_adding_reactions
-
-
 class Game:
     def __init__(
             self, players, queue,
@@ -30,7 +23,7 @@ class Game:
         self.queueId = queue.id
         self.scoreReported = False
         
-        # Optional
+        # Optional params
         self.guild = guild
         self.category = category
         self.helper_role = helper_role
@@ -135,7 +128,6 @@ class Game:
             react = struct.pack('<I', int(react_hex, base=16)).decode('utf-32le')
             await self.teams_message.add_reaction(react)
 
-    # here
     async def process_captains_pick(self, reaction, user):
         teams_complete = False
         pick_i = len(self.blue)+len(self.orange)-2
@@ -275,5 +267,3 @@ class Game:
 
     def _generate_name_pass(self):
         return config.room_pass[random.randrange(len(config.room_pass))]
-
-# TODO: Load from file?
