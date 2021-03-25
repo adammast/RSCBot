@@ -1,30 +1,10 @@
 import discord
 import collections
-import operator
-import random
-import asyncio
 import datetime
 import uuid
-
 from queue import Queue
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.predicates import ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions
-
 
 team_size = 6
-minimum_game_time = 600     # Seconds (10 Minutes)
-player_timeout_time = 14400 # How long players can be in a queue in seconds (4 Hours)
-loop_time = 5               # How often to check the queues in seconds
-verify_timeout = 15
-pp_play_key = "Play"
-pp_win_key = "Win"
-player_points_key = "Points"
-player_gp_key = "GamesPlayed"
-player_wins_key = "Wins"
-queues_key = "Queues"
 
 class SixMansQueue:
     def __init__(self, name, guild, channels, points, players, gamesPlayed):
