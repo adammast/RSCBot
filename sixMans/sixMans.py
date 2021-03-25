@@ -1089,7 +1089,7 @@ class SixMans(commands.Cog):
         elif team_selection == 'optional':
             pass
         elif team_selection == 'captains':
-            await game.captains_pick_teams()
+            await game.captains_pick_teams(await self._helper_role(ctx.guild))
         elif team_selection == 'balanced':
             await game.pick_balanced_teams()
         else:
@@ -1107,12 +1107,13 @@ class SixMans(commands.Cog):
         return True
 
     async def _display_teams(self, game, embed):
-        lobby_info_msg = await game.textChannel.send(embed=embed)
-        game.teams_message = lobby_info_msg
-        return lobby_info_msg
+        try:
+            await game.teams_message.edit(embed=embed)
+        except:
+            game.teams_message = await game.textChannel.send(embed=embed)
+        return game.teams_message
 
     async def _get_game_info_embed(self, ctx, game, six_mans_queue):
-        helper_role = await self._helper_role(ctx.guild)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         return await self._get_updated_game_info_embed(ctx.guild, game, six_mans_queue)
 
@@ -1142,6 +1143,7 @@ class SixMans(commands.Cog):
         if helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
+        embed.set_footer(text="Game ID: {}".format(game.id))
         return embed
 
     async def _create_game(self, ctx, six_mans_queue):
@@ -1150,41 +1152,18 @@ class SixMans(commands.Cog):
         players = [six_mans_queue._get() for _ in range(team_size)]
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
-        text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
 
-        for player in players:
-            await text_channel.set_permissions(player, read_messages=True)
-
-        automove = await self._get_automove(ctx)
-        game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
-        await game.append_channel_short_codes()
-        return game
-
-    async def _create_game_channels(self, ctx, six_mans_queue):
-        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
-        guild = ctx.message.guild
-        helper_role = await self._helper_role(ctx.guild)
-        category = await self._category(ctx)
-        text_channel = await guild.create_text_channel(
-            "{0} 6 Mans".format(six_mans_queue.name), 
-            permissions_synced=True,
-            category=category
+        # here
+        game = Game(
+            players,
+            six_mans_queue,
+            guild=ctx.guild,
+            category=await self._category(ctx),
+            helper_role=await self._helper_role(ctx.guild),
+            automove=await self._get_automove(ctx)
         )
-        await text_channel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
-        
-        blue_vc = await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), category=await self._category(ctx))
-        await blue_vc.set_permissions(guild.default_role, connect=False)
-        oran_vc = await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name),  permissions_synced=True, category=await self._category(ctx))
-        await oran_vc.set_permissions(guild.default_role, connect=False)
-        
-        # manually add helper role perms if there is not an associated 6mans category
-        if helper_role and not category:
-            await text_channel.set_permissions(helper_role, view_channel=True, read_messages=True)
-            await blue_vc.set_permissions(helper_role, connect=True)
-            await oran_vc.set_permissions(helper_role, connect=True)
-        
-        voice_channels = [blue_vc, oran_vc]
-        return text_channel, voice_channels
+        await game.create_game_channels(six_mans_queue, await self._category(ctx))
+        return game
 
     async def _get_info(self, ctx):
         game = self._get_game(ctx)
@@ -1285,6 +1264,7 @@ class SixMans(commands.Cog):
                 self.queues.append(six_mans_queue)
 
     async def _pre_load_games(self, ctx, force_load):
+        await self._pre_load_queues(ctx)
         if self.games is None or self.games == [] or force_load:
             games = await self._games(ctx)
             game_list = []
@@ -1293,7 +1273,10 @@ class SixMans(commands.Cog):
                 text_channel = ctx.guild.get_channel(value["TextChannel"])
                 voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
                 queueId = value["QueueId"]
-                game = Game(players, text_channel, voice_channels, queueId)
+                for q in self.queues:
+                    if q.id == queueId:
+                        queue = q
+                game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels)
                 game.id = int(key)
                 game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
                 game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
@@ -1342,14 +1325,14 @@ class SixMans(commands.Cog):
     async def _save_players(self, ctx, players):
         await self.config.guild(ctx.guild).Players.set(players)
 
-    async def _category(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
-
     async def _get_automove(self, ctx):
         return await self.config.guild(ctx.guild).AutoMove()
 
     async def _save_automove(self, ctx, automove: bool):
         await self.config.guild(ctx.guild).AutoMove.set(automove)
+
+    async def _category(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
 
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)

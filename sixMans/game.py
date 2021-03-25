@@ -11,7 +11,14 @@ import struct
 
 
 class Game:
-    def __init__(self, players, text_channel: discord.TextChannel, voice_channels, queue_id, automove=False):
+    def __init__(
+            self, players, queue,
+            guild: discord.Guild=None,
+            category=None,
+            helper_role=None,
+            automove=False,
+            text_channel: discord.TextChannel=None, 
+            voice_channels=None):
         self.id = uuid.uuid4().int
         self.players = set(players)
         self.captains = []
@@ -19,26 +26,43 @@ class Game:
         self.orange = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.textChannel = text_channel
-        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
-        self.queueId = queue_id
+        self.queueId = queue.id
         self.scoreReported = False
+        
+        # Optional
+        self.guild = guild
+        self.category = category
+        self.helper_role = helper_role
         self.automove = automove
+
         self.teams_message = None
-        # self.voted_remake = []
-        # self.remake_embed = None
-
+        if text_channel and voice_channels:
+            self.textChannel = text_channel
+            self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
     
-    async def append_channel_short_codes(self):
-        await self.append_short_code_tc()
-        await self.append_short_code_vc()
-
-    async def append_short_code_tc(self):
-        await self.textChannel.edit(name="{}-{}".format(str(self.id)[-3:], self.textChannel.name))
-
-    async def append_short_code_vc(self):
-        for vc in self.voiceChannels:
-            await vc.edit(name="{} | {}".format(str(self.id)[-3:], vc.name))
+    async def create_game_channels(self, six_mans_queue, category=None):
+        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
+        code = str(self.id)[-3:]
+        self.textChannel = await self.guild.create_text_channel(
+            "{} {} 6 Mans".format(code, six_mans_queue.name), 
+            permissions_synced=True,
+            category=category
+        )
+        await self.textChannel.set_permissions(self.guild.default_role, view_channel=False, read_messages=False)
+        for player in self.players:
+            await self.textChannel.set_permissions(player, read_messages=True)
+        blue_vc = await self.guild.create_voice_channel("{} | {} Blue Team".format(code, six_mans_queue.name), category=category)
+        await blue_vc.set_permissions(self.guild.default_role, connect=False)
+        oran_vc = await self.guild.create_voice_channel("{} | {} Orange Team".format(code, six_mans_queue.name),  permissions_synced=True, category=category)
+        await oran_vc.set_permissions(self.guild.default_role, connect=False)
+        
+        # manually add helper role perms if there is not an associated 6mans category
+        if self.helper_role and not category:
+            await text_channel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
+            await blue_vc.set_permissions(self.helper_role, connect=True)
+            await oran_vc.set_permissions(self.helper_role, connect=True)
+        
+        self.voiceChannels = [blue_vc, oran_vc]
 
     async def add_to_blue(self, player):
         self.players.remove(player)
@@ -67,7 +91,7 @@ class Game:
                 pass
 
     async def pick_random_teams(self):
-        self.shuffle_players()
+        await self.shuffle_players()
 
     async def shuffle_players(self):
         self.blue = set()
@@ -80,11 +104,14 @@ class Game:
         self.reset_players()
         self.get_new_captains_from_teams()
 
-    async def captains_pick_teams(self):
+    async def captains_pick_teams(self, helper_role):
+        # Mentions all players
+        await self.textChannel.send(', '.join(player.mention for player in self.players))
         # Pick captains
         self.captains = random.sample(self.players, 2)
         self.blue.add(self.captains[0])
         self.orange.add(self.captains[1])
+        self.helper_role = helper_role
 
         pick_order = ['blue', 'orange', 'orange']
 
@@ -141,6 +168,13 @@ class Game:
             teams_complete = True
             embed = self._get_captains_embed(None, guild=last_player.guild)
             await self.teams_message.edit(embed=embed)
+        
+        if teams_complete:
+            for player in self.blue:
+                await self.add_to_blue(player)
+            for player in self.orange:
+                await self.add_to_orange(player)
+            self.reset_players()
         return teams_complete
 
     def _get_captains_embed(self, pick, guild=None):
@@ -148,14 +182,14 @@ class Game:
         if pick:
             team_color = discord.Colour.blue() if pick == 'blue' else discord.Colour.orange()
             player = self.captains[0] if pick == 'blue' else self.captains[1]
-            description = "**{}**, pick a player to join the **{}** team.".format(player.name, pick)
+            description = "**{}**, react to pick a player to join the **{}** team.".format(player.name, pick)
 
         else:
             team_color = discord.Colour.green()
             description="Teams have been set!"
 
         embed = discord.Embed(
-            title="{} Game | Team Selection".format(self.textChannel.name),
+            title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
             color=team_color,
             description=description
         )
@@ -173,6 +207,12 @@ class Game:
         pickable_players = self._get_pickable_players_str()
         if pickable_players:
             embed.add_field(name="Available Players", value=pickable_players, inline=False)
+        
+        if self.helper_role:
+            embed.add_field(name="Help", value="If you need any help or have questions please contact someone with the {} role.".format(self.helper_role.mention))
+        
+        embed.set_footer(text="Game ID: {}".format(self.id))
+
         return embed
 
     def _get_player_from_reaction_emoji(self, emoji):
