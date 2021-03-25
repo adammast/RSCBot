@@ -45,7 +45,7 @@ class ModeratorLink(commands.Cog):
 
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
-        """Catches when a user changes their discord name or discriminator."""
+        """Catches when a user changes their discord name or discriminator. [Not yet supported]"""
         if before.name != after.name:
             pass
         if before.discriminator != after.discriminator:
@@ -54,9 +54,12 @@ class ModeratorLink(commands.Cog):
     @commands.Cog.listener("on_member_update")
     async def on_member_update(self, before, after):
         """Processes updates for roles or nicknames, and shares them across the guild network."""
+        
+        # If roles updated:
         if before.roles != after.roles:
             await self._process_role_update(before, after)
         
+        # If nickname changed:
         try:
             before_name = before.nick
         except:
@@ -109,26 +112,28 @@ class ModeratorLink(commands.Cog):
             return
 
         # Process Role Removals
+        role_removal_msg = "Shared role {} removed from **{}** [initiated from **{}**]"
         for role in removed_roles:
-            guild_role_instances = await self._shared_guild_role_instances(mutual_guilds, role)
-            for guild_role in guild_role_instances:
-                guild_member = self._guild_member_from_id(guild_role.guild, before.id)
+            for guild in mutual_guilds:
+                guild_role = self._guild_sister_role(guild, role)
+                guild_member = self._guild_member_from_id(guild, before.id)
                 if guild_role in guild_member.roles:
                     await guild_member.remove_roles(guild_role)
                     channel = await self._event_log_channel(guild_member.guild)
-                    await channel.send("Shared role **{}** removed from **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
+                    await channel.send(role_removal_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
 
         # Process Role Additions
+        role_assign_msg = "Shared role {} added to {} [initiated from **{}**]"
         for role in added_roles:
-            guild_role_instances = await self._shared_guild_role_instances(mutual_guilds, role)
-            for guild_role in guild_role_instances:
-                guild_member = self._guild_member_from_id(guild_role.guild, before.id)
+            for guild in mutual_guilds:
+                guild_role = self._guild_sister_role(guild, role)
+                guild_member = self._guild_member_from_id(guild, before.id)
                 if guild_role not in guild_member.roles:
                     await guild_member.add_roles(guild_role)
                     channel = await self._event_log_channel(guild_member.guild)
-                    await channel.send("Shared role **{}** added to **{}** [initiated from **{}**]".format(guild_role.name, guild_member.name, before.guild.name))
+                    await channel.send(role_assign_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
         
-        await event_log_channel.send("Done.")
+        # await event_log_channel.send("Done.")
 
     def _guild_member_from_id(self, guild, member_id):
         return guild.get_member(member_id)
@@ -160,17 +165,13 @@ class ModeratorLink(commands.Cog):
             if target_member and target_role:
                 await target_member.add_roles(guild_role)
                 shared += 1
-        return shared
+        return shared 
 
-    async def _shared_guild_role_instances(self, mutual_guilds, target_role):
-        role_matches = []
-        for guild in mutual_guilds:
-            for role in guild.roles:
-                if role.name == target_role.name and role != target_role:
-                    role_matches.append(role)
-                    if len(role_matches) == len(mutual_guilds):
-                        return role_matches
-        return role_matches   
+    def _guild_sister_role(self, guild, sister_role):
+        for role in guild.roles:
+            if role.name == sister_role.name and role != sister_role:
+                return role
+        return None
 
     async def _process_nickname_update(self, before, after):
         before_name = before.nick if before.nick else before.name
