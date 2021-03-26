@@ -1,43 +1,34 @@
-# RSCBot: combineRooms
+# RSCBot: modLink
 
-The `combineRooms` cog is primarily responsible for managing combines for RSC. This involves dynamically creating and deleting voice channels under a "Combine Rooms" category. This cog uses discord events to keep rooms open for each tier that has been established.
+## About modLink
+
+The `modLink` cog is responsible for maintaining member status and representation consistency across multiple discord guilds. This cog processes member updates and applies them to each guild in the `modLink` network. This is defined by guilds the RSCBot is in, that have set an Event Log Channel.
+
+The following behaviors are shared across the guild network:
+
+- Shared role addition and removal (Default: ["Muted"])
+- Member bans and unbans.
+- Nickname changes
 
 ## Installation
 
-The `combineRooms` cog depends on the `teamManager` cog. Install `teamManager` as well as its dependencies before installing `combineRooms`.
+The `modLink` cog is independent from other RSCBot cogs.
 
 ```
-<p>cog install RSCBot combineRooms
-<p>load combineRooms
+<p>cog install RSCBot modLink
+<p>load modLink
 ```
 
-## Usage
+## Commands
 
-- `<p>startCombines`
-  Creates a Combine Rooms channel category with all associated text and voice channels.
+- `<p>setEventChannel [event_channel]`
 
-- `<p>stopCombines`
-  Runs a teardown for all combine channels. This will remove all channels under the "Combine Rooms" categorty as well as the category itself.
+  Sets the channel where all moderator-link related events are logged, and enables cross-guild member updates
 
-#### Roles involved:
-- League
-- Muted
+- `<p>unsetEventChannel`
 
-## Customization
+  Unsets the channel currently assigned as the event log channel and disables cross-guild member updates
 
-- `<p>setRoomCapacity` (Default: 10)
-  - Sets the limit for discord members in room.
-- `<p>togglePublicity` (Default: Public)
-  - Toggles the combines between a Public and Private status.
-  - If combines are Public, any member may participate.
-  - If combines are Private, only members with the "League" role may particpate.
-- `<p>setAcronym` (Default: RSC)
-  - Sets the acronym used in the combines cog.
-  - This is is relevant with the naming scheme for dynamically created voice channels.
+- `<p>getEventChannel`
 
-## Other commands
-
-The following commands can be used to check current properties of the server:
-- `<p>getRoomCapacity`
-- `<p>getCombinePublicity`
-- `<p>getAcronym`
+  Gets the channel currently assigned as the event log channel

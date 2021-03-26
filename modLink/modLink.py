@@ -13,26 +13,26 @@ class ModeratorLink(commands.Cog):
         self.bot = bot
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
     async def setEventChannel(self, ctx, event_channel: discord.TextChannel):
-        """Sets the channel where all moderator-link related events are logged, and enables cross-guild role sharing."""
+        """Sets the channel where all moderator-link related events are logged, and enables cross-guild member updates."""
         await self._save_event_log_channel(ctx.guild, event_channel.id)
         await ctx.send("Done")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['unsetEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
     async def unsetEventChannel(self, ctx):
-        """Gets the channel currently assigned as the event log channel"""
+        """Unsets the channel currently assigned as the event log channel and disables cross-guild member updates."""
         await self._save_event_log_channel(ctx.guild, None)
         await ctx.send("Event log channel has been cleared.")
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['getEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
     async def getEventChannel(self, ctx):
-        """Gets the channel currently assigned as the event log channel"""
+        """Gets the channel currently assigned as the event log channel."""
         try:
             channel = await self._event_log_channel(ctx.guild)
             if channel:
@@ -75,11 +75,21 @@ class ModeratorLink(commands.Cog):
 
     @commands.Cog.listener("on_member_ban")
     async def on_member_ban(self, guild, user):
-        pass
+        for linked_guild in self.guilds:
+            linked_guild_log = await self._event_log_channel(linked_guild)
+            is_banned = user in await linked_guild.bans()
+            if linked_guild_log and not is_banned:
+                await linked_guild.ban(user, reason="Banned from {}.".format(guild.name))
+                await linked_guild_log.send("{} (id: {}) has been banned. [initiated from **{}**]".format(user.name, user.id, guild.name))
     
     @commands.Cog.listener("on_member_unban")
     async def on_member_unban(self, guild, user):
-        pass
+        for linked_guild in self.guilds:
+            linked_guild_log = await self._event_log_channel(linked_guild)
+            is_banned = user in await linked_guild.bans()
+            if linked_guild_log and is_banned:
+                await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
+                await linked_guild_log.send("{} (id: {}) has been unbanned. [initiated from **{}**]".format(user.name, user.id, guild.name))
 
 
     async def _process_role_update(self, before, after):
@@ -150,23 +160,6 @@ class ModeratorLink(commands.Cog):
                 mutual_guilds.append(guild)
         return mutual_guilds
 
-    async def _add_shared_role(self, mutual_guilds, target_member, target_role):
-        shared = 0
-        for guild in mutual_guilds:
-            guild_role = None
-            guild_member = None
-            for role in guild.roles:
-                if role.name == target_role.name:
-                    guild_role = role
-            for member in guild.members:
-                if member.id == target_member.id:
-                    guild_member = member
-            
-            if target_member and target_role:
-                await target_member.add_roles(guild_role)
-                shared += 1
-        return shared 
-
     def _guild_sister_role(self, guild, sister_role):
         for role in guild.roles:
             if role.name == sister_role.name and role != sister_role:
@@ -178,8 +171,6 @@ class ModeratorLink(commands.Cog):
         after_name = after.nick if after.nick else after.name
         
         event_log_channel = await self._event_log_channel(before.guild)
-
-        # await event_log_channel.send("Name changed from **{}** to **{}**".format(before_name, after_name))
 
         before_nick = before_name[before_name.index(' | ')+3:] if ' | ' in before_name else before_name
         after_nick = after_name[after_name.index(' | ')+3:] if ' | ' in after_name else after_name
@@ -208,10 +199,6 @@ class ModeratorLink(commands.Cog):
                     await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
             except:
                 pass
-
-    async def _log_linked_event(self, source_guild, member, action: str):
-        for guild in self.bot.guilds:
-            event_log_channel = await self._event_log_channel()
 
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
