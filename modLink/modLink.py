@@ -3,7 +3,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None, "ActionLogChannel": None}
+defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None}
 
 
 class ModeratorLink(commands.Cog):
@@ -72,7 +72,6 @@ class ModeratorLink(commands.Cog):
         if before_name != after_name:
             await self._process_nickname_update(before, after)
             
-
     @commands.Cog.listener("on_member_ban")
     async def on_member_ban(self, guild, user):
         for linked_guild in self.guilds:
