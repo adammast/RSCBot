@@ -42,6 +42,19 @@ class ModeratorLink(commands.Cog):
         except:
             await ctx.send(":x: Event log channel not set")
     
+    # @commands.guild_only()
+    # @commands.command()
+    # @checks.admin_or_permissions(manage_guild=True)
+    # async def ban(self, ctx, user: discord.User, *, reason=None):
+    #     await ctx.guild.ban(user, reason=reason, delete_message_days=0)
+    #     await ctx.send("Done.")
+    
+    # @commands.guild_only()
+    # @commands.command()
+    # @checks.admin_or_permissions(manage_guild=True)
+    # async def unban(self, ctx, user: discord.User, *, reason=None):
+    #     await ctx.guild.unban(user, reason=reason)
+    #     await ctx.send("Done.")
 
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
@@ -74,21 +87,21 @@ class ModeratorLink(commands.Cog):
             
     @commands.Cog.listener("on_member_ban")
     async def on_member_ban(self, guild, user):
-        for linked_guild in self.guilds:
+        for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
-            is_banned = user in await linked_guild.bans()
+            is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
             if linked_guild_log and not is_banned:
-                await linked_guild.ban(user, reason="Banned from {}.".format(guild.name))
-                await linked_guild_log.send("{} (id: {}) has been banned. [initiated from **{}**]".format(user.name, user.id, guild.name))
+                await linked_guild.ban(user, reason="Banned from {}.".format(guild.name), delete_message_days=0)
+                await linked_guild_log.send("**{}** (id: {}) has been banned. [initiated from **{}**]".format(user.name, user.id, guild.name))
     
     @commands.Cog.listener("on_member_unban")
     async def on_member_unban(self, guild, user):
-        for linked_guild in self.guilds:
+        for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
-            is_banned = user in await linked_guild.bans()
+            is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
             if linked_guild_log and is_banned:
                 await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
-                await linked_guild_log.send("{} (id: {}) has been unbanned. [initiated from **{}**]".format(user.name, user.id, guild.name))
+                await linked_guild_log.send("**{}** (id: {}) has been unbanned. [initiated from **{}**]".format(user.mention, user.id, guild.name))
 
 
     async def _process_role_update(self, before, after):
