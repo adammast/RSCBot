@@ -103,6 +103,10 @@ class ModeratorLink(commands.Cog):
                 await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
                 await linked_guild_log.send("**{}** (id: {}) has been unbanned. [initiated from **{}**]".format(user.mention, user.id, guild.name))
 
+    @commands.Cog.listener("on_member_join")
+    async def on_member_join(self, member):
+        mutual_guilds = def _member_mutual_guilds()
+
 
     async def _process_role_update(self, before, after):
         removed_roles = before.roles
@@ -139,9 +143,9 @@ class ModeratorLink(commands.Cog):
             for guild in mutual_guilds:
                 guild_role = self._guild_sister_role(guild, role)
                 guild_member = self._guild_member_from_id(guild, before.id)
-                if guild_role in guild_member.roles:
+                channel = await self._event_log_channel(guild_member.guild)
+                if guild_role in guild_member.roles and channel:
                     await guild_member.remove_roles(guild_role)
-                    channel = await self._event_log_channel(guild_member.guild)
                     await channel.send(role_removal_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
 
         # Process Role Additions
@@ -150,9 +154,9 @@ class ModeratorLink(commands.Cog):
             for guild in mutual_guilds:
                 guild_role = self._guild_sister_role(guild, role)
                 guild_member = self._guild_member_from_id(guild, before.id)
-                if guild_role not in guild_member.roles:
+                channel = await self._event_log_channel(guild_member.guild)
+                if guild_role not in guild_member.roles and channel:
                     await guild_member.add_roles(guild_role)
-                    channel = await self._event_log_channel(guild_member.guild)
                     await channel.send(role_assign_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
 
     def _guild_member_from_id(self, guild, member_id):
@@ -192,23 +196,23 @@ class ModeratorLink(commands.Cog):
         mutual_guilds.remove(before.guild)
 
         for guild in mutual_guilds:
-            member = self._guild_member_from_id(guild, before.id)
-            name = member.nick if member.nick else member.name
             channel = await self._event_log_channel(guild)
-            
-            try:
-                prefix = name[0:name.index(' | ')] if ' | ' in name else ''
-                guild_before_name = member.nick if member.nick else member.name
-                guild_before_name = guild_before_name[guild_before_name.index(' | ')+3:] if ' | ' in guild_before_name else guild_before_name
+            if channel:
+                member = self._guild_member_from_id(guild, before.id)
+                name = member.nick if member.nick else member.name
+                try:
+                    prefix = name[0:name.index(' | ')] if ' | ' in name else ''
+                    guild_before_name = member.nick if member.nick else member.name
+                    guild_before_name = guild_before_name[guild_before_name.index(' | ')+3:] if ' | ' in guild_before_name else guild_before_name
 
-                if guild_before_name != after_nick:
-                    if prefix:
-                        await member.edit(nick='{} | {}'.format(prefix, after_nick))
-                    else:
-                        await member.edit(nick=after_nick)
-                    await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
-            except:
-                pass
+                    if guild_before_name != after_nick:
+                        if prefix:
+                            await member.edit(nick='{} | {}'.format(prefix, after_nick))
+                        else:
+                            await member.edit(nick=after_nick)
+                        await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
+                except:
+                    pass
 
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
