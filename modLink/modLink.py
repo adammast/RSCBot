@@ -141,8 +141,6 @@ class ModeratorLink(commands.Cog):
                     await guild_member.add_roles(guild_role)
                     channel = await self._event_log_channel(guild_member.guild)
                     await channel.send(role_assign_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
-        
-        # await event_log_channel.send("Done.")
 
     def _guild_member_from_id(self, guild, member_id):
         return guild.get_member(member_id)
