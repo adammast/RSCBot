@@ -13,10 +13,13 @@ from redbot.core import checks
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
+from .game import Game
+from .queue import SixMansQueue
+
 team_size = 6
-minimum_game_time = 600 #Seconds (10 Minutes)
-player_timeout_time = 14400 #How long players can be in a queue in seconds (4 Hours)
-loop_time = 5 #How often to check the queues in seconds
+minimum_game_time = 600     # Seconds (10 Minutes)
+player_timeout_time = 14400 # How long players can be in a queue in seconds (4 Hours)
+loop_time = 5               # How often to check the queues in seconds
 verify_timeout = 15
 pp_play_key = "Play"
 pp_win_key = "Win"
@@ -25,7 +28,18 @@ player_gp_key = "GamesPlayed"
 player_wins_key = "Wins"
 queues_key = "Queues"
 
-defaults = {"CategoryChannel": None, "HelperRole": None, "AutoMove": False, "QLobby": None, "Games": {}, "Queues": {}, "GamesPlayed": 0, "Players": {}, "Scores": []}
+defaults = {
+    "CategoryChannel": None,
+    "HelperRole": None,
+    "AutoMove": False,
+    "QLobby": None,
+    "DefaultTeamSelection": "shuffle",
+    "Games": {},
+    "Queues": {},
+    "GamesPlayed": 0,
+    "Players": {},
+    "Scores": []
+}
 
 class SixMans(commands.Cog):
 
@@ -36,6 +50,10 @@ class SixMans(commands.Cog):
         self.queues = []
         self.games = []
         self.task = self.bot.loop.create_task(self.timeout_queues())
+        self.SHUFFLE_REACT = "\U0001F500" # :twisted_rightwards_arrows:
+        self.WHITE_X_REACT = "\U0000274E" # :negative_squared_cross_mark:
+        self.WHITE_CHECK_REACT = "\U00002705" # :white_check_mark:
+
 
     def cog_unload(self):
         """Clean up when cog shuts down."""
@@ -236,7 +254,7 @@ class SixMans(commands.Cog):
                 break
             await self._add_to_queue(member, six_mans_queue)
         if six_mans_queue._queue_full():
-            await self._randomize_teams(ctx, six_mans_queue)
+            await self._select_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["queue"])
@@ -257,7 +275,7 @@ class SixMans(commands.Cog):
 
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
-            await self._randomize_teams(ctx, six_mans_queue)
+            await self._select_teams(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
@@ -636,6 +654,39 @@ class SixMans(commands.Cog):
         action = "will move" if new_automove_status else "will not move"
         message = "Popped 6-mans queues **{}** members to their team voice channel.".format(action)
         await ctx.send(message)
+    
+    @commands.guild_only()
+    @commands.command(aliases=['setTeamSelection'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setDefaultTeamSelection(self, ctx, team_selection_method):
+        """Set method for Six Mans team selection (Default: Random)
+        
+        Valid team selecion methods options:
+        - **random**: selects random teams
+        - shuffle: selects random teams, but allows re-shuffling teams after they have been set
+        - captains: selects a captain for each team
+        - balanced: creates balanced teams from all participating players
+        - option: choose from the methods listed above when a queue pops
+        """
+        # TODO: Support Captains [captains random, captains shuffle], Balanced
+        team_selection_method = team_selection_method.lower()
+        if team_selection_method not in ['random', 'shuffle', 'captains', 'balanced']:
+            return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
+
+        if team_selection_method in ['option', 'balanced']:
+            return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
+        
+        await self._save_team_selection(ctx, team_selection_method)
+
+        await ctx.send("Done.")
+
+    @commands.guild_only()
+    @commands.command(aliases=['getTeamSelection'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getDefaultTeamSelection(self, ctx):
+        """Get method for Six Mans team selection (Default: Random)"""
+        team_selection = await self._team_selection(ctx.guild)
+        await ctx.send("Six Mans team selection is currently set to **{}**.".format(team_selection))
 
     @commands.guild_only()
     @commands.command()
@@ -661,7 +712,7 @@ class SixMans(commands.Cog):
     async def unsetCategory(self, ctx):
         """Unsets the 6 mans category channel. 6 mans channels will not be created if this is not set"""
         category = await self._category(ctx)
-        old_helper_role = await self._helper_role(ctx)
+        old_helper_role = await self._helper_role(ctx.guild)
         if old_helper_role and category:
             await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_category(ctx, None)
@@ -684,7 +735,7 @@ class SixMans(commands.Cog):
     async def getHelperRole(self, ctx):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx)).name))
+            await ctx.send("6 mans helper role set to: {0}".format((await self._helper_role(ctx.guild)).name))
         except:
             await ctx.send(":x: 6 mans helper role not set")
 
@@ -694,7 +745,7 @@ class SixMans(commands.Cog):
     async def unsetHelperRole(self, ctx):
         """Unsets the 6 mans helper role."""
         category = await self._category(ctx)
-        old_helper_role = await self._helper_role(ctx)
+        old_helper_role = await self._helper_role(ctx.guild)
         if old_helper_role and category:
             await category.set_permissions(old_helper_role, overwrite=None)
         await self._save_helper_role(ctx, None)
@@ -725,8 +776,57 @@ class SixMans(commands.Cog):
         await ctx.channel.send(embed=embed)
 
 
+    @commands.guild_only()
+    @commands.Cog.listener("on_reaction_add")
+    async def process_shuffle_vote(self, reaction, user):
+        message = reaction.message
+        channel = reaction.message.channel
+        if user.id == self.bot.user.id:
+            return False
+        
+        # Find Game and Queue
+        game, queue = self._get_game_and_queue(channel)
+        
+        if message != game.teams_message:
+            return False
+
+        team_selection_mode = await self._team_selection(user.guild)
+
+        if team_selection_mode == 'captains':
+            teams_complete = await game.process_captains_pick(reaction, user)
+            if teams_complete:
+                embed = await self._get_updated_game_info_embed(user.guild, game, queue)
+                await self._display_teams(game, embed)
+
+        elif team_selection_mode == 'shuffle':
+            if reaction.emoji is not self.SHUFFLE_REACT:
+                return
+            now = datetime.datetime.utcnow()
+            time_since_last_team = (now - message.created_at).seconds
+            time_since_q_pop = (now - message.channel.created_at).seconds
+            if time_since_q_pop > 300:
+                await reaction.clear()
+                return await reaction.message.channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
+            if time_since_last_team > 180:
+                await reaction.clear()
+                return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
+            
+            # Is vote enough?
+            # if user not in game.voted_remake:
+            #     game.voted_remake.append(user)
+            guild = reaction.message.channel.guild
+            
+            if reaction.count >= int(len(game.players)/2)+1:
+                await channel.send("{} _Generating New teams..._".format(self.SHUFFLE_REACT))
+                await message.edit(embed=await self._get_updated_game_info_embed(guild, game, queue, invalid=True, prefix='?'))
+                await game.shuffle_players()
+                embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
+                lobby_info_message = await self._display_teams(game, embed)
+                await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
+
+
     async def has_perms(self, ctx):
-        helper_role = await self._helper_role(ctx)
+        helper_role = await self._helper_role(ctx.guild)
         if ctx.author.guild_permissions.administrator:
             return True
         elif helper_role and helper_role in ctx.author.roles:
@@ -828,7 +928,7 @@ class SixMans(commands.Cog):
         await self._save_games_played(ctx, _games_played)
 
         if await self._get_automove(ctx): # game.automove not working?
-            qlobby_vc = await self._get_q_lobby_vc(ctx)
+            qlobby_vc = await self._get_q_lobby_vc(ctx.guild)
             if qlobby_vc:
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[0].members)
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[1].members)
@@ -846,7 +946,7 @@ class SixMans(commands.Cog):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
         await asyncio.sleep(30)
-        q_lobby_vc = await self._get_q_lobby_vc(ctx)
+        q_lobby_vc = await self._get_q_lobby_vc(ctx.guild)
         try:
             await game.textChannel.delete()
         except:
@@ -969,7 +1069,7 @@ class SixMans(commands.Cog):
             embed.set_thumbnail(url=player.avatar_url)
         return embed
 
-    async def _randomize_teams(self, ctx, six_mans_queue):
+    async def _select_teams(self, ctx, six_mans_queue):
         game = await self._create_game(ctx, six_mans_queue)
         if game is None:
             return False
@@ -980,45 +1080,71 @@ class SixMans(commands.Cog):
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
 
-        orange = random.sample(game.players, 3)
-        for player in orange:
-            await game.add_to_orange(player)
-            await game.voiceChannels[1].set_permissions(player, connect=True)
+        team_selection = await self._team_selection(ctx.guild) # TODO: add other methods of player selection (i.e. captains)
         
-        blue = list(game.players)
-        for player in blue:
-            await game.add_to_blue(player)
-            await game.voiceChannels[0].set_permissions(player, connect=True)
+        if team_selection == 'random':
+            await game.pick_random_teams()
+        elif team_selection == 'shuffle':
+            await game.shuffle_players()
+        elif team_selection == 'optional':
+            pass
+        elif team_selection == 'captains':
+            await game.captains_pick_teams(await self._helper_role(ctx.guild))
+        elif team_selection == 'balanced':
+            await game.pick_balanced_teams()
+        else:
+            return print("you messed up fool")
 
-        game.reset_players()
-        game.get_new_captains_from_teams()
-
-        await self._display_game_info(ctx, game, six_mans_queue)
-
+        # Display teams
+        if team_selection in ['shuffle', 'random']:
+            embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
+            lobby_info_message = await self._display_teams(game, embed)
+            if team_selection == 'shuffle':
+                await lobby_info_message.add_reaction(self.SHUFFLE_REACT)
+        
         self.games.append(game)
         await self._save_games(ctx, self.games)
         return True
 
-    async def _display_game_info(self, ctx, game, six_mans_queue):
-        helper_role = await self._helper_role(ctx)
+    async def _display_teams(self, game, embed):
+        try:
+            await game.teams_message.edit(embed=embed)
+        except:
+            game.teams_message = await game.textChannel.send(embed=embed)
+        return game.teams_message
+
+    async def _get_game_info_embed(self, ctx, game, six_mans_queue):
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-        embed = discord.Embed(title="{0} 6 Mans Game Info".format(six_mans_queue.name), color=discord.Colour.blue())
+        return await self._get_updated_game_info_embed(ctx.guild, game, six_mans_queue)
+
+    async def _get_updated_game_info_embed(self, guild, game, six_mans_queue, invalid=False, prefix='?'):
+        helper_role = await self._helper_role(guild)
+        sm_title = "{0} 6 Mans Game Info".format(six_mans_queue.name)
+        embed_color = discord.Colour.green()
+        if invalid:
+            sm_title += " :x: [Teams Changed]"
+            embed_color = discord.Colour.red()
+        embed = discord.Embed(title=sm_title, color=embed_color)
+        embed.set_thumbnail(url=guild.icon_url)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
-        embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
+        if not invalid:
+            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
         embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[pp_play_key], six_mans_queue.points[pp_win_key]), inline=False)
-        embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-            "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-            "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-            "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-            "cancel the game.".format(ctx.prefix), inline=False)
+        if not invalid:
+            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
+                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+                "cancel the game.".format(prefix), inline=False)
         help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
         if helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
-        await game.textChannel.send(embed=embed)
+        embed.set_footer(text="Game ID: {}".format(game.id))
+        return embed
 
     async def _create_game(self, ctx, six_mans_queue):
         if not six_mans_queue._queue_full():
@@ -1026,41 +1152,18 @@ class SixMans(commands.Cog):
         players = [six_mans_queue._get() for _ in range(team_size)]
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
-        text_channel, voice_channels = await self._create_game_channels(ctx, six_mans_queue)
 
-        for player in players:
-            await text_channel.set_permissions(player, read_messages=True)
-
-        automove = await self._get_automove(ctx)
-        game = Game(players, text_channel, voice_channels, six_mans_queue.id, automove)
-        await game.append_short_code_vc()
-        return game
-
-    async def _create_game_channels(self, ctx, six_mans_queue):
-        # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
-        guild = ctx.message.guild
-        helper_role = await self._helper_role(ctx)
-        category = await self._category(ctx)
-        text_channel = await guild.create_text_channel(
-            "{0} 6 Mans".format(six_mans_queue.name), 
-            permissions_synced=True,
-            category=category
+        # here
+        game = Game(
+            players,
+            six_mans_queue,
+            guild=ctx.guild,
+            category=await self._category(ctx),
+            helper_role=await self._helper_role(ctx.guild),
+            automove=await self._get_automove(ctx)
         )
-        await text_channel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
-        
-        blue_vc = await guild.create_voice_channel("{0} Blue Team".format(six_mans_queue.name), category=await self._category(ctx))
-        await blue_vc.set_permissions(guild.default_role, connect=False)
-        oran_vc = await guild.create_voice_channel("{0} Orange Team".format(six_mans_queue.name),  permissions_synced=True, category=await self._category(ctx))
-        await oran_vc.set_permissions(guild.default_role, connect=False)
-        
-        # manually add helper role perms if there is not an associated 6mans category
-        if helper_role and not category:
-            await text_channel.set_permissions(helper_role, view_channel=True, read_messages=True)
-            await blue_vc.set_permissions(helper_role, connect=True)
-            await oran_vc.set_permissions(helper_role, connect=True)
-        
-        voice_channels = [blue_vc, oran_vc]
-        return text_channel, voice_channels
+        await game.create_game_channels(six_mans_queue, await self._category(ctx))
+        return game
 
     async def _get_info(self, ctx):
         game = self._get_game(ctx)
@@ -1078,6 +1181,19 @@ class SixMans(commands.Cog):
             return None
         
         return game, six_mans_queue
+
+    def _get_game_and_queue(self, channel: discord.TextChannel):
+        game = None
+        for g in self.games:
+            if g.textChannel == channel:
+                game = g
+                break
+        queue = None
+        for q in self.queues:
+            if q.id == game.queueId:
+                queue = q
+                return game, queue     
+        return game, queue
 
     def _get_game(self, ctx):
         for game in self.games:
@@ -1148,6 +1264,7 @@ class SixMans(commands.Cog):
                 self.queues.append(six_mans_queue)
 
     async def _pre_load_games(self, ctx, force_load):
+        await self._pre_load_queues(ctx)
         if self.games is None or self.games == [] or force_load:
             games = await self._games(ctx)
             game_list = []
@@ -1156,7 +1273,10 @@ class SixMans(commands.Cog):
                 text_channel = ctx.guild.get_channel(value["TextChannel"])
                 voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
                 queueId = value["QueueId"]
-                game = Game(players, text_channel, voice_channels, queueId)
+                for q in self.queues:
+                    if q.id == queueId:
+                        queue = q
+                game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels)
                 game.id = int(key)
                 game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
                 game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
@@ -1205,14 +1325,14 @@ class SixMans(commands.Cog):
     async def _save_players(self, ctx, players):
         await self.config.guild(ctx.guild).Players.set(players)
 
-    async def _category(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
-
     async def _get_automove(self, ctx):
         return await self.config.guild(ctx.guild).AutoMove()
 
     async def _save_automove(self, ctx, automove: bool):
         await self.config.guild(ctx.guild).AutoMove.set(automove)
+
+    async def _category(self, ctx):
+        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
 
     async def _save_category(self, ctx, category):
         await self.config.guild(ctx.guild).CategoryChannel.set(category)
@@ -1220,242 +1340,21 @@ class SixMans(commands.Cog):
     async def _save_q_lobby_vc(self, ctx, vc):
         await self.config.guild(ctx.guild).QLobby.set(vc)
     
-    async def _get_q_lobby_vc(self, ctx):
-        lobby_voice = await self.config.guild(ctx.guild).QLobby()
-        for vc in ctx.guild.voice_channels:
+    async def _get_q_lobby_vc(self, guild):
+        lobby_voice = await self.config.guild(guild).QLobby()
+        for vc in guild.voice_channels:
             if vc.id == lobby_voice:
                 return vc
         return None
 
-    async def _helper_role(self, ctx):
-        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
+    async def _helper_role(self, guild: discord.Guild):
+        return guild.get_role(await self.config.guild(guild).HelperRole())
 
     async def _save_helper_role(self, ctx, helper_role):
         await self.config.guild(ctx.guild).HelperRole.set(helper_role)
 
-class Game:
-    def __init__(self, players, text_channel, voice_channels, queue_id, automove=False):
-        self.id = uuid.uuid4().int
-        self.players = set(players)
-        self.captains = []
-        self.blue = set()
-        self.orange = set()
-        self.roomName = self._generate_name_pass()
-        self.roomPass = self._generate_name_pass()
-        self.textChannel = text_channel
-        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
-        self.queueId = queue_id
-        self.scoreReported = False
-        self.automove = automove
-
-    async def append_short_code_vc(self):
-        for vc in self.voiceChannels:
-            await vc.edit(name="{} | {}".format(vc.name, str(self.id)[-3:]))
-
-    async def add_to_blue(self, player):
-        self.players.remove(player)
-        self.blue.add(player)
-
-        if self.automove:
-            team_vcs = self.voiceChannels
-            try:
-                await player.move_to(team_vcs[0])
-            except:
-                pass
-
-    async def add_to_orange(self, player):
-        self.players.remove(player)
-        self.orange.add(player)
-
-        if self.automove:
-            team_vcs = self.voiceChannels
-            try:
-                await player.move_to(team_vcs[1])
-            except:
-                pass
-
-    def reset_players(self):
-        self.players.update(self.orange)
-        self.players.update(self.blue)
-
-    def get_new_captains_from_teams(self):
-        self.captains = []
-        self.captains.append(random.sample(list(self.blue), 1)[0])
-        self.captains.append(random.sample(list(self.orange), 1)[0])
-
-    def __contains__(self, item):
-        return item in self.players or item in self.orange or item in self.blue
-
-    def _to_dict(self):
-        return {
-            "Players": [x.id for x in self.players],
-            "Captains": [x.id for x in self.captains],
-            "Blue": [x.id for x in self.blue],
-            "Orange": [x.id for x in self.orange],
-            "RoomName": self.roomName,
-            "RoomPass": self.roomPass,
-            "TextChannel": self.textChannel.id,
-            "VoiceChannels": [x.id for x in self.voiceChannels],
-            "QueueId": self.queueId,
-            "ScoreReported": self.scoreReported,
-        }
-
-    def _generate_name_pass(self):
-        return room_pass[random.randrange(len(room_pass))]
-
-class OrderedSet(collections.MutableSet):
-    def __init__(self, iterable=None):
-        self.end = end = []
-        end += [None, end, end]  # sentinel node for doubly linked list
-        self.map = {}  # key --> [key, prev, next]
-        if iterable is not None:
-            self |= iterable
-
-    def __len__(self):
-        return len(self.map)
-
-    def __contains__(self, key):
-        return key in self.map
-
-    def add(self, key):
-        if key not in self.map:
-            end = self.end
-            curr = end[1]
-            curr[2] = end[1] = self.map[key] = [key, curr, end]
-
-    def discard(self, key):
-        if key in self.map:
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
-
-    def __iter__(self):
-        end = self.end
-        curr = end[2]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[2]
-
-    def __reversed__(self):
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-
-    def __repr__(self):
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
-
-    def __eq__(self, other):
-        if isinstance(other, OrderedSet):
-            return len(self) == len(other) and list(self) == list(other)
-        return set(self) == set(other)
-
-
-class PlayerQueue(Queue):
-    def _init(self, maxsize):
-        self.queue = OrderedSet()
-
-    def _put(self, item):
-        self.queue.add(item)
-
-    def _get(self):
-        return self.queue.pop()
-
-    def _remove(self, value):
-        self.queue.remove(value)
-
-    def __contains__(self, item):
-        with self.mutex:
-            return item in self.queue
-
-class SixMansQueue:
-    def __init__(self, name, guild, channels, points, players, gamesPlayed):
-        self.id = uuid.uuid4().int
-        self.name = name
-        self.queue = PlayerQueue()
-        self.guild = guild
-        self.channels = channels
-        self.points = points
-        self.players = players
-        self.gamesPlayed = gamesPlayed
-        self.activeJoinLog = {}
-
-    def _put(self, player):
-        self.queue.put(player)
-        self.activeJoinLog[player.id] = datetime.datetime.now()
-
-    def _get(self):
-        player = self.queue.get()
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-        return player
-
-    def _remove(self, player):
-        self.queue._remove(player)
-        try:
-            del self.activeJoinLog[player.id]
-        except:
-            pass
-
-    def _queue_full(self):
-        return self.queue.qsize() >= team_size
-
-    def _to_dict(self):
-        return {
-            "Name": self.name,
-            "Channels": [x.id for x in self.channels],
-            "Points": self.points,
-            "Players": self.players,
-            "GamesPlayed": self.gamesPlayed
-        }
-
-# TODO: Load from file?
-room_pass = [
-    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-    'vulcan', 'zippy',
-
-    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-    'dunkhouse', 'throwback', 'underpass', 'badlands',
-
-    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-    'stormwatch', 'tora', 'trigon', 'wetpaint',
-
-    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-    'voltaic', 'wonderment', 'zomba',
-
-    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-    'platinum', 'diamond',
-
-    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-    'doubles', 'standard', 'chaos',
-
-    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-]
+    async def _save_team_selection(self, ctx, team_selection):
+        await self.config.guild(ctx.guild).DefaultTeamSelection.set(team_selection)
+    
+    async def _team_selection(self, guild):
+        return await self.config.guild(guild).DefaultTeamSelection()
