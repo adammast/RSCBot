@@ -778,12 +778,6 @@ class SixMans(commands.Cog):
         await ctx.channel.send(embed=embed)
 
     @commands.guild_only()
-    @commands.command(aliases=["rc"])
-    async def recolor(self, ctx):
-        game, six_mans_queue = await self._get_info(ctx)
-        await game.color_embed_for_winners('blue')
-
-    @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def process_shuffle_vote(self, reaction, user):
         message = reaction.message
