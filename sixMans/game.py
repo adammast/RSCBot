@@ -67,7 +67,7 @@ class Game:
             await blue_vc.set_permissions(player, connect=True)
             await orange_vc.set_permissions(player, connect=False)
             try:
-                await player.move_to(blue)
+                await player.move_to(blue_vc)
             except:
                 pass
 
