@@ -465,6 +465,7 @@ class SixMans(commands.Cog):
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
+        await game.color_embed_for_winners(winner)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 

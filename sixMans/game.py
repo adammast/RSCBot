@@ -208,6 +208,15 @@ class Game:
 
         return embed
 
+    async def color_embed_for_winners(self, winner):
+        if winner == 'blue':
+            color = discord.Colour.blue()
+        elif winner == 'orange':
+            color = discord.Colour.orange()
+
+        embed = self.teams_message.embeds[0]
+        await self.teams_message.edit(embed=embed)
+
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None
         target_value = None
