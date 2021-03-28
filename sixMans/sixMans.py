@@ -409,7 +409,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
             return
 
-        await game.color_embed_for_winners(winner)
+        await game.color_embed_for_winners(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
@@ -466,7 +466,7 @@ class SixMans(commands.Cog):
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
-        await game.color_embed_for_winners(winner)
+        await game.color_embed_for_winners(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
@@ -777,6 +777,11 @@ class SixMans(commands.Cog):
 
         await ctx.channel.send(embed=embed)
 
+    @commands.guild_only()
+    @commands.command(aliases=["rc"])
+    async def recolor(self, ctx):
+        game, six_mans_queue = await self._get_info(ctx)
+        await game.color_embed_for_winners('blue')
 
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
@@ -1097,12 +1102,16 @@ class SixMans(commands.Cog):
         else:
             return print("you messed up fool")
 
+        
+        print("# here >> 1 created game channels: {}".format(game.textChannel))
         # Display teams
         if team_selection in ['shuffle', 'random']:
             embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
             lobby_info_message = await self._display_teams(game, embed)
             if team_selection == 'shuffle':
                 await lobby_info_message.add_reaction(self.SHUFFLE_REACT)
+        
+        print("# here >> 2 created game channels: {}".format(game.textChannel))
         
         self.games.append(game)
         await self._save_games(ctx, self.games)
