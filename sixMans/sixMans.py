@@ -831,6 +831,25 @@ class SixMans(commands.Cog):
                 lobby_info_message = await self._display_teams(game, embed)
                 await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
 
+    @commands.guild_only()
+    @commands.Cog.listener("on_guild_channel_delete")
+    async def on_guild_channel_delete(self, channel):
+        """If a queue channel is deleted, removes it from the queue class instance. If the last queue channel is deleted, the channel is replaced."""
+        if type(channel) != discord.TextChannel:
+            return
+        await self._pre_load_queues_from_guild(channel.guild)
+        queue = None
+        for queue in self.queues:
+            if channel in queue.channels:
+                queue.channels.remove(channel)
+                break
+        if queue.channels:
+            return
+        
+        clone = await channel.clone()
+        await clone.send(":grey_exclamation: This channel has been created because the last textChannel for the **{}** queue has been deleted.".format(queue.name))
+        queue.channels.append(clone)
+        await self._save_queues(ctx, self.queues)
 
     async def has_perms(self, ctx):
         helper_role = await self._helper_role(ctx.guild)
@@ -1102,16 +1121,12 @@ class SixMans(commands.Cog):
         else:
             return print("you messed up fool")
 
-        
-        print("# here >> 1 created game channels: {}".format(game.textChannel))
         # Display teams
         if team_selection in ['shuffle', 'random']:
             embed = await self._get_game_info_embed(ctx, game, six_mans_queue)
             lobby_info_message = await self._display_teams(game, embed)
             if team_selection == 'shuffle':
                 await lobby_info_message.add_reaction(self.SHUFFLE_REACT)
-        
-        print("# here >> 2 created game channels: {}".format(game.textChannel))
         
         self.games.append(game)
         await self._save_games(ctx, self.games)
@@ -1164,7 +1179,6 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
 
-        # here
         game = Game(
             players,
             six_mans_queue,
@@ -1254,9 +1268,30 @@ class SixMans(commands.Cog):
             player_list = "No players currently in the queue"
         return player_list
 
+    # here
+    async def _pre_load_queues_from_guild(self, guild):
+        if self.queues is None or self.queues == []:
+            queues = await self._queues(guild)
+            self.queues = []
+            for key, value in queues.items():
+                queue_channels = [guild.get_channel(x) for x in value["Channels"]]
+                queue_name = value["Name"]
+                for queue in self.queues:
+                    if queue.name == queue_name:
+                        await queue.channels[0].send(":x: There is already a queue set up with the name: {0}".format(queue.name))
+                        return
+                    for channel in queue_channels:
+                        if channel in queue.channels:
+                            await channel.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                            return
+
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
+                six_mans_queue.id = int(key)
+                self.queues.append(six_mans_queue)
+
     async def _pre_load_queues(self, ctx):
         if self.queues is None or self.queues == []:
-            queues = await self._queues(ctx)
+            queues = await self._queues(ctx.guild)
             self.queues = []
             for key, value in queues.items():
                 queue_channels = [ctx.guild.get_channel(x) for x in value["Channels"]]
@@ -1308,8 +1343,8 @@ class SixMans(commands.Cog):
             game_dict[game.id] = game._to_dict()
         await self.config.guild(ctx.guild).Games.set(game_dict)
 
-    async def _queues(self, ctx):
-        return await self.config.guild(ctx.guild).Queues()
+    async def _queues(self, guild):
+        return await self.config.guild(guild).Queues()
 
     async  def _save_queues(self, ctx, queues):
         queue_dict = {}
