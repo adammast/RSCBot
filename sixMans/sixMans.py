@@ -841,7 +841,9 @@ class SixMans(commands.Cog):
             return
         
         clone = await channel.clone()
-        await clone.send(":grey_exclamation: This channel has been created because the last textChannel for the **{}** queue has been deleted.".format(queue.name))
+        helper_role = await self._helper_role(channel.guild)
+        helper_ping = " {}".format(helper_role.mention) if helper_role else ""
+        await clone.send(":grey_exclamation:{} This channel has been created because the last textChannel for the **{}** queue has been deleted.".format(helper_ping, queue.name))
         queue.channels.append(clone)
         await self._save_queues(channel.guild, self.queues)
 
@@ -1263,7 +1265,6 @@ class SixMans(commands.Cog):
             player_list = "No players currently in the queue"
         return player_list
 
-    # here
     async def _pre_load_queues_from_guild(self, guild):
         if self.queues is None or self.queues == []:
             queues = await self._queues(guild)
