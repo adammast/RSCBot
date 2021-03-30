@@ -103,9 +103,38 @@ class ModeratorLink(commands.Cog):
                 await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
                 await linked_guild_log.send("**{}** (id: {}) has been unbanned. [initiated from **{}**]".format(user.mention, user.id, guild.name))
 
-    # @commands.Cog.listener("on_member_join")
-    # async def on_member_join(self, member):
-    #     mutual_guilds = def _member_mutual_guilds()
+    @commands.Cog.listener("on_member_join")
+    async def on_member_join(self, member):
+        """Adds shared roles upon member join if they are found in a guild within the network."""
+        mutual_guilds = self._member_mutual_guilds(member)
+        shared_role_names = await self._get_shared_role_names(member.guild)
+        event_log_channel = await self._event_log_channel(member.guild)
+        if not event_log_channel or not shared_role_names:
+            return
+    
+        # check each mutual guild with event logs set
+        for guild in mutual_guilds:
+            guild_event_log_channel = await self._event_log_channel(guild)
+            if guild_event_log_channel:
+                guild_member = self._guild_member_from_id(guild, member.id)
+
+                # match nickname
+                nick = guild_member.nick if guild_member.nick else guild_member.name
+                nick = nick[nick.index(' | ')+3:] if ' | ' in nick else nick
+                await guild_member.edit(nick=nick)
+                
+                # if member has shared role
+                for guild_member_role in guild_member.roles:
+                    if guild_member_role.name in shared_role_names:
+                        role_to_add = self._guild_sister_role(member.guild, guild_member_role)
+                        if role_to_add not in member.roles:
+                            await member.add_roles(role_to_add)
+                            await event_log_channel.send(
+                                "{} was assigned the shared role, {} role upon member join [found on member in **{}**]".format(
+                                    member.mention, role_to_add, guild.name
+                                ))
+            return True
+                            
 
 
     async def _process_role_update(self, before, after):
