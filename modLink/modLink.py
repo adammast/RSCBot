@@ -103,9 +103,9 @@ class ModeratorLink(commands.Cog):
                 await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
                 await linked_guild_log.send("**{}** (id: {}) has been unbanned. [initiated from **{}**]".format(user.mention, user.id, guild.name))
 
-    @commands.Cog.listener("on_member_join")
-    async def on_member_join(self, member):
-        mutual_guilds = def _member_mutual_guilds()
+    # @commands.Cog.listener("on_member_join")
+    # async def on_member_join(self, member):
+    #     mutual_guilds = def _member_mutual_guilds()
 
 
     async def _process_role_update(self, before, after):
