@@ -33,6 +33,9 @@ class Game:
         if text_channel and voice_channels:
             self.textChannel = text_channel
             self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
+        else:
+            self.textChannel = None
+            self.voiceChannels = None
     
     async def create_game_channels(self, six_mans_queue, category=None):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
@@ -67,7 +70,7 @@ class Game:
             await blue_vc.set_permissions(player, connect=True)
             await orange_vc.set_permissions(player, connect=False)
             try:
-                await player.move_to(blue)
+                await player.move_to(blue_vc)
             except:
                 pass
 
@@ -207,6 +210,18 @@ class Game:
         embed.set_footer(text="Game ID: {}".format(self.id))
 
         return embed
+      
+    async def color_embed_for_winners(self, winner):
+        if winner == 'blue':
+            color = discord.Colour.blue()
+        elif winner == 'orange':
+            color = discord.Colour.orange()
+
+        embed = self.teams_message.embeds[0]
+        embed_dict = embed.to_dict()
+        embed_dict['color'] = color.value
+        embed = discord.Embed.from_dict(embed_dict)
+        await self.teams_message.edit(embed=embed)
 
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None

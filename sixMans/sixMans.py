@@ -111,7 +111,7 @@ class SixMans(commands.Cog):
         points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
         six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0)
         self.queues.append(six_mans_queue)
-        await self._save_queues(ctx, self.queues)
+        await self._save_queues(ctx.guild, self.queues)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -146,7 +146,7 @@ class SixMans(commands.Cog):
         six_mans_queue.name = new_name
         six_mans_queue.points = {pp_play_key: points_per_play, pp_win_key: points_per_win}
         six_mans_queue.channels = queue_channels
-        await self._save_queues(ctx, self.queues)
+        await self._save_queues(ctx.guild, self.queues)
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -157,7 +157,7 @@ class SixMans(commands.Cog):
         for queue in self.queues:
             if queue.name == queue_name:
                 self.queues.remove(queue)
-                await self._save_queues(ctx, self.queues)
+                await self._save_queues(ctx.guild, self.queues)
                 await ctx.send("Done")
                 return
         await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
@@ -409,6 +409,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
             return
 
+        await game.color_embed_for_winners(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
@@ -465,6 +466,7 @@ class SixMans(commands.Cog):
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
+        await game.color_embed_for_winners(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
@@ -775,7 +777,6 @@ class SixMans(commands.Cog):
 
         await ctx.channel.send(embed=embed)
 
-
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def process_shuffle_vote(self, reaction, user):
@@ -823,6 +824,28 @@ class SixMans(commands.Cog):
                 embed = await self._get_updated_game_info_embed(guild, game, queue, invalid=False, prefix='?')
                 lobby_info_message = await self._display_teams(game, embed)
                 await lobby_info_msg.add_reaction(self.SHUFFLE_REACT)
+
+    @commands.guild_only()
+    @commands.Cog.listener("on_guild_channel_delete")
+    async def on_guild_channel_delete(self, channel):
+        """If a queue channel is deleted, removes it from the queue class instance. If the last queue channel is deleted, the channel is replaced."""
+        if type(channel) != discord.TextChannel:
+            return
+        await self._pre_load_queues_from_guild(channel.guild)
+        queue = None
+        for queue in self.queues:
+            if channel in queue.channels:
+                queue.channels.remove(channel)
+                break
+        if queue.channels:
+            return
+        
+        clone = await channel.clone()
+        helper_role = await self._helper_role(channel.guild)
+        helper_ping = " {}".format(helper_role.mention) if helper_role else ""
+        await clone.send(":grey_exclamation:{} This channel has been created because the last textChannel for the **{}** queue has been deleted.".format(helper_ping, queue.name))
+        queue.channels.append(clone)
+        await self._save_queues(channel.guild, self.queues)
 
 
     async def has_perms(self, ctx):
@@ -923,7 +946,7 @@ class SixMans(commands.Cog):
         six_mans_queue.gamesPlayed += 1
 
         await self._save_scores(ctx, _scores)
-        await self._save_queues(ctx, self.queues)
+        await self._save_queues(ctx.guild, self.queues)
         await self._save_players(ctx, _players)
         await self._save_games_played(ctx, _games_played)
 
@@ -1153,7 +1176,6 @@ class SixMans(commands.Cog):
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
 
-        # here
         game = Game(
             players,
             six_mans_queue,
@@ -1243,9 +1265,29 @@ class SixMans(commands.Cog):
             player_list = "No players currently in the queue"
         return player_list
 
+    async def _pre_load_queues_from_guild(self, guild):
+        if self.queues is None or self.queues == []:
+            queues = await self._queues(guild)
+            self.queues = []
+            for key, value in queues.items():
+                queue_channels = [guild.get_channel(x) for x in value["Channels"]]
+                queue_name = value["Name"]
+                for queue in self.queues:
+                    if queue.name == queue_name:
+                        await queue.channels[0].send(":x: There is already a queue set up with the name: {0}".format(queue.name))
+                        return
+                    for channel in queue_channels:
+                        if channel in queue.channels:
+                            await channel.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
+                            return
+
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"])
+                six_mans_queue.id = int(key)
+                self.queues.append(six_mans_queue)
+
     async def _pre_load_queues(self, ctx):
         if self.queues is None or self.queues == []:
-            queues = await self._queues(ctx)
+            queues = await self._queues(ctx.guild)
             self.queues = []
             for key, value in queues.items():
                 queue_channels = [ctx.guild.get_channel(x) for x in value["Channels"]]
@@ -1297,15 +1339,15 @@ class SixMans(commands.Cog):
             game_dict[game.id] = game._to_dict()
         await self.config.guild(ctx.guild).Games.set(game_dict)
 
-    async def _queues(self, ctx):
-        return await self.config.guild(ctx.guild).Queues()
+    async def _queues(self, guild):
+        return await self.config.guild(guild).Queues()
 
-    async  def _save_queues(self, ctx, queues):
+    async def _save_queues(self, guild, queues):
         queue_dict = {}
         for queue in queues:
-            if queue.guild == ctx.guild:
+            if queue.guild == guild:
                 queue_dict[queue.id] = queue._to_dict()
-        await self.config.guild(ctx.guild).Queues.set(queue_dict)
+        await self.config.guild(guild).Queues.set(queue_dict)
 
     async def _scores(self, ctx):
         return await self.config.guild(ctx.guild).Scores()
