@@ -786,6 +786,7 @@ class SixMans(commands.Cog):
         
         # Find Game and Queue
         game, queue = self._get_game_and_queue(channel)
+        
         if not game or message != game.teams_message:
             return False
 
