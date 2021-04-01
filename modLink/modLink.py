@@ -47,14 +47,6 @@ class ModeratorLink(commands.Cog):
         except:
             await ctx.send(":x: Event log channel not set")
     
-    @commands.guild_only()
-    @commands.command(aliases=['nc'])
-    @checks.admin_or_permissions(manage_guild=True)
-    async def GetNameComponents(self, ctx):
-        member = ctx.message.author
-        prefix, pname, rewards = self._get_name_components(member)
-        await ctx.send("Prefix: {}\nPlayer Name: {}\nRewards: {}".format(prefix, pname, rewards))
-
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
