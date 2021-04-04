@@ -145,7 +145,6 @@ class ModeratorLink(commands.Cog):
                         ))
                 
                 return
-                            
 
 
     async def _process_role_update(self, before, after):
