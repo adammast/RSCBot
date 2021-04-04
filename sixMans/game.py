@@ -212,10 +212,13 @@ class Game:
         return embed
       
     async def color_embed_for_winners(self, winner):
+        winner = winner.lower()
         if winner == 'blue':
             color = discord.Colour.blue()
         elif winner == 'orange':
             color = discord.Colour.orange()
+        else:
+            color = discord.Colour.green()  # catch all for errors hopefully
 
         embed = self.teams_message.embeds[0]
         embed_dict = embed.to_dict()
