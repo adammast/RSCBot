@@ -92,6 +92,9 @@ class ModeratorLink(commands.Cog):
             
     @commands.Cog.listener("on_member_ban")
     async def on_member_ban(self, guild, user):
+        """Upon a member ban, members in the guild network will be banned automatically."""
+        if not await self._event_log_channel(guild):
+            return
         for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
             is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
@@ -101,6 +104,9 @@ class ModeratorLink(commands.Cog):
     
     @commands.Cog.listener("on_member_unban")
     async def on_member_unban(self, guild, user):
+        """Upon a member unban, members in the guild network will be unbanned automatically."""
+        if not await self._event_log_channel(guild):
+            return
         for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
             is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
