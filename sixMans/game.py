@@ -48,9 +48,9 @@ class Game:
         await self.textChannel.set_permissions(self.guild.default_role, view_channel=False, read_messages=False)
         for player in self.players:
             await self.textChannel.set_permissions(player, read_messages=True)
-        blue_vc = await self.guild.create_voice_channel("{} | {} Blue Team".format(code, six_mans_queue.name), category=category)
+        blue_vc = await self.guild.create_voice_channel("{} | {} Blue Team".format(code, six_mans_queue.name), permissions_synced=True, category=category)
         await blue_vc.set_permissions(self.guild.default_role, connect=False)
-        oran_vc = await self.guild.create_voice_channel("{} | {} Orange Team".format(code, six_mans_queue.name),  permissions_synced=True, category=category)
+        oran_vc = await self.guild.create_voice_channel("{} | {} Orange Team".format(code, six_mans_queue.name), permissions_synced=True, category=category)
         await oran_vc.set_permissions(self.guild.default_role, connect=False)
         
         # manually add helper role perms if there is not an associated 6mans category
@@ -65,10 +65,11 @@ class Game:
         self.players.remove(player)
         self.blue.add(player)
 
+        blue_vc, orange_vc = self.voiceChannels
+        await blue_vc.set_permissions(player, connect=True)
+        await orange_vc.set_permissions(player, connect=False)
+
         if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=True)
-            await orange_vc.set_permissions(player, connect=False)
             try:
                 await player.move_to(blue_vc)
             except:
@@ -78,10 +79,11 @@ class Game:
         self.players.remove(player)
         self.orange.add(player)
 
+        blue_vc, orange_vc = self.voiceChannels
+        await blue_vc.set_permissions(player, connect=False)
+        await orange_vc.set_permissions(player, connect=True)
+
         if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=False)
-            await orange_vc.set_permissions(player, connect=True)
             try:
                 await player.move_to(orange_vc)
             except:
