@@ -788,7 +788,7 @@ class SixMans(commands.Cog):
         # Find Game and Queue
         game, queue = self._get_game_and_queue(channel)
         
-        if message != game.teams_message:
+        if not game or message != game.teams_message:
             return False
 
         team_selection_mode = await self._team_selection(user.guild)

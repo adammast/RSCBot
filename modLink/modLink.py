@@ -12,6 +12,11 @@ class ModeratorLink(commands.Cog):
         self.config.register_guild(**defaults)
         self.bot = bot
 
+        self.TROPHY_EMOJI = "\U0001F3C6" # :trophy:
+        self.MEDAL_EMOJI = "\U0001F3C5" # :medal:
+        self.STAR_EMOJI = "\U00002B50" # :star:
+        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.MEDAL_EMOJI, self.STAR_EMOJI]
+
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -87,6 +92,9 @@ class ModeratorLink(commands.Cog):
             
     @commands.Cog.listener("on_member_ban")
     async def on_member_ban(self, guild, user):
+        """Upon a member ban, members in the guild network will be banned automatically."""
+        if not await self._event_log_channel(guild):
+            return
         for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
             is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
@@ -96,6 +104,9 @@ class ModeratorLink(commands.Cog):
     
     @commands.Cog.listener("on_member_unban")
     async def on_member_unban(self, guild, user):
+        """Upon a member unban, members in the guild network will be unbanned automatically."""
+        if not await self._event_log_channel(guild):
+            return
         for linked_guild in self.bot.guilds:
             linked_guild_log = await self._event_log_channel(linked_guild)
             is_banned = user in (banned_entry.user for banned_entry in await linked_guild.bans())
@@ -103,9 +114,43 @@ class ModeratorLink(commands.Cog):
                 await linked_guild.unban(user, reason="Unbanned from {}.".format(guild.name))
                 await linked_guild_log.send("**{}** (id: {}) has been unbanned. [initiated from **{}**]".format(user.mention, user.id, guild.name))
 
-    # @commands.Cog.listener("on_member_join")
-    # async def on_member_join(self, member):
-    #     mutual_guilds = def _member_mutual_guilds()
+    @commands.Cog.listener("on_member_join")
+    async def on_member_join(self, member):
+        """Updates member nickname and shared roles when they join the discord guild from their active status in the guild network."""
+        mutual_guilds = self._member_mutual_guilds(member)
+        shared_role_names = await self._get_shared_role_names(member.guild)
+        event_log_channel = await self._event_log_channel(member.guild)
+        if not event_log_channel or not shared_role_names:
+            return
+    
+        # check each mutual guild with event logs set
+        mutual_guilds.remove(member.guild)
+        for guild in mutual_guilds:
+            guild_event_log_channel = await self._event_log_channel(guild)
+            if guild_event_log_channel:
+                guild_member = self._guild_member_from_id(guild, member.id)
+                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
+
+                if guild_nick != member.name:
+                    await member.edit(nick=guild_nick)
+                    await event_log_channel.send("{} (**{}**) has had thier nickname set to **{}** upon joining the server [discovered from **{}**]".format(member.mention, member.name, guild_nick, guild.name))
+                
+                # if member has shared role
+                member_shared_roles = []
+                for guild_member_role in guild_member.roles:
+                    if guild_member_role.name in shared_role_names:
+                        sis_role = self._guild_sister_role(member.guild, guild_member_role)
+                        if sis_role:
+                            member_shared_roles.append(sis_role)
+                
+                if member_shared_roles:
+                    await member.add_roles(*member_shared_roles)
+                    await event_log_channel.send(
+                        "{} had one or more shared roles assigned upon joining this server: {} [discovered from **{}**]".format(
+                            member.mention, ', '.join(role.mention for role in member_shared_roles), guild.name
+                        ))
+                
+                return
 
 
     async def _process_role_update(self, before, after):
@@ -181,15 +226,11 @@ class ModeratorLink(commands.Cog):
         return None
 
     async def _process_nickname_update(self, before, after):
-        before_name = before.nick if before.nick else before.name
-        after_name = after.nick if after.nick else after.name
-        
+        b_prefix, b_nick, b_rewards = self._get_name_components(before)
+        a_prefix, a_nick, a_rewards = self._get_name_components(after)
         event_log_channel = await self._event_log_channel(before.guild)
 
-        before_nick = before_name[before_name.index(' | ')+3:] if ' | ' in before_name else before_name
-        after_nick = after_name[after_name.index(' | ')+3:] if ' | ' in after_name else after_name
-
-        if before_nick == after_nick or not event_log_channel:
+        if b_nick == a_nick or not event_log_channel:
             return
         
         mutual_guilds = self._member_mutual_guilds(before) # before.mutual_guilds not working
@@ -198,21 +239,40 @@ class ModeratorLink(commands.Cog):
         for guild in mutual_guilds:
             channel = await self._event_log_channel(guild)
             if channel:
-                member = self._guild_member_from_id(guild, before.id)
-                name = member.nick if member.nick else member.name
+                guild_member = self._guild_member_from_id(guild, before.id)
+                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
                 try:
-                    prefix = name[0:name.index(' | ')] if ' | ' in name else ''
-                    guild_before_name = member.nick if member.nick else member.name
-                    guild_before_name = guild_before_name[guild_before_name.index(' | ')+3:] if ' | ' in guild_before_name else guild_before_name
-
-                    if guild_before_name != after_nick:
-                        if prefix:
-                            await member.edit(nick='{} | {}'.format(prefix, after_nick))
-                        else:
-                            await member.edit(nick=after_nick)
-                        await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(member.mention, guild_before_name, after_nick, before.guild.name))
+                    if guild_nick != a_nick:
+                        new_guild_name = self._generate_new_name(guild_prefix, a_nick, guild_rewards)
+                        await guild_member.edit(nick=new_guild_name)
+                        await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(guild_member.mention, guild_nick, a_nick, before.guild.name))
                 except:
                     pass
+
+    def _get_name_components(self, member: discord.Member):
+        if member.nick:
+            name = member.nick
+        else:
+            return "", member.name, ""
+        prefix = name[0:name.index(' | ')] if ' | ' in name else ''
+        if prefix:
+            name = name[name.index(' | ')+3:]
+        player_name = ""
+        rewards = ""
+        for char in name[::-1]:
+            if char not in self.LEAGUE_REWARDS:
+                break
+            rewards = char + rewards
+
+        player_name = name.replace(" " + rewards, "") if rewards else name
+
+        return prefix.strip(), player_name.strip(), rewards.strip()
+
+    def _generate_new_name(self, prefix, name, rewards):
+        new_name = "{} | {}".format(prefix, name) if prefix else name
+        if rewards:
+            new_name += " {}".format(rewards)
+        return new_name
 
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
