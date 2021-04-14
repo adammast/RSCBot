@@ -33,7 +33,7 @@ defaults = {
     "HelperRole": None,
     "AutoMove": False,
     "QLobby": None,
-    "DefaultTeamSelection": "shuffle",
+    "DefaultTeamSelection": "random",
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -665,10 +665,10 @@ class SixMans(commands.Cog):
         
         Valid team selecion methods options:
         - **random**: selects random teams
-        - shuffle: selects random teams, but allows re-shuffling teams after they have been set
-        - captains: selects a captain for each team
-        - balanced: creates balanced teams from all participating players
-        - option: choose from the methods listed above when a queue pops
+        - **shuffle**: selects random teams, but allows re-shuffling teams after they have been set
+        - **captains**: selects a captain for each team
+        - **balanced**: creates balanced teams from all participating players
+        - **option**: choose from the methods listed above when a queue pops
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
