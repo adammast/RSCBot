@@ -82,10 +82,11 @@ class Game:
         self.players.remove(player)
         self.blue.add(player)
 
+        blue_vc, orange_vc = self.voiceChannels
+        await blue_vc.set_permissions(player, connect=True)
+        await orange_vc.set_permissions(player, connect=False)
+
         if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=True)
-            await orange_vc.set_permissions(player, connect=False)
             try:
                 await player.move_to(blue_vc)
             except:
@@ -95,10 +96,11 @@ class Game:
         self.players.remove(player)
         self.orange.add(player)
 
+        blue_vc, orange_vc = self.voiceChannels
+        await blue_vc.set_permissions(player, connect=False)
+        await orange_vc.set_permissions(player, connect=True)
+
         if self.automove:
-            blue_vc, orange_vc = self.voiceChannels
-            await blue_vc.set_permissions(player, connect=False)
-            await orange_vc.set_permissions(player, connect=True)
             try:
                 await player.move_to(orange_vc)
             except:
