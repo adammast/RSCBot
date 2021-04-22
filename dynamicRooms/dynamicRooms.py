@@ -8,7 +8,7 @@ defaults = {"DynamicCategories": [], "DynamicRooms": [], "HideoutCategories": []
 
 
 class DynamicRooms(commands.Cog):
-    """Allows configuration of setting up dynamic rooms"""
+    """Allows configuration of setting up dynamic rooms and hideout"""
 
     def __init__(self, bot):
         self.config = Config.get_conf(self, identifier=1234567892, force_registration=True)
@@ -57,7 +57,7 @@ class DynamicRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addDynamicRoom(self, ctx, voice_channel: discord.VoiceChannel):
-        """Sets a voice channel to be dynamic -- independent from a dynamic category.
+        """Sets a voice channel to be dynamic. This is independent from a dynamic category.
         """
         categories = await self._get_dynamic_categories(ctx.guild)
         dynamic_vcs = await self._get_dynamic_rooms(ctx.guild)
@@ -95,7 +95,7 @@ class DynamicRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def addHideoutCategory(self, ctx, category: discord.CategoryChannel):
-        """Sets existing category where each contained voice channel will become a dynamic voice channel.
+        """Sets existing category where each contained voice channel will be cloned and hidden when it reaches its capacity.
         """
         categories = await self._get_hideout_categories(ctx.guild)
         categories.append(category.id)
@@ -107,7 +107,7 @@ class DynamicRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearHideoutCategories(self, ctx):
-        """Disables dynamic room behavior of all categories.
+        """Disables hideout room behavior of all hideout categories.
         """
         await self._save_hideout_categories(ctx.guild, [])
         await ctx.send("Done")
@@ -116,7 +116,7 @@ class DynamicRooms(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def getHideoutCategories(self, ctx):
-        """View all categories that are configured for dynamic room management.
+        """View all categories that are configured for hideout room management.
         """
         categories = await self._get_hideout_categories(ctx.guild)
         if not categories:
@@ -125,9 +125,11 @@ class DynamicRooms(commands.Cog):
         message = "The following categories have been set as dynamic:\n - " + "\n - ".join(self._get_category_name(ctx, c) for c in categories)
         await ctx.send(message)
 
+    # Hide
     @commands.command(aliases=['hideme', 'hideus'])
     @commands.guild_only()
     async def hide(self, ctx):
+        """Hides the voice channel the invoker currently occupies from other members in the guild."""
         await ctx.message.delete()
         member = ctx.message.author
         if not member.voice:
@@ -270,13 +272,6 @@ class DynamicRooms(commands.Cog):
 
     async def _get_hideout_categories(self, guild):
         return await self.config.guild(guild).HideoutCategories()
-
-    # Rooms that hide when full - independent from category
-    # async def _save_hideout_rooms(self, guild, vcs):
-    #     await self.config.guild(guild).HideoutRooms.set(vcs)
-
-    # async def _get_hideout_rooms(self, guild):
-    #    return await self.config.guild(guild).HideoutRooms()
 
     # Rooms that hide upon command (<p>hide) => maybe merge with hideout rooms
     async def _save_hiding(self, guild, hidden_rooms):
