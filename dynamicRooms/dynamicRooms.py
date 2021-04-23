@@ -125,6 +125,7 @@ class DynamicRooms(commands.Cog):
         message = "The following categories have been set as dynamic:\n - " + "\n - ".join(self._get_category_name(ctx, c) for c in categories)
         await ctx.send(message)
 
+
     # Hide
     @commands.command(aliases=['hideme', 'hideus'])
     @commands.guild_only()
@@ -141,6 +142,11 @@ class DynamicRooms(commands.Cog):
         else:
             await member.voice.channel.edit(name='no')
         
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def cp(self, ctx, voice_channel: discord.VoiceChannel):
+        self._get_channel_permissions(voice_channel)
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -235,7 +241,15 @@ class DynamicRooms(commands.Cog):
 
         # hide current vc
         await vc.set_permissions(vc.guild.default_role, view_channel=False)
-        await vc.edit(name="{} (hidden)".format(vc.name))
+
+        cant_view_overwrite = discord.PermissionOverwrite(view_channel=False)
+        voice_overwrites = {
+            vc.guild.default_role: cant_view_overwrite
+        }
+        for role in vc.overwrites.keys():
+            voice_overwrites[role] = cant_view_overwrite
+            
+        await vc.edit(name="{} (hidden)".format(vc.name), overwrites=voice_overwrites)
 
         # update hiding vc list
         hiding_rooms = await self._get_hiding(vc.guild)
