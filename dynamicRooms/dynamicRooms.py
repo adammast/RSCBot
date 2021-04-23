@@ -307,6 +307,7 @@ class DynamicRooms(commands.Cog):
     async def _get_hiding(self, guild):
         return await self.config.guild(guild).Hiding()
     
+    # hide vc command settings
     async def _enable_hide_vcs(self, guild):
         await self.config.guild(guild).HideVCsEnabled.set(True)
 
