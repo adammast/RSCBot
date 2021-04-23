@@ -4,7 +4,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"DynamicCategories": [], "DynamicRooms": [], "HideoutCategories": [], "Hiding": []}
+defaults = {"DynamicCategories": [], "DynamicRooms": [], "HideoutCategories": [], "Hiding": [], "HideVCsEnabled": False}
 
 
 class DynamicRooms(commands.Cog):
@@ -125,13 +125,31 @@ class DynamicRooms(commands.Cog):
         message = "The following categories have been set as dynamic:\n - " + "\n - ".join(self._get_category_name(ctx, c) for c in categories)
         await ctx.send(message)
 
+    # hide command
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def toggleHideoutVCs(self, ctx):
+        """Enables or disables the `[p]hide` command"""
+        was_enabled = await self._is_hide_enabled(ctx.guild)
+        
+        if was_enabled:
+            await self._disable_hide_vcs(ctx.guild)
+            action = 'disabled'
+        else:
+            await self._enable_hide_vcs(ctx.guild)
+            action = 'enabled'
 
-    # Hide
+        await ctx.send("The `{}hide` command is **{}**.".format(ctx.prefix, action))
+        
     @commands.command(aliases=['hideme', 'hideus'])
     @commands.guild_only()
     async def hide(self, ctx):
         """Hides the voice channel the invoker currently occupies from other members in the guild."""
         await ctx.message.delete()
+        if not await self._is_hide_enabled(ctx.guild):
+            return 
+
         member = ctx.message.author
         if not member.voice:
             await ctx.send("{}, you must be connected to a voice channel for that command to work.".format(member.mention))
@@ -142,11 +160,6 @@ class DynamicRooms(commands.Cog):
         else:
             await member.voice.channel.edit(name='no')
         
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def cp(self, ctx, voice_channel: discord.VoiceChannel):
-        self._get_channel_permissions(voice_channel)
 
     @commands.Cog.listener("on_voice_state_update")
     async def on_voice_state_update(self, member, before, after):
@@ -248,7 +261,7 @@ class DynamicRooms(commands.Cog):
         }
         for role in vc.overwrites.keys():
             voice_overwrites[role] = cant_view_overwrite
-            
+
         await vc.edit(name="{} (hidden)".format(vc.name), overwrites=voice_overwrites)
 
         # update hiding vc list
@@ -294,3 +307,11 @@ class DynamicRooms(commands.Cog):
     async def _get_hiding(self, guild):
         return await self.config.guild(guild).Hiding()
     
+    async def _enable_hide_vcs(self, guild):
+        await self.config.guild(guild).HideVCsEnabled.set(True)
+
+    async def _disable_hide_vcs(self, guild):
+        await self.config.guild(guild).HideVCsEnabled.set(False)
+
+    async def _is_hide_enabled(self, guild):
+        return await self.config.guild(guild).HideVCsEnabled()
