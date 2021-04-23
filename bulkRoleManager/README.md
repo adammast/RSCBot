@@ -11,6 +11,15 @@ The `bulkRoleManager` cog depends on the `teamManager` cog. Install `teamManager
 <p>load bulkRoleManager
 ```
 
+## Relevant Roles
+
+- League
+- Draft Eligible
+- Free Agent
+- PermFA
+- \<Tier Roles>
+- \<Tier FA Roles>
+
 ## Usage
 
 - `<p>getAllWithRole <role> [getNickname]`
@@ -43,4 +52,3 @@ The `bulkRoleManager` cog depends on the `teamManager` cog. Install `teamManager
 
 - `<p>retire [userList]`
   - Removes all league roles (franchise, tier, free agent, league) and assigns the "Former Player" role. This additionally will clear the user's nickname prefix.
-  

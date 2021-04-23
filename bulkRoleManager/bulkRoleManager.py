@@ -324,6 +324,7 @@ class BulkRoleManager(commands.Cog):
             former_player_role = await self.team_manager_cog.create_role(ctx, former_player_str)
 
         roles_to_remove = [
+            self.team_manager_cog._find_role_by_name(ctx, "Draft Eligible"),
             self.team_manager_cog._find_role_by_name(ctx, "League"),
             self.team_manager_cog._find_role_by_name(ctx, "Free Agent"),
             self.team_manager_cog._find_role_by_name(ctx, self.PERM_FA_ROLE)
