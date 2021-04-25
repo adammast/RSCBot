@@ -12,7 +12,8 @@ class Game:
             helper_role=None,
             automove=False,
             text_channel: discord.TextChannel=None, 
-            voice_channels=None):
+            voice_channels=None,
+            observers=None):
         self.id = uuid.uuid4().int
         self.players = set(players)
         self.captains = []
@@ -22,12 +23,14 @@ class Game:
         self.roomPass = self._generate_name_pass()
         self.queueId = queue.id
         self.scoreReported = False
+        self.game_state = "team selection"
         
         # Optional params
         self.guild = guild
         self.category = category
         self.helper_role = helper_role
         self.automove = automove
+        self.observers = observers if observers else []
 
         self.teams_message = None
         if text_channel and voice_channels:
@@ -36,7 +39,21 @@ class Game:
         else:
             self.textChannel = None
             self.voiceChannels = None
+
+        # attatch listeners to game
+        for observer in self.observers:
+            observer._subject = self
     
+    # @property
+    # def subject_state(self):
+    #     return self.game_state
+
+    async def _notify(self, new_state=None):
+        if new_state:
+            self.game_state = new_state
+        for observer in self.observers:
+            await observer.update(self)
+
     async def create_game_channels(self, six_mans_queue, category=None):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
@@ -91,6 +108,7 @@ class Game:
 
     async def pick_random_teams(self):
         await self.shuffle_players()
+        await self._notify(new_state="ongoing")
 
     async def shuffle_players(self):
         self.blue = set()
@@ -173,6 +191,8 @@ class Game:
             for player in self.orange:
                 await self.add_to_orange(player)
             self.reset_players()
+        
+        await self._notify(new_state="ongoing")
         return teams_complete
 
     def _get_captains_embed(self, pick, guild=None):
@@ -213,6 +233,10 @@ class Game:
 
         return embed
       
+    async def report_winner(self, winner):
+        await self.color_embed_for_winners(winner)
+        await self._notify(new_state="game over")
+
     async def color_embed_for_winners(self, winner):
         winner = winner.lower()
         if winner == 'blue':

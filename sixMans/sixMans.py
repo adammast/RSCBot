@@ -16,11 +16,13 @@ from redbot.core.utils.menus import start_adding_reactions
 from .game import Game
 from .queue import SixMansQueue
 
+debug = False
 team_size = 6
-minimum_game_time = 600     # Seconds (10 Minutes)
-player_timeout_time = 14400 # How long players can be in a queue in seconds (4 Hours)
-loop_time = 5               # How often to check the queues in seconds
-verify_timeout = 15
+minimum_game_time = 600                     # Seconds (10 Minutes)
+player_timeout_time = 14400                 # How long players can be in a queue in seconds (4 Hours)
+loop_time = 5                               # How often to check the queues in seconds
+verify_timeout = 15                         # How long someone has to react to a prompt (seconds)
+channel_sleep_time = 5 if debug else 30     # How long channels will persist after a game's score has been reported (seconds)
 pp_play_key = "Play"
 pp_win_key = "Win"
 player_points_key = "Points"
@@ -33,7 +35,7 @@ defaults = {
     "HelperRole": None,
     "AutoMove": False,
     "QLobby": None,
-    "DefaultTeamSelection": "shuffle",
+    "DefaultTeamSelection": "random",
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -53,6 +55,7 @@ class SixMans(commands.Cog):
         self.SHUFFLE_REACT = "\U0001F500" # :twisted_rightwards_arrows:
         self.WHITE_X_REACT = "\U0000274E" # :negative_squared_cross_mark:
         self.WHITE_CHECK_REACT = "\U00002705" # :white_check_mark:
+        self.observers = set()
 
 
     def cog_unload(self):
@@ -327,7 +330,7 @@ class SixMans(commands.Cog):
         try:
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
-                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in 30 seconds**")
+                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in {} seconds**".format(channel_sleep_time))
                 await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
@@ -371,9 +374,9 @@ class SixMans(commands.Cog):
                 await ctx.send("Done.")
                 try:
                     # If the text channel has been deleted this will throw an error and we'll instead want to send the message to wherever the command was used
-                    await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
+                    await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in {} seconds**".format(ctx.author.mention, channel_sleep_time))
                 except:
-                    await ctx.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in 30 seconds**".format(ctx.author.mention))
+                    await ctx.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in {} seconds**".format(ctx.author.mention, channel_sleep_time))
                 await self._remove_game(ctx, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
@@ -409,8 +412,8 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Score report not verified. To report the score you will need to use the `{0}sr` command again.".format(ctx.prefix))
             return
 
-        await game.color_embed_for_winners(winning_team)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
+        await game.report_winner(winning_team)
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(channel_sleep_time))
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
@@ -466,8 +469,8 @@ class SixMans(commands.Cog):
                 "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return
 
-        await game.color_embed_for_winners(winning_team)
-        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in 30 seconds**")
+        await game.report_winner(winning_team)
+        await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(channel_sleep_time))
         await self._finish_game(ctx, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
@@ -665,10 +668,10 @@ class SixMans(commands.Cog):
         
         Valid team selecion methods options:
         - **random**: selects random teams
-        - shuffle: selects random teams, but allows re-shuffling teams after they have been set
-        - captains: selects a captain for each team
-        - balanced: creates balanced teams from all participating players
-        - option: choose from the methods listed above when a queue pops
+        - **shuffle**: selects random teams, but allows re-shuffling teams after they have been set
+        - **captains**: selects a captain for each team
+        - **balanced**: creates balanced teams from all participating players
+        - **option**: choose from the methods listed above when a queue pops
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
@@ -776,6 +779,18 @@ class SixMans(commands.Cog):
             embed.add_field(name="{}:".format(queue_name), value="{}".format("\n".join(["{0}\n{1}".format(str(game.id), ", ".join([player.mention for player in game.players])) for game in queue_games])), inline=False)
 
         await ctx.channel.send(embed=embed)
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def observers(self, ctx):
+        await ctx.send("There are {} observers.".format(len(self.observers)))
+
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def observing(self, ctx):
+        action = "are" if self.is_observing(ctx.message.author) else "are not"
+        await ctx.send("You sir {} observing.".format(action))
 
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
@@ -968,7 +983,7 @@ class SixMans(commands.Cog):
     async def _remove_game(self, ctx, game):
         self.games.remove(game)
         await self._save_games(ctx, self.games)
-        await asyncio.sleep(30)
+        await asyncio.sleep(channel_sleep_time)
         q_lobby_vc = await self._get_q_lobby_vc(ctx.guild)
         try:
             await game.textChannel.delete()
@@ -1182,7 +1197,8 @@ class SixMans(commands.Cog):
             guild=ctx.guild,
             category=await self._category(ctx),
             helper_role=await self._helper_role(ctx.guild),
-            automove=await self._get_automove(ctx)
+            automove=await self._get_automove(ctx),
+            observers=self.observers
         )
         await game.create_game_channels(six_mans_queue, await self._category(ctx))
         return game
@@ -1203,6 +1219,10 @@ class SixMans(commands.Cog):
             return None
         
         return game, six_mans_queue
+
+    # adds observer
+    def add_observer(self, observer):
+        self.observers.add(observer)
 
     def _get_game_and_queue(self, channel: discord.TextChannel):
         game = None
@@ -1318,7 +1338,7 @@ class SixMans(commands.Cog):
                 for q in self.queues:
                     if q.id == queueId:
                         queue = q
-                game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels)
+                game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels, observers=self.observers)
                 game.id = int(key)
                 game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
                 game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
