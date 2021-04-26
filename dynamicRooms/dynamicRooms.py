@@ -193,7 +193,7 @@ class DynamicRooms(commands.Cog):
                     dynamic_vcs.append(clone_vc.id)
                     await self._save_dynamic_rooms(member.guild, dynamic_vcs)
 
-        if hideout_vc and len(voice_channel.members) >= voice_channel.user_limit:
+        if hideout_vc and (not await self._is_hiding(voice_channel)) and len(voice_channel.members) == voice_channel.user_limit:
             await self._hide_vc(voice_channel)
 
     async def _member_leaves_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
@@ -303,6 +303,9 @@ class DynamicRooms(commands.Cog):
     # Rooms that hide upon command (<p>hide) => maybe merge with hideout rooms
     async def _save_hiding(self, guild, hidden_rooms):
         await self.config.guild(guild).Hiding.set(hidden_rooms)
+
+    async def _is_hiding(self, vc: VoiceChannel):
+        return vc.id in await self._get_hiding(vc.guild)
 
     async def _get_hiding(self, guild):
         return await self.config.guild(guild).Hiding()
