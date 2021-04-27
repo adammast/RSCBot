@@ -272,7 +272,6 @@ class DynamicRooms(commands.Cog):
         except:
             return False
     
-
     async def _is_hiding(self, voice_channel: discord.VoiceChannel):
         return vc.id in await self._get_hiding(vc.guild)
 

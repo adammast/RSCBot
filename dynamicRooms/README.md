@@ -36,5 +36,9 @@ The `dynamicRooms` cog is independant from all other cogs. No prerequisites are 
   Disables hideout room behavior of all hideout categories.
 - `<p>getHideoutCategories`
   View all categories that are configured for hideout room management.
+- `<p>getHiddenRooms`
+  View all individiual voice channels that are actively hidden.
+- `<p>clearDynamicVCData`
+  Clears all dynamic room data in the `dynamicRooms` cog
 - `<p>toggleHideoutVCs`
   Enables or disables the `<p>hide command`.
