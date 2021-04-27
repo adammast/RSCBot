@@ -181,8 +181,6 @@ class DynamicRooms(commands.Cog):
         
         if not await self._is_hiding_vc(member.voice.channel):
             await self._hide_vc(member.voice.channel)
-        else:
-            await member.voice.channel.edit(name='no')
     
     @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
