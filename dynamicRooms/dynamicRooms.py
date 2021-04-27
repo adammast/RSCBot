@@ -138,7 +138,7 @@ class DynamicRooms(commands.Cog):
             return await ctx.send(":x: There are currently no hiding rooms.")
         
         message = "The following rooms are currently hidden ({}):\n - ".format(len(hidden_vc_ids)) + "\n - ".join(self._get_channel_name(ctx.guild, vc) for vc in hidden_vc_ids)
-        await ctx.send("The following rooms are currently hidden ({}):\n - ".format(len(hidden_vc_ids)) + "\n - ".join(self._get_channel_name(ctx.guild, vc) for vc in hidden_vc_ids))
+        await ctx.send(message)
     
     @commands.command()
     @commands.guild_only()
@@ -247,9 +247,9 @@ class DynamicRooms(commands.Cog):
         
         # remove if dynamic or hideout room is empty
         dynamic_room = await self._is_dynamic_vc(voice_channel)
-        hiding_room = await self._is_hideout_vc(voice_channel)
+        hiding_room = await self._is_hiding(voice_channel)
         
-        if dynamic_room or hiding_rooms:
+        if dynamic_room or hiding_room:
             await voice_channel.delete()
 
 
@@ -273,7 +273,7 @@ class DynamicRooms(commands.Cog):
             return False
     
     async def _is_hiding(self, voice_channel: discord.VoiceChannel):
-        return vc.id in await self._get_hiding(vc.guild)
+        return voice_channel.id in await self._get_hiding(voice_channel.guild)
 
     async def _is_dynamic_vc(self, voice_channel: discord.VoiceChannel):
         guild = voice_channel.guild
