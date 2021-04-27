@@ -133,7 +133,6 @@ class DynamicRooms(commands.Cog):
         """View all individiual voice channels that are actively hidden.
         """
         hidden_vc_ids = await self._get_hiding(ctx.guild)
-        print(hidden_vc_ids)
         if not hidden_vc_ids:
             return await ctx.send(":x: There are currently no hiding rooms.")
         
