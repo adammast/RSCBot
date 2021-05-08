@@ -5,7 +5,12 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"TransChannel": None}
+defaults = {
+    "TransChannel": None,
+    "DevLeagueTiers": [],
+    "DevLeagueCutMessage": None,
+    "NoDevLeagueCutMessage": None
+}
 
 class Transactions(commands.Cog):
     """Used to set franchise and role prefixes and give to members in those franchises or with those roles"""
@@ -16,8 +21,8 @@ class Transactions(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567895, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager_cog = bot.get_cog("TeamManager")
         self.prefix_cog = bot.get_cog("PrefixManager")
+        self.team_manager_cog = bot.get_cog("TeamManager")
 
     @commands.guild_only()
     @commands.command()
@@ -111,6 +116,7 @@ class Transactions(commands.Cog):
                 gm_name = self._get_gm_name(ctx, franchise_role)
                 message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await trans_channel.send(message)
+                await self._maybe_send_dev_league_dm(ctx, user, tier_role)
                 await ctx.send("Done")
             except KeyError:
                 await ctx.send(":x: Free agent role not found in dictionary")
@@ -252,6 +258,82 @@ class Transactions(commands.Cog):
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
 
+    @commands.guild_only()
+    @commands.command(aliases=["edl", "enableDevLeagueTier", "enableDevLeagueTiers", "addDevLeagueTier", "addDevLeagueTiers"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def enableDevLeague(self, ctx, *, tiers):
+        dev_league_tiers = await self._dev_league_tiers(ctx)
+        league_tiers = await self.team_manager_cog.tiers(ctx)
+        added = []
+        for tier in tiers.split():
+            if tier in league_tiers and tier not in dev_league_tiers:
+                dev_league_tiers.append(tier)
+                added.append(tier)
+
+        if added:
+            await self._save_dev_league_tiers(ctx, dev_league_tiers)
+            await ctx.send(":white_check_mark: The following tiers have been added to the development league ({}): {}".format(
+                len(added), ', '.join(added)
+            ))
+        else:
+            await ctx.send(":x: No valid tiers were provided")
+
+    @commands.guild_only()
+    @commands.command(aliases=["viewDevLeagues"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getDevLeagues(self, ctx):
+        dev_league_tiers = await self._dev_league_tiers(ctx)
+        if dev_league_tiers:
+            await ctx.send("The following tiers have development leagues ({}): {}".format(len(dev_league_tiers), ', '.join(dev_league_tiers)))
+        else:
+            await ctx.send(":x: No tiers have corresponding development leagues.")
+
+    @commands.guild_only()
+    @commands.command(aliases=["ddl", "disableDevLeagueTier", "disableDevLeagueTiers", "removeDevLeagueTier", "removeDevLeagueTiers"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def disableDevLeague(self, ctx, *, tiers):
+        dev_league_tiers = await self._dev_league_tiers(ctx)
+        league_tiers = await self.team_manager_cog.tiers(ctx)
+        removed = []
+        for tier in tiers.split():
+            if tier in league_tiers and tier in dev_league_tiers:
+                dev_league_tiers.remove(tier)
+                removed.append(tier)
+
+        if removed:
+            await self._save_dev_league_tiers(ctx, dev_league_tiers)
+            await ctx.send(":white_check_mark: The following tiers have been added to the development league ({}): {}".format(
+                len(removed), ', '.join(removed)
+            ))
+        else:
+            await ctx.send(":x: No valid tiers were provided")
+    
+    @commands.guild_only()
+    @commands.command(aliases=['devLeagueCutMessage'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setDevLeagueCutMessage(self, ctx):
+        dlcm = await self._dev_league_cut_message(ctx)
+        message = "If a tier **does** have a development league, this message will be sent to cut players:\n\n{}".format(dlcm)
+        await ctx.send(message)
+
+        ndlcm = await self._no_dev_league_cut_message(ctx)
+        message = "If a tier **does not** have a development league, this message will be sent to cut players:\n\n{}".format(ndlcm)
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command(aliases=["dlcm"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setDevLeagueCutMessage(self, ctx, *, message):
+        await self._save_dev_league_cut_message(ctx, message)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command(aliases=["ndlcm"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setNoDevLeagueCutMessage(self, ctx, *, message):
+        await self._save_no_dev_league_cut_message(ctx, message)
+        await ctx.send("Done")
+    
 
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
@@ -323,8 +405,52 @@ class Transactions(commands.Cog):
         else:
            return self.team_manager_cog._get_gm_name(franchise_role)
 
+    async def _maybe_send_dev_league_dm(self, ctx, user, tier_role):
+        dev_league_tiers = await self._dev_league_tiers(ctx)
+        if not dev_league_tiers:
+            return
+        
+        if tier_role.name in dev_league_tiers:
+            message = await self._dev_league_cut_message(ctx)
+        else:
+            message = await self._no_dev_league_cut_message(ctx)
+        
+        await self._send_member_message(ctx, user, message)
+    
+    async def _send_member_message(self, ctx, member, message):
+        if not message:
+            return False
+        message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
+        command_prefix = ctx.prefix
+        message = message.replace('[p]', command_prefix)
+        message = message_title + message
+        try:
+            await member.send(message)
+        except:
+            await ctx.send(":x: Couldn't send message to this member.")
+
+    # json db
     async def _trans_channel(self, ctx):
         return ctx.guild.get_channel(await self.config.guild(ctx.guild).TransChannel())
 
     async def _save_trans_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
+
+    async def _dev_league_tiers(self, ctx):
+        return await self.config.guild(ctx.guild).DevLeagueTiers()
+
+    async def _save_dev_league_tiers(self, ctx, tiers):
+        await self.config.guild(ctx.guild).DevLeagueTiers.set(tiers)
+    
+    async def _dev_league_cut_message(self, ctx):
+        return await self.config.guild(ctx.guild).DevLeagueCutMessage()
+    
+    async def _save_dev_league_cut_message(self, ctx, message):
+        await self.config.guild(ctx.guild).DevLeagueCutMessage.set(message)
+    
+    async def _no_dev_league_cut_message(self, ctx):
+        return await self.config.guild(ctx.guild).NoDevLeagueCutMessage()
+
+    async def _save_no_dev_league_cut_message(self, ctx, message):
+        await self.config.guild(ctx.guild).NoDevLeagueCutMessage.set(message)
+    
