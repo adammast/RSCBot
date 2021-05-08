@@ -296,7 +296,7 @@ class Transactions(commands.Cog):
         league_tiers = await self.team_manager_cog.tiers(ctx)
         removed = []
         for tier in tiers.split():
-            if tier in league_tiers and tier not in dev_league_tiers:
+            if tier in league_tiers and tier in dev_league_tiers:
                 dev_league_tiers.remove(tier)
                 removed.append(tier)
 
