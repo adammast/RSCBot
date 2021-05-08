@@ -279,6 +279,16 @@ class Transactions(commands.Cog):
             await ctx.send(":x: No valid tiers were provided")
 
     @commands.guild_only()
+    @commands.command(aliases=["viewDevLeagues"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getDevLeagues(self, ctx):
+        dev_league_tiers = await self._dev_league_tiers(ctx)
+        if dev_league_tiers:
+            await ctx.send("The following tiers have development leagues ({}): {}".format(len(dev_league_tiers), ', '.join(dev_league_tiers)))
+        else:
+            await ctx.send(":x: No tiers have corresponding development leagues.")
+
+    @commands.guild_only()
     @commands.command(aliases=["ddl", "disableDevLeagueTier", "disableDevLeagueTiers", "removeDevLeagueTier", "removeDevLeagueTiers"])
     @checks.admin_or_permissions(manage_guild=True)
     async def disableDevLeague(self, ctx, *, tiers):
