@@ -301,6 +301,18 @@ class Transactions(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["dlcm"])
     @checks.admin_or_permissions(manage_guild=True)
+    async def devLeagueCutMessage(self, ctx):
+        dlcm = await self._dev_league_cut_message(ctx)
+        message = "If a tier **does** have a development league, this message will be sent to cut players:\n\n{}".format(dlcm)
+        await ctx.send(message)
+
+        ndlcm = await self._no_dev_league_cut_message(ctx)
+        message = "If a tier **does not** have a development league, this message will be sent to cut players:\n\n{}".format(ndlcm)
+        await ctx.send(message)
+
+    @commands.guild_only()
+    @commands.command(aliases=["dlcm"])
+    @checks.admin_or_permissions(manage_guild=True)
     async def setDevLeagueCutMessage(self, ctx, *, message):
         await self._save_dev_league_cut_message(ctx, message)
         await ctx.send("Done")
