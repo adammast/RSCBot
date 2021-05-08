@@ -299,7 +299,7 @@ class Transactions(commands.Cog):
             await ctx.send(":x: No valid tiers were provided")
     
     @commands.guild_only()
-    @commands.command(aliases=["dlcm"])
+    @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def devLeagueCutMessage(self, ctx):
         dlcm = await self._dev_league_cut_message(ctx)
