@@ -414,7 +414,10 @@ class Transactions(commands.Cog):
         command_prefix = ctx.prefix
         message = message.replace('[p]', command_prefix)
         message = message_title + message
-        await member.send(message)
+        try:
+            await member.send(message)
+        except:
+            await ctx.send(":x: Couldn't send message to this member.")
 
     # json db
     async def _trans_channel(self, ctx):
