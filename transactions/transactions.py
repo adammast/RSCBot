@@ -299,9 +299,9 @@ class Transactions(commands.Cog):
             await ctx.send(":x: No valid tiers were provided")
     
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['devLeagueCutMessage'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def devLeagueCutMessage(self, ctx):
+    async def setDevLeagueCutMessage(self, ctx):
         dlcm = await self._dev_league_cut_message(ctx)
         message = "If a tier **does** have a development league, this message will be sent to cut players:\n\n{}".format(dlcm)
         await ctx.send(message)
