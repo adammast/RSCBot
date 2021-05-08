@@ -396,6 +396,8 @@ class Transactions(commands.Cog):
         await self._send_member_message(ctx, user, message)
     
     async def _send_member_message(self, ctx, member, message):
+        if not message:
+            return False
         message_title = "**Message from {0}:**\n\n".format(ctx.guild.name)
         command_prefix = ctx.prefix
         message = message.replace('[p]', command_prefix)
