@@ -48,7 +48,95 @@ class ModeratorLink(commands.Cog):
                 await ctx.send("PepeHands.")
         except:
             await ctx.send(":x: Event log channel not set")
-    
+
+    @commands.guild_only()
+    @commands.command(aliases=['champion', 'assignTrophy', 'awardTrophy'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addTrophy(self, ctx, *userList):
+        """Adds a trophy to each user passed in the userList"""
+        found = []
+        notFound = []
+        success_count = 0
+        failed = 0
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    found.append(member)
+            except:
+                notFound.append(user)
+        
+        for player in found:
+            prefix, nick, rewards = self._get_name_components(player)
+            rewards += self.TROPHY_EMOJI
+            new_name = self._generate_new_name(prefix, nick, rewards)
+            try:
+                await player.edit(nick=new_name)
+                success_count += 1
+            except:
+                failed += 1
+        
+        message = ""
+        if success_count:
+            message = ":white_check_mark: Trophies have been added to **{} player(s)**.".format(success_count)
+        
+        if notFound:
+            message += "\n:x: {} members could not be found.".format(len(notFound))
+        
+        if failed:
+            message += "\n:x: Nicknames could not be changed for {} members.".format(failed)
+        
+        if message:
+            message += "\nDone"
+        else:
+            message = "No members changed."
+
+        await ctx.send(message)
+        
+    @commands.guild_only()
+    @commands.command(aliases=['assignMedal', 'awardMedal'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def addMedal(self, ctx, *userList):
+        """Adds a trophy to each user passed in the userList"""
+        found = []
+        notFound = []
+        success_count = 0
+        failed = 0
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    found.append(member)
+            except:
+                notFound.append(user)
+        
+        for player in found:
+            prefix, nick, rewards = self._get_name_components(player)
+            rewards += self.FIRST_PLACE_EMOJI
+            new_name = self._generate_new_name(prefix, nick, rewards)
+            try:
+                await player.edit(nick=new_name)
+                success_count += 1
+            except:
+                failed += 1
+        
+        message = ""
+        if success_count:
+            message = ":white_check_mark: Trophies have been added to **{} player(s)**.".format(success_count)
+        
+        if notFound:
+            message += "\n:x: {} members could not be found.".format(len(notFound))
+        
+        if failed:
+            message += "\n:x: Nicknames could not be changed for {} members.".format(failed)
+        
+        if message:
+            message += "\nDone"
+        else:
+            message = "No members changed."
+
+        await ctx.send(message)
+
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
