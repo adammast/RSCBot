@@ -1,4 +1,5 @@
 import discord
+from datetime import datetime
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
@@ -13,9 +14,10 @@ class ModeratorLink(commands.Cog):
         self.bot = bot
 
         self.TROPHY_EMOJI = "\U0001F3C6" # :trophy:
-        self.MEDAL_EMOJI = "\U0001F3C5" # :medal:
+        self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # :medal:
+        self.FIRST_PLACE_EMOJI = "\U0001F947" 
         self.STAR_EMOJI = "\U00002B50" # :star:
-        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.MEDAL_EMOJI, self.STAR_EMOJI]
+        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
 
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
@@ -87,7 +89,8 @@ class ModeratorLink(commands.Cog):
         except:
             after_name = after.name
         
-        if before_name != after_name:
+        seconds_in_server = (datetime.utcnow() - before.joined_at).seconds
+        if before_name != after_name and seconds_in_server > 120:
             await self._process_nickname_update(before, after)
             
     @commands.Cog.listener("on_member_ban")
