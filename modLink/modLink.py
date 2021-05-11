@@ -97,7 +97,7 @@ class ModeratorLink(commands.Cog):
     @commands.command(aliases=['assignMedal', 'awardMedal'])
     @checks.admin_or_permissions(manage_guild=True)
     async def addMedal(self, ctx, *userList):
-        """Adds a trophy to each user passed in the userList"""
+        """Adds a first place medal to each user passed in the userList"""
         found = []
         notFound = []
         success_count = 0
