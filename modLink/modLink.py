@@ -14,8 +14,8 @@ class ModeratorLink(commands.Cog):
         self.bot = bot
 
         self.TROPHY_EMOJI = "\U0001F3C6" # :trophy:
-        self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # :medal:
-        self.FIRST_PLACE_EMOJI = "\U0001F947" 
+        self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # gold medal
+        self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
         self.STAR_EMOJI = "\U00002B50" # :star:
         self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
 
