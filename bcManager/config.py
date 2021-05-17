@@ -4,8 +4,8 @@ from datetime import datetime
 # ###############################################################################
 
 class config:
-    auth_token = 'Ght7UfDSmDeA58GPc3A8QnRfmM93LX7Z6U9g7LG0'
-    top_level_group = 'test-group-cl0dozmu3o'
+    auth_token = None
+    top_level_group = None
     search_count = 10
     visibility = 'public'
     team_identification = 'by-player-clusters'                  # setting -- Alternative: 'by-distinct-players'
