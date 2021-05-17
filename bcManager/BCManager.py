@@ -167,7 +167,7 @@ class BCManager(commands.Cog):
         group_code = await self._get_top_level_group(ctx)
         url = "https://ballchasing.com/group/{}".format(group_code)
         if group_code:
-            await ctx.send("See all season replays in the top level ballchasing group: {}".format())
+            await ctx.send("See all season replays in the top level ballchasing group: {}".format(url))
         else:
             await ctx.send(":x: A ballchasing group has not been set for this season yet.")
 
@@ -175,12 +175,14 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     async def registerAccount(self, ctx, platform, identifier):
         """Allows user to register account for ballchasing requests. This may be found by searching your appearances on ballchasing.com
-        **Note:** Only **steam** accounts can be used to find match replays.
+        
         Examples:
-            [p]registerAccount steam 76561199096013422
-            [p]registerAccount xbox e4b17b0000000900
-            [p]registerAccount ps4 touchetupac2
-            [p]registerAccount epic 76edd61bd58841028a8ee27373ae307a
+        [p]registerAccount steam 76561199096013422
+        [p]registerAccount xbox e4b17b0000000900
+        [p]registerAccount ps4 touchetupac2
+        [p]registerAccount epic 76edd61bd58841028a8ee27373ae307a
+
+        **Note:** Only **steam** accounts can be used to find match replays.
         """
 
         # Check platform
@@ -591,10 +593,11 @@ class BCManager(commands.Cog):
         count = config.search_count
 
         # RFC3339 Date/Time format
-        now = datetime.now(timezone.utc).astimezone().isoformat()
-        adj_char = '+' if '+' in str(now) else '-'
-        zone_adj = "{}{}".format(adj_char, str(now).split(adj_char)[-1])
+        # now = datetime.now(timezone.utc).astimezone().isoformat()
+        # adj_char = '+' if '+' in str(now) else '-'
+        # zone_adj = "{}{}".format(adj_char, str(now).split(adj_char)[-1])
 
+        zone_adj = '-04:00'
         date_string = match['matchDate']
         match_date = datetime.strptime(date_string, '%B %d, %Y').strftime('%Y-%m-%d')
         start_match_date_rfc3339 = "{}T00:00:00{}".format(match_date, zone_adj)
@@ -603,9 +606,9 @@ class BCManager(commands.Cog):
         params = [
             # 'uploader={}'.format(uploader),
             'playlist=private',
-            # 'replay-date-after={}'.format(start_match_date_rfc3339),  # Filters by matches played on this day
-            # 'replay-date-before={}'.format(end_match_date_rfc3339),
-            'count={}'.format(count),
+            'replay-date-after={}'.format(start_match_date_rfc3339),  # Filters by matches played on this day
+            'replay-date-before={}'.format(end_match_date_rfc3339),
+            # 'count={}'.format(count),
             'sort-by={}'.format(sort),
             'sort-dir={}'.format(sort_dir)
         ]
@@ -616,7 +619,7 @@ class BCManager(commands.Cog):
         # Search invoker's replay uploads first
         if member in all_players:
             all_players.remove(member)
-            member.insert(0 member)
+            all_players.insert(0, member)
         
         # Search all players in game for replays until match is found
         for player in all_players:
@@ -739,20 +742,6 @@ class BCManager(commands.Cog):
 
             game_number += 1
         return renamed
-
-    def _delete_temp_files(self, files_to_upload):
-        for replay_filename in files_to_upload:
-            if os.path.exists("temp/{}".format(replay_filename)):
-                os.remove("temp/{}".format(replay_filename))
-        try:
-            os.rmdir("temp") # Remove Temp Folder
-        except OSError:
-            print("Can't remove populated folder.")
-            return False
-        except:
-            print("Uncaught error in delete_temp_files.")
-            return False
-        return True
 
     async def _get_tier_subgroup_name(self, ctx, tier):
         tier_num = (await self._get_tier_ranks(ctx))[tier]
