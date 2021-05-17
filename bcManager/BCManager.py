@@ -39,6 +39,7 @@ class BCManager(commands.Cog):
         """Finds match games from recent public uploads, and adds them to the correct Ballchasing subgroup
         """
 
+        # TODO: do not allow players to report replays for teams they are not a part of (unless admin or GM)
         # Get match information
         member = ctx.message.author
         match = await self.get_match(ctx, member, team_name, match_day)
