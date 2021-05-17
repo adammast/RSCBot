@@ -36,8 +36,7 @@ class BCManager(commands.Cog):
     @commands.command(aliases=['bcr', 'bcpull'])
     @commands.guild_only()
     async def bcreport(self, ctx, team_name=None, match_day=None):
-        """
-        Finds match games from recent public uploads, and adds them to the correct Ballchasing subgroup
+        """Finds match games from recent public uploads, and adds them to the correct Ballchasing subgroup
         """
 
         # Get match information
@@ -116,12 +115,11 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setAuthToken(self, ctx, auth_token):
-        """
-        Sets the Auth Key for Ballchasing API requests.
+        """Sets the Auth Key for Ballchasing API requests.
         Note: Auth Token must be generated from the Ballchasing group owner
         """
         token_set = await self._save_auth_token(ctx, auth_token)
-        if(token_set):
+        if token_set:
             await ctx.send("Done.")
         else:
             await ctx.send(":x: Error setting auth token.")
@@ -130,6 +128,8 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setTierRank(self, ctx, tier, rank):
+        """Declares a ranking of tiers so that they are sorted in accordance with skill distribution
+        """
         tiers = await self.team_manager_cog.tiers(ctx)
         tier_found = False
         for t in tiers:
@@ -151,8 +151,7 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setTopLevelGroup(self, ctx, top_level_group):
-        """
-        Sets the Top Level Ballchasing Replay group for saving match replays.
+        """Sets the Top Level Ballchasing Replay group for saving match replays.
         Note: Auth Token must be generated from the Ballchasing group owner
         """
         group_set = await self._save_top_level_group(ctx, top_level_group)
@@ -164,6 +163,7 @@ class BCManager(commands.Cog):
     @commands.command(aliases=['bcGroup', 'ballchasingGroup', 'bcg'])
     @commands.guild_only()
     async def bcgroup(self, ctx):
+        """Links to the top level ballchasing group for the current season."""
         group_code = await self._get_top_level_group(ctx)
         url = "https://ballchasing.com/group/{}".format(group_code)
         if group_code:
@@ -175,6 +175,7 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     async def registerAccount(self, ctx, platform, identifier):
         """Allows user to register account for ballchasing requests. This may be found by searching your appearances on ballchasing.com
+        **Note:** Only **steam** accounts can be used to find match replays.
         Examples:
             [p]registerAccount steam 76561199096013422
             [p]registerAccount xbox e4b17b0000000900
@@ -218,6 +219,7 @@ class BCManager(commands.Cog):
     @commands.command(aliases=['rmaccount', 'removeAccount'])
     @commands.guild_only()
     async def unregisterAccount(self, ctx, platform, identifier=None):
+        """Removes one or more registered accounts."""
         remove_accs = []
         account_register = await self._get_account_register()
         member = ctx.message.author
@@ -264,7 +266,7 @@ class BCManager(commands.Cog):
     @commands.command(aliases=['accs', 'myAccounts', 'registeredAccounts'])
     @commands.guild_only()
     async def accounts(self, ctx):
-        """view all accounts that have been registered to with your discord account in this guild."""
+        """View all accounts that have been registered to with your discord account in this guild."""
         member = ctx.message.author
         accounts = await self._get_member_accounts(member)
         if not accounts:
@@ -278,19 +280,20 @@ class BCManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def massAddAccounts(self, ctx):
+        """Adds accounts in bulk -- This is not supported yet"""
         pass
     
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearAccountData(self, ctx):
+        """Clears all account data -- This is not supported yet"""
         pass
 
 
     # @commands.Cog.listener("on_message")
     # async def on_message(self, message):
     #     member = message.author
-
 
 
     async def _bc_get_request(self, ctx, endpoint, params=[], auth_token=None):
@@ -581,7 +584,6 @@ class BCManager(commands.Cog):
         return next_subgroup_id
 
     async def _find_match_replays(self, ctx, member, match):
-
         # search for appearances in private matches
         endpoint = "/replays"
         sort = 'replay-date' # 'created
@@ -609,7 +611,15 @@ class BCManager(commands.Cog):
         ]
 
         auth_token = await self._get_auth_token(ctx.guild)
-        for player in await self._get_all_match_players(ctx, match):
+        all_players = await self._get_all_match_players(ctx, match)
+        
+        # Search invoker's replay uploads first
+        if member in all_players:
+            all_players.remove(member)
+            member.insert(0 member)
+        
+        # Search all players in game for replays until match is found
+        for player in all_players:
             for steam_id in await self._get_steam_ids(ctx.guild, player.id):
                 uploaded_by_param='uploader={}'.format(steam_id)
                 params.append(uploaded_by_param)
