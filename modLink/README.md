@@ -22,13 +22,12 @@ The `modLink` cog is independent from other RSCBot cogs.
 ## Commands
 
 - `<p>setEventChannel [event_channel]`
-
   Sets the channel where all moderator-link related events are logged, and enables cross-guild member updates
-
 - `<p>unsetEventChannel`
-
   Unsets the channel currently assigned as the event log channel and disables cross-guild member updates
-
 - `<p>getEventChannel`
-
   Gets the channel currently assigned as the event log channel
+- `<p>addTrophy [userList]`
+  Adds a medal to each user passed in the userList
+- `<p>addMedal [userList]`
+  Adds a first place medal to each user passed in the userList
