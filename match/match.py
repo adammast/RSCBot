@@ -146,7 +146,7 @@ class Match(commands.Cog):
 
         if not match_data:
             return await ctx.send(":x: Match could not be found")
-            
+
         opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
         
         opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
@@ -160,6 +160,7 @@ class Match(commands.Cog):
         
         embed = discord.Embed(title="Your Opponents are ready!", color=tier_role.color, description=message)
 
+        # TODO: cover scenario where captain has promoted
         # only send to captain if in-game
         if await self._is_in_game(opp_captain):
             return await opp_captain.send(embed)
