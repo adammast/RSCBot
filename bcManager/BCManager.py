@@ -757,7 +757,8 @@ class BCManager(commands.Cog):
                 players.append(player)
         return players
 
-    # json db
+# json db
+
     async def _get_auth_token(self, guild):
         return await self.config.guild(guild).AuthToken()
     

@@ -143,6 +143,10 @@ class Match(commands.Cog):
 
         team_name = teams[0]
         match_data = await self.get_match_from_day_team(ctx, match_day, team_name)
+
+        if not match_data:
+            return await ctx.send(":x: Match could not be found")
+            
         opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
         
         opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
@@ -202,7 +206,6 @@ class Match(commands.Cog):
         await opposing_gm.send(embed)
         await ctx.message.add_reaction("\U00002705") # white check mark
         # TODO: Maybe react with franchise emojis? could be fun :)
-
 
     @commands.command()
     @commands.guild_only()
