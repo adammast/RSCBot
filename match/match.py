@@ -4,12 +4,13 @@ import random
 from datetime import datetime
 import json
 import discord
+from .config import config
 
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"MatchDay": 0, "Schedule": {}}
+defaults = {"MatchDay": 0, "Schedule": {}, "Game": "Rocket League"}
 
 class Match(commands.Cog):
     """Used to get the match information"""
@@ -129,6 +130,83 @@ class Match(commands.Cog):
                                                          team_name)
                 )
         await ctx.message.delete()
+
+    @commands.command(aliases=['lobbyup', 'up'])
+    @commands.guild_only()
+    async def lobbyready(self, ctx):
+        """Informs players of the opposing team that the private match lobby is ready and joinable."""
+        match_day = await self._match_day(ctx)
+        teams = await self.team_manager.teams_for_user(ctx, user)
+        
+        if not (match_day and teams):
+            return
+
+        team_name = teams[0]
+        match_data = await self.get_match_from_day_team(ctx, match_day, team_name)
+
+        if not match_data:
+            return await ctx.send(":x: Match could not be found")
+
+        opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
+        
+        opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
+        opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
+        opposing_roster = self.team_manager.members_from_team(ctx, opp_franchise_role, tier_role)
+        opposing_roster.remove(opp_captain)
+        
+        message = "Please join your match against the **{}** with the following lobby information:".format(opposing_team)
+        message += "\n\n**Name:** {}".format(match_data['roomName'])
+        message += "\n**Password:** {}".format(match_data['roomPass'])
+        
+        embed = discord.Embed(title="Your Opponents are ready!", color=tier_role.color, description=message)
+
+        # TODO: cover scenario where captain has promoted
+        # only send to captain if in-game
+        if await self._is_in_game(opp_captain):
+            return await opp_captain.send(embed)
+        
+        # send to captain if status is online
+        if opp_captain.status == "online":
+            await opp_captain.send(embed)
+
+        # send to all rostered players in-game if captain isn't in-game
+        actively_playing = []
+        for player in opposing_roster:
+            if await self._is_in_game(player):
+                actively_playing.append(player)
+        
+        if actively_playing:
+            for player in actively_playing:
+                await player.send(embed)
+            return
+        
+        # send to all online players if no players are in-game
+        online = []
+        for player in opposing_roster:
+            if player.status == "online":
+                online.append(player)
+        
+        if online:
+            for player in online:
+                await player.send(embed)
+            return
+
+        # send to everyone if nobody is online, including opposing team's GM
+        opposing_roster.append(opp_captain)
+        for player in opposing_roster:
+            await player.send(embed)
+        
+        # Don't double send to GM
+        opposing_gm = self.team_manager._get_gm(ctx, opp_franchise_role)
+        if opposing_gm in opposing_roster:
+            return
+
+        embed.description += "\n_This message has been sent to you because none of the players on your "
+        embed.description += "{} team, the {} appear to be in-game or online._".format(tier_role.name, opposing_team)
+
+        await opposing_gm.send(embed)
+        await ctx.message.add_reaction("\U00002705") # white check mark
+        # TODO: Maybe react with franchise emojis? could be fun :)
 
     @commands.command()
     @commands.guild_only()
@@ -359,8 +437,6 @@ class Match(commands.Cog):
             
         return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
 
-        
-
     async def _format_match_message(self, ctx, match_index, user_team_name):
         matches = await self._matches(ctx)
         match = matches[match_index]
@@ -410,13 +486,13 @@ class Match(commands.Cog):
                     return match
         return None
 
-    async def set_match_on_stream(self, ctx, match_day, team_name, stream_info):
+    async def set_match_on_stream(self, ctx, match_day, team_name, stream_data):
         matches = await self._matches(ctx)
         for match in matches:
             if not match['matchDay'] == match_day:
                 break 
             if match['home'] == team_name or match['away'] == team_name:
-                match['streamDetails'] = stream_info
+                match['streamDetails'] = stream_data
                 await self._save_matches(ctx, matches)
                 return True
         return False
@@ -437,14 +513,14 @@ class Match(commands.Cog):
         if user_team_name:
             if stream_details:
                 if user_team_name.casefold() == home.casefold():
-                    additional_info += stream_info.format(
+                    additional_info += config.stream_info.format(
                         home_or_away='home', 
                         time_slot=stream_details['slot'],
                         time=stream_details['time'],
                         live_stream=stream_details['live_stream']
                     )
                 elif user_team_name.casefold() == away.casefold():
-                    additional_info += stream_info.format(
+                    additional_info += config.stream_info.format(
                         home_or_away='away', 
                         time_slot=stream_details['slot'],
                         time=stream_details['time'],
@@ -452,17 +528,17 @@ class Match(commands.Cog):
                     )
             else:
                 if user_team_name == home:
-                    additional_info += home_info
+                    additional_info += config.home_info
                 elif user_team_name == away:
-                    additional_info += away_info
+                    additional_info += config.away_info
                 
 
         # TODO: Add other info (complaint form, disallowed maps,
         #       enable crossplay, etc.)
         # REGULAR SEASON INFO
-        additional_info += regular_info
+        additional_info += config.regular_info
         # PLAYOFF INFO
-        #additional_info += playoff_info
+        #additional_info += config.playoff_info
         return additional_info
 
     async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away):
@@ -521,19 +597,19 @@ class Match(commands.Cog):
         message = ""
         if user_team_name.casefold() == home.casefold():
             ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
-            message += solo_home_info.format(seed)
+            message += config.solo_home_info.format(seed)
             message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + str(seed), match['roomPass'] + str(seed))
-            message += solo_home_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time)
-            message += solo_home_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time)
-            message += solo_home_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time)
+            message += config.solo_home_match_info.format(config.first_match_descr, ordered_opponent_names[0], config.first_match_time)
+            message += config.solo_home_match_info.format(config.second_match_descr, ordered_opponent_names[1], config.second_match_time)
+            message += config.solo_home_match_info.format(config.third_match_descr, ordered_opponent_names[2], config.third_match_time)
         else:
             ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
-            message += solo_away_info.format(seed)
-            message += "\n\n{0}".format(solo_away_match_info.format(first_match_descr, ordered_opponent_names[0], first_match_time, 
+            message += config.solo_away_info.format(seed)
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.first_match_descr, ordered_opponent_names[0], config.first_match_time, 
                 match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
-            message += "\n\n{0}".format(solo_away_match_info.format(second_match_descr, ordered_opponent_names[1], second_match_time, 
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.second_match_descr, ordered_opponent_names[1], config.second_match_time, 
                 match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
-            message += "\n\n{0}".format(solo_away_match_info.format(third_match_descr, ordered_opponent_names[2], third_match_time, 
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.third_match_descr, ordered_opponent_names[2], config.third_match_time, 
                 match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
         return message
 
@@ -541,21 +617,21 @@ class Match(commands.Cog):
         message = ""
         try:
             # First match
-            message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(first_match_time)
+            message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(config.first_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 3)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 1)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 2)
             message += "```"
             # Second match
-            message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(second_match_time)
+            message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(config.second_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 2)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 3)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 1)
             message += "```"
             # Third match
-            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(third_match_time)
+            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(config.third_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 1)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 2)
@@ -568,117 +644,31 @@ class Match(commands.Cog):
     async def _create_matchup_string(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
         away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick) # We convert to string to handle None cases
         home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick) # We convert to string to handle None cases
-        return solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)
+        return config.solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)
 
     def _generate_name_pass(self):
-        return room_pass[random.randrange(len(room_pass))]
+        return config.room_pass[random.randrange(len(room_pass))]
 
-# TODO: Load from file?
-room_pass = [
-    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-    'vulcan', 'zippy',
+    async def _is_in_game(self, member):
+        if not member.activities:
+            return False 
+        
+        playing = False
+        game = await self._get_guild_game(member.guild)
 
-    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-    'dunkhouse', 'throwback', 'underpass', 'badlands',
+        for activity in member.activities:
+            if type(activity) == discord.Game:
+                if activity.name == game:
+                    playing = True
+                    try:
+                        playing = not activity.end or activity.end > datetime.utcnow()
+                    except:
+                        playing = not activity.end
+                    return playing
 
-    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-    'stormwatch', 'tora', 'trigon', 'wetpaint',
+    async def _save_guild_game(self, guild, game):
+        await self.config.guild(guild).Game.set(game)
 
-    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-    'voltaic', 'wonderment', 'zomba',
-
-    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-    'platinum', 'diamond',
-
-    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-    'doubles', 'standard', 'chaos',
-
-    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-]
-
-home_info = ("You are the **home** team. You will create the "
-            "room using the above information. Contact the "
-            "other team when your team is ready to begin the "
-            "match. Do not join a team until the away team starts "
-            "to.\nRemember to ask before the match begins if the other "
-            "team would like to switch server region after 2 "
-            "games.")
-
-away_info = ("You are the **away** team. You will join the room "
-            "using the above information once the other team "
-            "contacts you. Do not begin joining a team until "
-            "your entire team is ready to begin playing.")
-
-solo_home_info = ("You are on the **home** team. You are the {0} seed. "
-            "You are responsible for hosting the lobby for all of "
-            "your matches with the following lobby information: ")
-
-solo_away_info = ("You are on the **away** team. You are the {0} seed. "
-            "You will participate in the following matchups: ")
-            
-
-solo_home_match_info = ("Your {0} will be against `{1}` at {2}.\n\n")
-
-solo_away_match_info = ("Your {0} will be against `{1}` at "
-            "{2} with the following lobby info: "
-            "\nName: **{3}**"
-            "\nPassword: **{4}**")
-
-first_match_descr = ("first **one game** match")
-
-second_match_descr = ("second **one game** match")
-
-third_match_descr = ("**three game** series")
-
-first_match_time = ("10:00 pm ET (7:00 pm PT)")
-
-second_match_time = ("approximately 10:15 pm ET (7:15 pm PT)")
-
-third_match_time = ("approximately 10:30 pm ET (7:30 pm PT)")
-
-solo_matchup = ("{away_player:25s} vs.\t{home_player}")
-
-stream_info = ("**This match is scheduled to play on stream ** "
-            "(Time slot {time_slot}: {time})"
-            "\nYou are the **{home_or_away}** team. "
-            "A member of the Media Committee will inform you when the lobby is ready. "
-            "Do not join the lobby unless you are playing in the upcoming game. "
-            "Players should not join until instructed to do so via in-game chat. "
-            "\nRemember to inform the Media Committee what server "
-            "region your team would like to play on before games begin."
-            "\n\nLive Stream: <{live_stream}>")
-            
-regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
-                "and screenshots of the end-of-game scoreboard. Do not leave "
-                "the game until screenshots have been taken. "
-                "These must be uploaded by one member of your team after the 4-game series "
-                "is over. Remember that the deadline to reschedule matches is "
-                "at 10 minutes before the currently scheduled match time. They "
-                "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
-
-playoff_info = ("Playoff matches are a best of 5 series for every round until the finals. "
-                "Screenshots and replays do not need to be uploaded to the website for "
-                "playoff matches but you will need to report the scores in #score-reporting.\n\n")
+    async def _get_guild_game(self, guild):
+        return await self.config.guild(guild).Game()
+    
