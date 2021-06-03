@@ -114,7 +114,7 @@ class Transactions(commands.Cog):
                     await self.team_manager_cog._set_user_nickname_prefix(ctx, "FA", user)
                     await user.add_roles(tier_fa_role, fa_role)
                 gm_name = self._get_gm_name(ctx, franchise_role)
-                message = "{0} was cut by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
+                message = "{0} was let go by the {1} ({2} - {3})".format(user.mention, team_name, gm_name, tier_role.name)
                 await trans_channel.send(message)
                 await self._maybe_send_dev_league_dm(ctx, user, tier_role)
                 await ctx.send("Done")
