@@ -1337,9 +1337,12 @@ class SixMans(commands.Cog):
                 text_channel = ctx.guild.get_channel(value["TextChannel"])
                 voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
                 queueId = value["QueueId"]
+
+                queue = None
                 for q in self.queues:
                     if q.id == queueId:
                         queue = q
+                        
                 game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels, observers=self.observers)
                 game.id = int(key)
                 game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
