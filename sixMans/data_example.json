@@ -64,15 +64,17 @@
         },
         "scores": [
             {
-                "queue": "queue1",
-                "playerId": "id",
+                "game": "gameId",
+                "queue": "queueId",
+                "player": "playerId",
                 "win": 1,
                 "points": 3,
                 "dateTime": "2018-12-19 09:26:03.478039"
             },
             {
-                "queue": "queue2",
-                "playerId": "id",
+                "game": "gameId",
+                "queue": "queueId",
+                "player": "playerId",
                 "win": 1,
                 "points": 6,
                 "dateTime": "2018-12-19 09:26:03.478039"

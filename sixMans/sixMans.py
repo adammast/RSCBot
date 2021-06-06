@@ -940,12 +940,12 @@ class SixMans(commands.Cog):
         _games_played = await self._games_played(ctx.guild)
         date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
-            score = self._create_player_score(six_mans_queue, player, 1, date_time)
+            score = self._create_player_score(six_mans_queue, game, player, 1, date_time)
             self._give_points(six_mans_queue.players, score)
             self._give_points(_players, score)
             _scores.insert(0, score)
         for player in losing_players:
-            score = self._create_player_score(six_mans_queue, player, 0, date_time)
+            score = self._create_player_score(six_mans_queue, game, player, 0, date_time)
             self._give_points(six_mans_queue.players, score)
             self._give_points(_players, score)
             _scores.insert(0, score)
@@ -1018,13 +1018,14 @@ class SixMans(commands.Cog):
         player_dict[PLAYER_GP_KEY] = player_dict.get(PLAYER_GP_KEY, 0) + 1
         player_dict[PLAYER_WINS_KEY] = player_dict.get(PLAYER_WINS_KEY, 0) + win
 
-    def _create_player_score(self, six_mans_queue: SixMansQueue, player: discord.Member, win, date_time):
+    def _create_player_score(self, six_mans_queue: SixMansQueue, game: Game, player: discord.Member, win, date_time):
         points_dict = six_mans_queue.points
         if win:
             points_earned = points_dict[PP_PLAY_KEY] + points_dict[PP_WIN_KEY]
         else:
             points_earned = points_dict[PP_PLAY_KEY]
         return {
+            "Game": game.id,
             "Queue": six_mans_queue.id,
             "Player": player.id,
             "Win": win,
