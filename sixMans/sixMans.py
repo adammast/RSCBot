@@ -880,12 +880,12 @@ class SixMans(commands.Cog):
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._put(player)
         embed = self.embed_player_added(player, six_mans_queue)
-        await six_mans_queue._send_embed(embed)
+        await six_mans_queue.send_message(embed=embed)
 
     async def _remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._remove(player)
         embed = self.embed_player_removed(player, six_mans_queue)
-        await six_mans_queue._send_embed(embed)
+        await six_mans_queue.send_message(embed=embed)
 
     async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         try:

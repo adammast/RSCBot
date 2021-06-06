@@ -42,13 +42,9 @@ class SixMansQueue:
     def _queue_full(self):
         return self.queue.qsize() >= self.teamSize
 
-    async def _send_message(self, message):
+    async def send_message(self, message='', embed=None):
         for channel in self.channels:
-            channel.send(message)
-
-    async def _send_embed(self, embed):
-        for channel in self.channels:
-            channel.send(embed=embed)
+            await channel.send(message, embed=embed)
 
     def _to_dict(self):
         return {
