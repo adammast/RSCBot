@@ -1,13 +1,14 @@
-import discord
 import collections
 import datetime
 import uuid
 from queue import Queue
+from typing import List
 
-team_size = 6
+import discord
+
 
 class SixMansQueue:
-    def __init__(self, name, guild, channels, points, players, gamesPlayed):
+    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, teamSize):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -16,6 +17,7 @@ class SixMansQueue:
         self.points = points
         self.players = players
         self.gamesPlayed = gamesPlayed
+        self.teamSize = teamSize
         self.activeJoinLog = {}
 
     def _put(self, player):
@@ -38,7 +40,15 @@ class SixMansQueue:
             pass
 
     def _queue_full(self):
-        return self.queue.qsize() >= team_size
+        return self.queue.qsize() >= self.teamSize
+
+    async def _send_message(self, message):
+        for channel in self.channels:
+            channel.send(message)
+
+    async def _send_embed(self, embed):
+        for channel in self.channels:
+            channel.send(embed=embed)
 
     def _to_dict(self):
         return {

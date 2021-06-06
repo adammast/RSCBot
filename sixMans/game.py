@@ -1,12 +1,16 @@
-import discord
 import random
-import uuid
 import struct
+import uuid
+
+import discord
+
 from .config import config
+from .queue import SixMansQueue
+
 
 class Game:
     def __init__(
-            self, players, queue,
+            self, players, queue: SixMansQueue,
             guild: discord.Guild=None,
             category=None,
             helper_role=None,
@@ -21,7 +25,7 @@ class Game:
         self.orange = set()
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
-        self.queueId = queue.id
+        self.queue = queue
         self.scoreReported = False
         self.game_state = "team selection"
         
@@ -52,7 +56,10 @@ class Game:
         if new_state:
             self.game_state = new_state
         for observer in self.observers:
-            await observer.update(self)
+            try:
+                await observer.update(self)
+            except:
+                pass
 
     async def create_game_channels(self, six_mans_queue, category=None):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
@@ -72,7 +79,7 @@ class Game:
         
         # manually add helper role perms if there is not an associated 6mans category
         if self.helper_role and not category:
-            await text_channel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
+            await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
             await blue_vc.set_permissions(self.helper_role, connect=True)
             await oran_vc.set_permissions(self.helper_role, connect=True)
         
@@ -305,7 +312,7 @@ class Game:
             "RoomPass": self.roomPass,
             "TextChannel": self.textChannel.id,
             "VoiceChannels": [x.id for x in self.voiceChannels],
-            "QueueId": self.queueId,
+            "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
         }
 
