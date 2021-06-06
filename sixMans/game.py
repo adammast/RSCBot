@@ -59,6 +59,7 @@ class Game:
             try:
                 await observer.update(self)
             except:
+                #TODO: Log error without preventing code from continuing to run
                 pass
 
     async def create_game_channels(self, six_mans_queue, category=None):
