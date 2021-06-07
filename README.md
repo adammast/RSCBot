@@ -46,11 +46,3 @@ Along with the tier specific free agent roles mentioned in the Tiers subsection 
 #### Draft Eligible Role
 
 For players who are eligible for the league's upcoming draft there should be a role named `Draft Eligible`. This role is used in some of the transaction commands and also used in the makeDE command from the bulkRoleManager cog.
-
-## Contributing
-
-Pull requests are welcome! Feel free to contact me in Discord (adammast#0190) for any questions or discussions on larger issues.
-
-## License
-
-[MIT](https://choosealicense.com/licenses/mit/)

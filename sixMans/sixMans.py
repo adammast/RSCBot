@@ -1138,8 +1138,8 @@ class SixMans(commands.Cog):
 
     def _get_queue_by_text_channel(self, channel: discord.TextChannel):
         for six_mans_queue in self.queues:
-            for channel in six_mans_queue.channels:
-                if channel == channel:
+            for queuechannel in six_mans_queue.channels:
+                if queuechannel == channel:
                     return six_mans_queue
 
     def _get_queue_name(self, guild: discord.Guild, queue_name):
@@ -1244,6 +1244,7 @@ class SixMans(commands.Cog):
             except:
                 await ctx.send(":x: Can't find player with id: {}".format(player[0]))
                 return
+
             player_info = player[1]
             playerStrings.append("`{0}` **{1:25s}:**".format(index, member.nick))
             statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[PLAYER_POINTS_KEY],
