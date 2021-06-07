@@ -1246,7 +1246,7 @@ class SixMans(commands.Cog):
                 return
 
             player_info = player[1]
-            playerStrings.append("`{0}` **{1:25s}:**".format(index, member.nick))
+            playerStrings.append("`{0}` **{1:25s}:**".format(index, member.display_name))
             statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[PLAYER_POINTS_KEY],
                 player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY]))
             
@@ -1259,7 +1259,7 @@ class SixMans(commands.Cog):
             author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
             if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
-                playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.nick))
+                playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name))
                 statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(author_info[PLAYER_POINTS_KEY],
                 author_info[PLAYER_WINS_KEY], author_info[PLAYER_GP_KEY]))
         except Exception:

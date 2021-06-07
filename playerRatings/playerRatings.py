@@ -390,35 +390,35 @@ class PlayerRatings(commands.Cog):
         sorted_opponents = await self.sort_members_by_rating(ctx, active_opponents)
         if is_home:
             if seed == 1:
-                ordered_opponent_names.append(sorted_opponents[2].nick)
-                ordered_opponent_names.append(sorted_opponents[1].nick)
-                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
                 ordered_opponent_seeds = [3, 2, 1]
             elif seed == 2:
-                ordered_opponent_names.append(sorted_opponents[0].nick)
-                ordered_opponent_names.append(sorted_opponents[2].nick)
-                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
                 ordered_opponent_seeds = [1, 3, 2]
             else:
-                ordered_opponent_names.append(sorted_opponents[1].nick)
-                ordered_opponent_names.append(sorted_opponents[0].nick)
-                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
                 ordered_opponent_seeds = [2, 1, 3]
         else:
             if seed == 1:
-                ordered_opponent_names.append(sorted_opponents[1].nick)
-                ordered_opponent_names.append(sorted_opponents[2].nick)
-                ordered_opponent_names.append(sorted_opponents[0].nick)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
                 ordered_opponent_seeds = [2, 3, 1]
             elif seed == 2:
-                ordered_opponent_names.append(sorted_opponents[2].nick)
-                ordered_opponent_names.append(sorted_opponents[0].nick)
-                ordered_opponent_names.append(sorted_opponents[1].nick)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
                 ordered_opponent_seeds = [3, 1, 2]
             else:
-                ordered_opponent_names.append(sorted_opponents[0].nick)
-                ordered_opponent_names.append(sorted_opponents[1].nick)
-                ordered_opponent_names.append(sorted_opponents[2].nick)
+                ordered_opponent_names.append(sorted_opponents[0].display_name)
+                ordered_opponent_names.append(sorted_opponents[1].display_name)
+                ordered_opponent_names.append(sorted_opponents[2].display_name)
                 ordered_opponent_seeds = [1, 2, 3]
         return (ordered_opponent_names, ordered_opponent_seeds)
 
@@ -463,7 +463,7 @@ class PlayerRatings(commands.Cog):
         embed_color = discord.Colour.blue()
         if tier_role:
             embed_color = tier_role.color
-        embed = discord.Embed(title="{0}".format(player.member.nick), color=embed_color)
+        embed = discord.Embed(title="{0}".format(player.member.display_name), color=embed_color)
         embed.set_thumbnail(url=player.member.avatar_url)
         embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
         embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
@@ -483,7 +483,7 @@ class PlayerRatings(commands.Cog):
         playerStrings = []
         statStrings = []
         for player in sorted_players:
-            playerStrings.append("`{0}` **{1}:**".format(index, player.member.nick))
+            playerStrings.append("`{0}` **{1}:**".format(index, player.member.display_name))
             statStrings.append("Elo Rating: `{0:4d}`  Record: `{1:2d} - {2:2d}`  Games Played: `{3:2d}`".format(player.elo_rating,
                 player.wins, player.losses, player.wins + player.losses))
             
@@ -496,10 +496,10 @@ class PlayerRatings(commands.Cog):
         return embed
 
     def embed_game_results(self, player_1, player_2, player_1_wins: int, player_2_wins: int, player_1_new_elo, player_2_new_elo):
-        embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.nick, player_2.member.nick), color=discord.Colour.blue())
-        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.nick, player_1_wins, player_2_wins, player_2.member.nick), inline=False)
-        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.nick, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
-            player_2.member.nick, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
+        embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.display_name, player_2.member.display_name), color=discord.Colour.blue())
+        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.display_name, player_1_wins, player_2_wins, player_2.member.display_name), inline=False)
+        embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.display_name, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
+            player_2.member.display_name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
         return embed
 
 #endregion
