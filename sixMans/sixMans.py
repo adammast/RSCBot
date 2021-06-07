@@ -1234,7 +1234,7 @@ class SixMans(commands.Cog):
         embed = discord.Embed(title="{0} {1} Mans {2} Leaderboard".format(queue_name, self.queueMaxSize, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
         embed.add_field(name="Unique Players", value="{}\n".format(len(sorted_players)), inline=True)
-        embed.add_field(name="", value="", inline=True) # Blank field added to push the Player and Stats fields to a new line
+        embed.add_field(name="⠀", value="⠀", inline=True) # Blank field added to push the Player and Stats fields to a new line
         
         index = 1
         playerStrings = []
