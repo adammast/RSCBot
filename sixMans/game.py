@@ -78,8 +78,8 @@ class Game:
         oran_vc = await self.guild.create_voice_channel("{} | {} Orange Team".format(code, six_mans_queue.name), permissions_synced=True, category=category)
         await oran_vc.set_permissions(self.guild.default_role, connect=False)
         
-        # manually add helper role perms if there is not an associated 6mans category
-        if self.helper_role and not category:
+        # manually add helper role perms if one is set
+        if self.helper_role:
             await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
             await blue_vc.set_permissions(self.helper_role, connect=True)
             await oran_vc.set_permissions(self.helper_role, connect=True)

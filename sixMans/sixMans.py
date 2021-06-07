@@ -187,7 +187,7 @@ class SixMans(commands.Cog):
             # TODO: determine a workaround from filtering through all active games
 
     @commands.guild_only()
-    @commands.command(aliases=["qm"])
+    @commands.command(aliases=["qm", "queueAll", "qa"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueMultiple(self, ctx: Context, *members: discord.Member):
         """Mass queueing for testing purposes"""
