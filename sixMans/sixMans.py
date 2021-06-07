@@ -1138,8 +1138,8 @@ class SixMans(commands.Cog):
 
     def _get_queue_by_text_channel(self, channel: discord.TextChannel):
         for six_mans_queue in self.queues:
-            for channel in six_mans_queue.channels:
-                if channel == channel:
+            for queuechannel in six_mans_queue.channels:
+                if queuechannel == channel:
                     return six_mans_queue
 
     def _get_queue_name(self, guild: discord.Guild, queue_name):
