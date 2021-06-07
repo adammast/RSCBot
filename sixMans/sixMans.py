@@ -46,7 +46,7 @@ class SixMans(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
         self.config.register_guild(**defaults)
-        self.teamSize = 6
+        self.queueMaxSize = 6
         self.queues: list[SixMansQueue] = []
         self.games: list[Game] = []
         self.task = self.bot.loop.create_task(self.timeout_queues())
@@ -80,7 +80,7 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def clearSixMansData(self, ctx: Context):
-        msg = await ctx.send("{0} Please verify that you wish to clear **all** of the {1} Mans data.".format(ctx.author.mention, self.teamSize))
+        msg = await ctx.send("{0} Please verify that you wish to clear **all** of the {1} Mans data.".format(ctx.author.mention, self.queueMaxSize))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, ctx.author)
@@ -109,7 +109,7 @@ class SixMans(commands.Cog):
                     return
 
         points = {PP_PLAY_KEY: points_per_play, PP_WIN_KEY: points_per_win}
-        six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.teamSize)
+        six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.queueMaxSize)
         self.queues.append(six_mans_queue)
         await self._save_queues(ctx.guild, self.queues)
         await ctx.send("Done")
@@ -261,7 +261,7 @@ class SixMans(commands.Cog):
         if game is None or six_mans_queue is None:
             return
 
-        opposing_captain = self._get_opposing_captain(ctx, game)
+        opposing_captain = self._get_opposing_captain(ctx.author, game)
         if opposing_captain is None:
             await ctx.send(":x: Only players on one of the two teams can cancel the game.")
             return
@@ -274,7 +274,7 @@ class SixMans(commands.Cog):
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result is True:
                 await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
-                await self._remove_game(ctx, game)
+                await self._remove_game(ctx.guild, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
@@ -320,7 +320,7 @@ class SixMans(commands.Cog):
                     await game.textChannel.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in {} seconds**".format(ctx.author.mention, CHANNEL_SLEEP_TIME))
                 except:
                     await ctx.send("Game canceled by {}. Feel free to queue again in an appropriate channel.\n**This game's channels will be deleted in {} seconds**".format(ctx.author.mention, CHANNEL_SLEEP_TIME))
-                await self._remove_game(ctx, game)
+                await self._remove_game(ctx.guild, game)
             else:
                 await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
         except asyncio.TimeoutError:
@@ -357,7 +357,7 @@ class SixMans(commands.Cog):
 
         await game.report_winner(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
-        await self._finish_game(ctx, game, six_mans_queue, winning_team)
+        await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
 
     @commands.guild_only()
     @commands.command(aliases=["sr"])
@@ -386,7 +386,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Someone has already reported the results or is waiting for verification")
             return
 
-        opposing_captain = self._get_opposing_captain(ctx, game)
+        opposing_captain = self._get_opposing_captain(ctx.author, game)
         if opposing_captain is None:
             await ctx.send(":x: Only players on one of the two teams can report the score")
             return
@@ -414,7 +414,7 @@ class SixMans(commands.Cog):
 
         await game.report_winner(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
-        await self._finish_game(ctx, game, six_mans_queue, winning_team)
+        await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
 
     #region listeners
 
@@ -472,9 +472,10 @@ class SixMans(commands.Cog):
     @commands.Cog.listener("on_guild_channel_delete")
     async def on_guild_channel_delete(self, channel):
         """If a queue channel is deleted, removes it from the queue class instance. If the last queue channel is deleted, the channel is replaced."""
+        #TODO: Error catch if Q Lobby VC is deleted
         if type(channel) != discord.TextChannel:
             return
-        await self._pre_load_queues_from_guild(channel.guild)
+        await self._pre_load_queues(channel.guild)
         queue = None
         for queue in self.queues:
             if channel in queue.channels:
@@ -691,6 +692,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["setQLobby"])
     @checks.admin_or_permissions(manage_guild=True)
     async def setQueueLobby(self, ctx: Context, lobby_voice: discord.VoiceChannel):
+        #TODO: Consider having the queues save the Queue Lobby VC
         await self._save_q_lobby_vc(ctx.guild, lobby_voice.id)
         await ctx.send("Done")
     
@@ -739,7 +741,7 @@ class SixMans(commands.Cog):
         await self._save_automove(ctx.guild, new_automove_status)
 
         action = "will move" if new_automove_status else "will not move"
-        message = "Popped {0} Mans queues **{1}** members to their team voice channel.".format(self.teamSize, action)
+        message = "Popped {0} Mans queues **{1}** members to their team voice channel.".format(self.queueMaxSize, action)
         await ctx.send(message)
     
     @commands.guild_only()
@@ -789,9 +791,9 @@ class SixMans(commands.Cog):
     async def getCategory(self, ctx: Context):
         """Gets the channel currently assigned as the transaction channel"""
         try:
-            await ctx.send("{0} Mans category channel set to: {1}".format(self.teamSize, (await self._category(ctx.guild)).mention))
+            await ctx.send("{0} Mans category channel set to: {1}".format(self.queueMaxSize, (await self._category(ctx.guild)).mention))
         except:
-            await ctx.send(":x: {0} Mans category channel not set".format(self.teamSize))
+            await ctx.send(":x: {0} Mans category channel not set".format(self.queueMaxSize))
 
     @commands.guild_only()
     @commands.command()
@@ -821,9 +823,9 @@ class SixMans(commands.Cog):
     async def getHelperRole(self, ctx: Context):
         """Gets the role currently assigned as the 6 Mans helper role"""
         try:
-            await ctx.send("{0} Mans helper role set to: {1}".format(self.teamSize, (await self._helper_role(ctx.guild)).name))
+            await ctx.send("{0} Mans helper role set to: {1}".format(self.queueMaxSize, (await self._helper_role(ctx.guild)).name))
         except:
-            await ctx.send(":x: {0} mans helper role not set".format(self.teamSize))
+            await ctx.send(":x: {0} mans helper role not set".format(self.queueMaxSize))
 
     @commands.guild_only()
     @commands.command()
@@ -858,12 +860,6 @@ class SixMans(commands.Cog):
     async def observers(self, ctx: Context):
         await ctx.send("There are {} observers.".format(len(self.observers)))
 
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def observing(self, ctx: Context):
-        action = "are" if self.is_observing(ctx.message.author) else "are not"
-        await ctx.send("You sir {} observing.".format(action))
-
     #endregion
 
 #endregion
@@ -891,7 +887,7 @@ class SixMans(commands.Cog):
         try:
             await self._remove_from_queue(player, six_mans_queue)
             await player.send("You have been timed out from the {0} {1} Mans queue. You'll need to use the "
-                "queue command again if you wish to play some more.".format(six_mans_queue.name), self.teamSize)
+                "queue command again if you wish to play some more.".format(six_mans_queue.name), self.queueMaxSize)
         except:
             pass
 
@@ -925,7 +921,7 @@ class SixMans(commands.Cog):
                         pass
             await asyncio.sleep(LOOP_TIME)
             
-    async def _finish_game(self, ctx: Context, game: Game, six_mans_queue: SixMansQueue, winning_team):
+    async def _finish_game(self, guild: discord.Guild, game: Game, six_mans_queue: SixMansQueue, winning_team):
         winning_players = []
         losing_players = []
         if winning_team.lower() == "blue":
@@ -935,9 +931,9 @@ class SixMans(commands.Cog):
             winning_players = game.orange
             losing_players = game.blue
 
-        _scores = await self._scores(ctx.guild)
-        _players = await self._players(ctx.guild)
-        _games_played = await self._games_played(ctx.guild)
+        _scores = await self._scores(guild)
+        _players = await self._players(guild)
+        _games_played = await self._games_played(guild)
         date_time = datetime.datetime.now().strftime("%d-%b-%Y (%H:%M:%S.%f)")
         for player in winning_players:
             score = self._create_player_score(six_mans_queue, game, player, 1, date_time)
@@ -953,18 +949,18 @@ class SixMans(commands.Cog):
         _games_played += 1
         six_mans_queue.gamesPlayed += 1
 
-        await self._save_scores(ctx.guild, _scores)
-        await self._save_queues(ctx.guild, self.queues)
-        await self._save_players(ctx.guild, _players)
-        await self._save_games_played(ctx.guild, _games_played)
+        await self._save_scores(guild, _scores)
+        await self._save_queues(guild, self.queues)
+        await self._save_players(guild, _players)
+        await self._save_games_played(guild, _games_played)
 
-        if await self._get_automove(ctx.guild): # game.automove not working?
-            qlobby_vc = await self._get_q_lobby_vc(ctx.guild)
+        if await self._get_automove(guild): # game.automove not working?
+            qlobby_vc = await self._get_q_lobby_vc(guild)
             if qlobby_vc:
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[0].members)
                 await self._move_to_voice(qlobby_vc, game.voiceChannels[1].members)
 
-        await self._remove_game(ctx, game)
+        await self._remove_game(guild, game)
 
     async def _move_to_voice(self, vc: discord.VoiceChannel, members: List[discord.Member]):
         for member in members:
@@ -973,11 +969,11 @@ class SixMans(commands.Cog):
             except:
                 pass
 
-    async def _remove_game(self, ctx: Context, game: Game):
+    async def _remove_game(self, guild: discord.Guild, game: Game):
         self.games.remove(game)
-        await self._save_games(ctx.guild, self.games)
+        await self._save_games(guild, self.games)
         await asyncio.sleep(CHANNEL_SLEEP_TIME)
-        q_lobby_vc = await self._get_q_lobby_vc(ctx.guild)
+        q_lobby_vc = await self._get_q_lobby_vc(guild)
         try:
             await game.textChannel.delete()
         except:
@@ -994,11 +990,11 @@ class SixMans(commands.Cog):
             except:
                 pass
 
-    def _get_opposing_captain(self, ctx: Context, game: Game):
+    def _get_opposing_captain(self, player: discord.Member, game: Game):
         opposing_captain = None
-        if ctx.author in game.blue:
+        if player in game.blue:
             opposing_captain = game.captains[1] #Orange team captain
-        elif ctx.author in game.orange:
+        elif player in game.orange:
             opposing_captain = game.captains[0] #Blue team captain
         return opposing_captain
 
@@ -1043,7 +1039,7 @@ class SixMans(commands.Cog):
                 valid_scores +=1
             else:
                 break
-        games_played = (valid_scores // self.teamSize)
+        games_played = (valid_scores // self.queueMaxSize)
         return players, games_played
 
     def _sort_player_dict(self, player_dict):
@@ -1051,7 +1047,7 @@ class SixMans(commands.Cog):
         return sorted(sorted_players, key=lambda x: x[1][PLAYER_POINTS_KEY], reverse=True)
 
     async def _select_teams(self, ctx: Context, six_mans_queue: SixMansQueue):
-        game = await self._create_game(ctx, six_mans_queue)
+        game = await self._create_game(ctx.guild, six_mans_queue)
         if game is None:
             return False
         
@@ -1088,7 +1084,7 @@ class SixMans(commands.Cog):
         await self._save_games(ctx.guild, self.games)
         return True
 
-    async def _display_teams(self, game, embed):
+    async def _display_teams(self, game: Game, embed):
         try:
             await game.teams_message.edit(embed=embed)
         except:
@@ -1098,7 +1094,7 @@ class SixMans(commands.Cog):
     async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue):
         if not six_mans_queue._queue_full():
             return None
-        players = [six_mans_queue._get() for _ in range(self.teamSize)]
+        players = [six_mans_queue._get() for _ in range(self.queueMaxSize)]
         for channel in six_mans_queue.channels:
             await channel.send("**Queue is full! Game is being created.**")
 
@@ -1117,7 +1113,7 @@ class SixMans(commands.Cog):
     async def _get_info(self, ctx: Context):
         game = self._get_game_by_text_channel(ctx.channel)
         if game is None:
-            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.teamSize))
+            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
             return None
 
         for queue in self.queues:
@@ -1170,7 +1166,7 @@ class SixMans(commands.Cog):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.green())
         embed.set_author(name="{0} added to the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), self.teamSize), icon_url="{}".format(player.avatar_url))
+            six_mans_queue.queue.qsize(), self.queueMaxSize), icon_url="{}".format(player.avatar_url))
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
@@ -1178,12 +1174,12 @@ class SixMans(commands.Cog):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.red())
         embed.set_author(name="{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
-            six_mans_queue.queue.qsize(), self.teamSize), icon_url="{}".format(player.avatar_url))
+            six_mans_queue.queue.qsize(), self.queueMaxSize), icon_url="{}".format(player.avatar_url))
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
     def embed_queue_info(self, queue: SixMansQueue):
-        embed = discord.Embed(title="{0} {1} Mans Info".format(queue.name, self.teamSize), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} {1} Mans Info".format(queue.name, self.queueMaxSize), color=discord.Colour.blue())
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
@@ -1193,12 +1189,12 @@ class SixMans(commands.Cog):
 
     def embed_queue_players(self, queue: SixMansQueue):
         player_list = self.format_player_list(queue)
-        embed = discord.Embed(title="{0} {1} Mans Queue".format(queue.name, self.teamSize), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} {1} Mans Queue".format(queue.name, self.queueMaxSize), color=discord.Colour.blue())
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
     async def embed_active_games(self, queueGames: Dict[int, List[Game]]):
-        embed = discord.Embed(title="{0} Mans Active Games".format(self.teamSize), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} Mans Active Games".format(self.queueMaxSize), color=discord.Colour.blue())
         for queueId in queueGames.keys():
             games = queueGames[queueId]
             queueName = next(queue.name for queue in self.queues if queue.id == queueId)
@@ -1207,7 +1203,7 @@ class SixMans(commands.Cog):
 
     async def embed_game_info(self, guild, game: Game, six_mans_queue: SixMansQueue, invalid=False, prefix='?'):
         helper_role = await self._helper_role(guild)
-        sm_title = "{0} {1} Mans Game Info".format(six_mans_queue.name, self.teamSize)
+        sm_title = "{0} {1} Mans Game Info".format(six_mans_queue.name, self.queueMaxSize)
         embed_color = discord.Colour.green()
         if invalid:
             sm_title += " :x: [Teams Changed]"
@@ -1235,7 +1231,7 @@ class SixMans(commands.Cog):
         return embed
 
     async def embed_leaderboard(self, ctx: Context, sorted_players, queue_name, games_played, lb_format):
-        embed = discord.Embed(title="{0} {1} Mans {2} Leaderboard".format(queue_name, self.teamSize, lb_format), color=discord.Colour.blue())
+        embed = discord.Embed(title="{0} {1} Mans {2} Leaderboard".format(queue_name, self.queueMaxSize, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
         embed.add_field(name="Unique Players", value="{}\n".format(len(sorted_players)), inline=True)
         
@@ -1275,13 +1271,13 @@ class SixMans(commands.Cog):
             points, wins, games_played = player_info[PLAYER_POINTS_KEY], player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY]
             wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][PLAYER_WINS_KEY], reverse=True)].index("{0}".format(player.id))
             games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][PLAYER_GP_KEY], reverse=True)].index("{0}".format(player.id))
-            embed = discord.Embed(title="{0} {1} {2} Mans {3} Rank".format(player.display_name, queue_name, self.teamSize, rank_format), color=discord.Colour.blue())
+            embed = discord.Embed(title="{0} {1} {2} Mans {3} Rank".format(player.display_name, queue_name, self.queueMaxSize, rank_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
             embed.add_field(name="Points:", value="**Value:** {2} | **Rank:** {0}/{1}".format(points_index + 1, num_players, points), inline=True)
             embed.add_field(name="Wins:", value="**Value:** {2} | **Rank:** {0}/{1}".format(wins_index + 1, num_players, wins), inline=True)
             embed.add_field(name="Games Played:", value="**Value:** {2} | **Rank:** {0}/{1}".format(games_played_index + 1, num_players, games_played), inline=True)
         except:
-            embed = discord.Embed(title="{0} {1} {2} Mans {3} Rank".format(player.display_name, queue_name, self.teamSize, rank_format), color=discord.Colour.red(),
+            embed = discord.Embed(title="{0} {1} {2} Mans {3} Rank".format(player.display_name, queue_name, self.queueMaxSize, rank_format), color=discord.Colour.red(),
                 description="No stats yet to rank {}".format(player.mention))
             embed.set_thumbnail(url=player.avatar_url)
         return embed
@@ -1303,7 +1299,7 @@ class SixMans(commands.Cog):
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
-                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.teamSize)
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize)
                 six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 

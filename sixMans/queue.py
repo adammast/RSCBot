@@ -8,7 +8,7 @@ import discord
 
 
 class SixMansQueue:
-    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, teamSize):
+    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, queueMaxSize):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -17,7 +17,7 @@ class SixMansQueue:
         self.points = points
         self.players = players
         self.gamesPlayed = gamesPlayed
-        self.teamSize = teamSize
+        self.queueMaxSize = queueMaxSize
         self.activeJoinLog = {}
 
     def _put(self, player):
@@ -40,7 +40,7 @@ class SixMansQueue:
             pass
 
     def _queue_full(self):
-        return self.queue.qsize() >= self.teamSize
+        return self.queue.qsize() >= self.queueMaxSize
 
     async def send_message(self, message='', embed=None):
         for channel in self.channels:

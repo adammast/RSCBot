@@ -4,7 +4,7 @@ import uuid
 
 import discord
 
-from .config import config
+from .strings import Strings
 from .queue import SixMansQueue
 
 
@@ -318,4 +318,4 @@ class Game:
         }
 
     def _generate_name_pass(self):
-        return config.room_pass[random.randrange(len(config.room_pass))]
+        return Strings.room_pass[random.randrange(len(Strings.room_pass))]
