@@ -240,7 +240,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["kq"])
     async def kickQueue(self, ctx: Context, player: discord.Member):
         """Remove someone else from the queue"""
-        if not await self.has_perms(ctx):
+        if not await self.has_perms(ctx.author):
             return
 
         await self._pre_load_queues(ctx.guild)
@@ -287,7 +287,7 @@ class SixMans(commands.Cog):
     async def forceCancelGame(self, ctx: Context, gameId: int = None):
         """Cancel the current game. Can only be used in a game channel unless a gameId is given.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
-        if not await self.has_perms(ctx):
+        if not await self.has_perms(ctx.author):
             return
         
         await self._pre_load_queues(ctx.guild)
@@ -329,7 +329,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["fr"])
     async def forceResult(self, ctx: Context, winning_team):
-        if not await self.has_perms(ctx):
+        if not await self.has_perms(ctx.author):
             return
 
         await self._pre_load_queues(ctx.guild)
@@ -842,7 +842,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["cag"])
     async def checkActiveGames(self, ctx: Context):
-        if not await self.has_perms(ctx):
+        if not await self.has_perms(ctx.author):
             return
 
         await self._pre_load_queues(ctx.guild)
@@ -866,11 +866,11 @@ class SixMans(commands.Cog):
 
 #region helper methods
 
-    async def has_perms(self, ctx: Context):
-        helper_role = await self._helper_role(ctx.guild)
-        if ctx.author.guild_permissions.administrator:
+    async def has_perms(self, member: discord.Member):
+        helper_role = await self._helper_role(member.guild)
+        if member.guild_permissions.administrator:
             return True
-        elif helper_role and helper_role in ctx.author.roles:
+        elif helper_role and helper_role in member.roles:
             return True
 
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
@@ -1162,7 +1162,7 @@ class SixMans(commands.Cog):
 
 #region embed and string format methods
 
-    async def embed_player_added(self, player: discord.Member, six_mans_queue: SixMansQueue):
+    def embed_player_added(self, player: discord.Member, six_mans_queue: SixMansQueue):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.green())
         embed.set_author(name="{0} added to the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
@@ -1170,7 +1170,7 @@ class SixMans(commands.Cog):
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
-    async def embed_player_removed(self, player: discord.Member, six_mans_queue: SixMansQueue):
+    def embed_player_removed(self, player: discord.Member, six_mans_queue: SixMansQueue):
         player_list = self.format_player_list(six_mans_queue)
         embed = discord.Embed(color=discord.Colour.red())
         embed.set_author(name="{0} removed from the {1} queue. ({2}/{3})".format(player.display_name, six_mans_queue.name,
@@ -1193,7 +1193,7 @@ class SixMans(commands.Cog):
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
-    async def embed_active_games(self, queueGames: Dict[int, List[Game]]):
+    def embed_active_games(self, queueGames: Dict[int, List[Game]]):
         embed = discord.Embed(title="{0} Mans Active Games".format(self.queueMaxSize), color=discord.Colour.blue())
         for queueId in queueGames.keys():
             games = queueGames[queueId]
