@@ -1,5 +1,5 @@
 
-class config:
+class Strings:
     room_pass = [
         'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
         'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
