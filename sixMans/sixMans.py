@@ -1234,18 +1234,23 @@ class SixMans(commands.Cog):
         embed = discord.Embed(title="{0} {1} Mans {2} Leaderboard".format(queue_name, self.queueMaxSize, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
         embed.add_field(name="Unique Players", value="{}\n".format(len(sorted_players)), inline=True)
+        embed.add_field(name="⠀", value="⠀", inline=True) # Blank field added to push the Player and Stats fields to a new line
         
         index = 1
-        message = ""
+        playerStrings = []
+        statStrings = []
         for player in sorted_players:
             try:
-                member = await commands.MemberConverter().convert(ctx, player[0])
+                member: discord.Member = await commands.MemberConverter().convert(ctx, player[0])
             except:
                 await ctx.send(":x: Can't find player with id: {}".format(player[0]))
                 return
+
             player_info = player[1]
-            message += "`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}\n".format(index, member.mention, player_info[PLAYER_POINTS_KEY], 
-                player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY])
+            playerStrings.append("`{0}` **{1:25s}:**".format(index, member.display_name))
+            statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[PLAYER_POINTS_KEY],
+                player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY]))
+            
             index += 1
             if index > 10:
                 break
@@ -1255,12 +1260,14 @@ class SixMans(commands.Cog):
             author_index = [y[0] for y in sorted_players].index("{0}".format(author.id))
             if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
-                message += "\n\n`{0}` {1} **Points:** {2}  **Wins:** {3}  **Games Played:** {4}".format(author_index + 1, author.mention, author_info[PLAYER_POINTS_KEY], 
-                    author_info[PLAYER_WINS_KEY], author_info[PLAYER_GP_KEY])
+                playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name))
+                statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(author_info[PLAYER_POINTS_KEY],
+                author_info[PLAYER_WINS_KEY], author_info[PLAYER_GP_KEY]))
         except Exception:
             pass
 
-        embed.add_field(name="Most Points", value=message, inline=False)
+        embed.add_field(name="Player", value="{}\n".format("\n".join(playerStrings)), inline=True)
+        embed.add_field(name="Stats", value="{}\n".format("\n".join(statStrings)), inline=True)
         return embed
 
     def embed_rank(self, player, sorted_players, queue_name, rank_format):
