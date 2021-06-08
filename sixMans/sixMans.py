@@ -1321,9 +1321,9 @@ class SixMans(commands.Cog):
                         
                 game = Game(players, queue, text_channel=text_channel, voice_channels=voice_channels, observers=self.observers)
                 game.id = int(key)
-                game.captains = [ctx.guild.get_member(x) for x in value["Captains"]]
-                game.blue = set([ctx.guild.get_member(x) for x in value["Blue"]])
-                game.orange = set([ctx.guild.get_member(x) for x in value["Orange"]])
+                game.captains = [guild.get_member(x) for x in value["Captains"]]
+                game.blue = set([guild.get_member(x) for x in value["Blue"]])
+                game.orange = set([guild.get_member(x) for x in value["Orange"]])
                 game.roomName = value["RoomName"]
                 game.roomPass = value["RoomPass"]
                 game.scoreReported = value["ScoreReported"]
