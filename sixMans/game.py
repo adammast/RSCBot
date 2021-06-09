@@ -239,19 +239,20 @@ class Game:
         await self._notify(new_state="game over")
 
     async def color_embed_for_winners(self, winner):
-        winner = winner.lower()
-        if winner == 'blue':
-            color = discord.Colour.blue()
-        elif winner == 'orange':
-            color = discord.Colour.orange()
-        else:
-            color = discord.Colour.green()  # catch all for errors hopefully
+        if self.info_message is not None:
+            winner = winner.lower()
+            if winner == 'blue':
+                color = discord.Colour.blue()
+            elif winner == 'orange':
+                color = discord.Colour.orange()
+            else:
+                color = discord.Colour.green()  # catch all for errors hopefully
 
-        embed = self.info_message.embeds[0]
-        embed_dict = embed.to_dict()
-        embed_dict['color'] = color.value
-        embed = discord.Embed.from_dict(embed_dict)
-        await self.info_message.edit(embed=embed)
+            embed = self.info_message.embeds[0]
+            embed_dict = embed.to_dict()
+            embed_dict['color'] = color.value
+            embed = discord.Embed.from_dict(embed_dict)
+            await self.info_message.edit(embed=embed)
 
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None
