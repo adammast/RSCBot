@@ -10,6 +10,7 @@
                 "RoomPass": "",
                 "TextChannel": "",
                 "VoiceChannels": [],
+                "InfoMessage": "",
                 "QueueId": "",
                 "ScoreReported": ""
             }
