@@ -247,15 +247,11 @@ class Game:
         else:
             color = discord.Colour.green()  # catch all for errors hopefully
 
-        try:
-            # TODO: Look into saving the teams_message id so it can be loaded later
-            embed = self.info_message.embeds[0]
-            embed_dict = embed.to_dict()
-            embed_dict['color'] = color.value
-            embed = discord.Embed.from_dict(embed_dict)
-            await self.info_message.edit(embed=embed)
-        except:
-            pass
+        embed = self.info_message.embeds[0]
+        embed_dict = embed.to_dict()
+        embed_dict['color'] = color.value
+        embed = discord.Embed.from_dict(embed_dict)
+        await self.info_message.edit(embed=embed)
 
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None
