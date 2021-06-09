@@ -6,7 +6,7 @@ Every franchise must have both, a prefix and a discord role in the appropriate f
 
 ## Installation
 
-The `prefixManager` has no other cog dependancies.
+The `prefixManager` cog has no other cog dependancies.
 
 ```
 <p>cog install RSCBot prefixManager
@@ -44,9 +44,9 @@ The following commands can be used to manage server prefixes:
     - Removes nicknames for each user passed in the userList. The `teamManager` cog uses prefixes and nicknames to reflect which franchise discord members are associated with.
     - Example: `<p>removeNicknames Adammast nullidea Snipe`
 
-
 ## What if a GM changes?
 
 If a GM wishes to step down, or leaves the server, the prefix and the franchise role name must be updated.
+
 - The discord role name may be updated in server settings.
 - The commands `<p>removePrefix` and `<p>addPrefix` may be used to update the prefix association to the newly appointed GM.

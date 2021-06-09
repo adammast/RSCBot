@@ -52,7 +52,6 @@ class SixMans(commands.Cog):
         self.task = self.bot.loop.create_task(self.timeout_queues())
         self.observers = set()
 
-
     def cog_unload(self):
         """Clean up when cog shuts down."""
         if self.task:
@@ -187,7 +186,7 @@ class SixMans(commands.Cog):
             # TODO: determine a workaround from filtering through all active games
 
     @commands.guild_only()
-    @commands.command(aliases=["qm", "queueAll", "qa"])
+    @commands.command(aliases=["qm", "queueAll", "qa", "forceQueue", "fq"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueMultiple(self, ctx: Context, *members: discord.Member):
         """Mass queueing for testing purposes"""
