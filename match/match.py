@@ -4,7 +4,9 @@ from datetime import datetime
 
 import discord
 from discord.ext.commands import Context
+from playerRatings import PlayerRatings
 from redbot.core import Config, checks, commands
+from teamManager import TeamManager
 
 from .strings import Strings
 
@@ -20,7 +22,7 @@ class Match(commands.Cog):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager = bot.get_cog("TeamManager")
+        self.team_manager: TeamManager = bot.get_cog("TeamManager")
 
 #region commmands
 
@@ -58,8 +60,7 @@ class Match(commands.Cog):
             await ctx.send("Match day not provided and not set for the server.")
             return
         team_names = []
-        user_team_names = await self.team_manager.teams_for_user(
-            ctx, ctx.message.author)
+        user_team_names = await self.team_manager.teams_for_user(ctx, ctx.message.author)
 
         team_names_provided = len(args) > 1
         if team_names_provided:
@@ -440,8 +441,8 @@ class Match(commands.Cog):
 
         embed = discord.Embed(title=title, description=description, color=tier_role.color)
 
-        player_ratings = self.bot.get_cog("PlayerRatings")
-        if player_ratings and await player_ratings.guild_has_players(ctx):
+        player_ratings: PlayerRatings = self.bot.get_cog("PlayerRatings")
+        if player_ratings and await player_ratings.guild_has_players(ctx.guild):
             return await self.embed_solo_match_info(ctx, embed, match, player_ratings, user_team_name, home, away)
             
         return await self.embed_normal_match_info(ctx, embed, match, user_team_name, home, away)
@@ -470,8 +471,8 @@ class Match(commands.Cog):
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
 
 
-        player_ratings = self.bot.get_cog("PlayerRatings")
-        if player_ratings and await player_ratings.guild_has_players(ctx):
+        player_ratings: PlayerRatings = self.bot.get_cog("PlayerRatings")
+        if player_ratings and await player_ratings.guild_has_players(ctx.guild):
             message += await self.format_solo_match_info_message(ctx, match, player_ratings, user_team_name, home, away)
             return message
             
@@ -503,7 +504,7 @@ class Match(commands.Cog):
 
         return message
 
-    async def embed_solo_match_info(self, ctx, embed: discord.Embed, match, player_ratings_cog, user_team_name, home, away):
+    async def embed_solo_match_info(self, ctx, embed: discord.Embed, match, player_ratings_cog: PlayerRatings, user_team_name, home, away):
         embed.add_field(name="**Home Team:**", value=await self.team_manager.format_roster_info(ctx, home), inline=False)
         embed.add_field(name="**Away Team:**", value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
@@ -517,7 +518,7 @@ class Match(commands.Cog):
         embed.add_field(name="Match Info:", value=message)
         return embed
 
-    async def format_solo_match_info_message(self, ctx, match, player_ratings_cog, user_team_name, home, away):
+    async def format_solo_match_info_message(self, ctx, match, player_ratings_cog: PlayerRatings, user_team_name, home, away):
         message = "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
         message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
         seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
@@ -560,7 +561,7 @@ class Match(commands.Cog):
         #additional_info += Strings.playoff_info
         return additional_info
 
-    async def format_solo_user_matchups_message(self, ctx, match, player_ratings_cog, user_team_name, home, away, seed):
+    async def format_solo_user_matchups_message(self, ctx, match, player_ratings_cog: PlayerRatings, user_team_name, home, away, seed):
         message = ""
         if user_team_name.casefold() == home.casefold():
             ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
@@ -580,7 +581,7 @@ class Match(commands.Cog):
                 match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
         return message
 
-    async def format_generic_solo_matchups_message(self, ctx, player_ratings_cog, home, away):
+    async def format_generic_solo_matchups_message(self, ctx, player_ratings_cog: PlayerRatings, home, away):
         message = ""
         try:
             # First match
@@ -608,7 +609,7 @@ class Match(commands.Cog):
             message = "There was an error getting the matchups for this match."
         return message
 
-    async def format_solo_matchup(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
+    async def format_solo_matchup(self, ctx, player_ratings_cog: PlayerRatings, home, away, home_seed, away_seed):
         away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).display_name) # We convert to string to handle None cases
         home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).display_name) # We convert to string to handle None cases
         return Strings.solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)

@@ -594,7 +594,7 @@ class TeamManager(commands.Cog):
         # Sort team_members by player rating if the player ratings cog is used in this server
         try:
             player_ratings = self.bot.get_cog("PlayerRatings")
-            team_members = await player_ratings.sort_members_by_rating(ctx, team_members)
+            team_members = await player_ratings.sort_members_by_rating(ctx.guild, team_members)
         except:
             pass
 

@@ -1,9 +1,6 @@
 import discord
-import re
-
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
+from playerRatings import PlayerRatings
+from redbot.core import Config, checks, commands
 
 defaults = {
     "TransChannel": None,
@@ -185,9 +182,9 @@ class Transactions(commands.Cog):
                         for team_member in team_members:
                             await team_member.remove_roles(subbed_out_role)
                     # Reset player temp rating if the player rating cog is used
-                    player_ratings = self.bot.get_cog("PlayerRatings")
+                    player_ratings: PlayerRatings = self.bot.get_cog("PlayerRatings")
                     if player_ratings:
-                        await player_ratings.reset_temp_rating(ctx, user)
+                        await player_ratings.reset_temp_rating(ctx.guild, user)
                 
                 # Begin Substitution:
                 else:
@@ -201,9 +198,9 @@ class Transactions(commands.Cog):
                     subbed_out_role = self.team_manager_cog._find_role_by_name(ctx, self.SUBBED_OUT_ROLE)
                     if subbed_out_user and subbed_out_role:
                         await subbed_out_user.add_roles(subbed_out_role)
-                        player_ratings = self.bot.get_cog("PlayerRatings")
+                        player_ratings: PlayerRatings = self.bot.get_cog("PlayerRatings")
                         if player_ratings:
-                            await player_ratings.set_player_temp_rating(ctx, user, subbed_out_user)
+                            await player_ratings.set_player_temp_rating(ctx.guild, user, subbed_out_user)
                     elif subbed_out_user:
                         await ctx.send(":x: The subbed out role is not set in this server")
                 await trans_channel.send(message)
