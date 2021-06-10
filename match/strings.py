@@ -1,5 +1,5 @@
 
-class config:
+class Strings:
     home_info = ("You are the **home** team. You will create the "
                 "room using the above information. Contact the "
                 "other team when your team is ready to begin the "
