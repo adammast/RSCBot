@@ -1,11 +1,16 @@
-import discord
 from datetime import datetime
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
+
+import discord
+from discord.ext.commands import Context
+from redbot.core import Config, checks, commands
 
 defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None}
 
+TROPHY_EMOJI = "\U0001F3C6"         # :trophy:
+GOLD_MEDAL_EMOJI = "\U0001F3C5"     # gold medal
+FIRST_PLACE_EMOJI = "\U0001F947"    # first place medal
+STAR_EMOJI = "\U00002B50"           # :star:
+LEAGUE_REWARDS = [TROPHY_EMOJI, GOLD_MEDAL_EMOJI, FIRST_PLACE_EMOJI, STAR_EMOJI]
 
 class ModeratorLink(commands.Cog):
     def __init__(self, bot):
@@ -13,16 +18,12 @@ class ModeratorLink(commands.Cog):
         self.config.register_guild(**defaults)
         self.bot = bot
 
-        self.TROPHY_EMOJI = "\U0001F3C6" # :trophy:
-        self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # gold medal
-        self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
-        self.STAR_EMOJI = "\U00002B50" # :star:
-        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
+#region commmands
 
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def setEventChannel(self, ctx, event_channel: discord.TextChannel):
+    async def setEventChannel(self, ctx: Context, event_channel: discord.TextChannel):
         """Sets the channel where all moderator-link related events are logged, and enables cross-guild member updates."""
         await self._save_event_log_channel(ctx.guild, event_channel.id)
         await ctx.send("Done")
@@ -30,7 +31,7 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['unsetEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def unsetEventChannel(self, ctx):
+    async def unsetEventChannel(self, ctx: Context):
         """Unsets the channel currently assigned as the event log channel and disables cross-guild member updates."""
         await self._save_event_log_channel(ctx.guild, None)
         await ctx.send("Event log channel has been cleared.")
@@ -38,7 +39,7 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['getEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def getEventChannel(self, ctx):
+    async def getEventChannel(self, ctx: Context):
         """Gets the channel currently assigned as the event log channel."""
         try:
             channel = await self._event_log_channel(ctx.guild)
@@ -52,7 +53,7 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['champion', 'assignTrophy', 'awardTrophy'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def addTrophy(self, ctx, *userList):
+    async def addTrophy(self, ctx: Context, *userList):
         """Adds a trophy to each user passed in the userList"""
         found = []
         notFound = []
@@ -68,7 +69,7 @@ class ModeratorLink(commands.Cog):
         
         for player in found:
             prefix, nick, rewards = self._get_name_components(player)
-            rewards += self.TROPHY_EMOJI
+            rewards += TROPHY_EMOJI
             new_name = self._generate_new_name(prefix, nick, rewards)
             try:
                 await player.edit(nick=new_name)
@@ -96,7 +97,7 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['assignMedal', 'awardMedal'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def addMedal(self, ctx, *userList):
+    async def addMedal(self, ctx: Context, *userList):
         """Adds a first place medal to each user passed in the userList"""
         found = []
         notFound = []
@@ -112,7 +113,7 @@ class ModeratorLink(commands.Cog):
         
         for player in found:
             prefix, nick, rewards = self._get_name_components(player)
-            rewards += self.FIRST_PLACE_EMOJI
+            rewards += FIRST_PLACE_EMOJI
             new_name = self._generate_new_name(prefix, nick, rewards)
             try:
                 await player.edit(nick=new_name)
@@ -140,16 +141,18 @@ class ModeratorLink(commands.Cog):
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
-    # async def ban(self, ctx, user: discord.User, *, reason=None):
+    # async def ban(self, ctx: Context, user: discord.User, *, reason=None):
     #     await ctx.guild.ban(user, reason=reason, delete_message_days=0)
     #     await ctx.send("Done.")
     
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
-    # async def unban(self, ctx, user: discord.User, *, reason=None):
+    # async def unban(self, ctx: Context, user: discord.User, *, reason=None):
     #     await ctx.guild.unban(user, reason=reason)
     #     await ctx.send("Done.")
+
+    #region listeners
 
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
@@ -243,6 +246,11 @@ class ModeratorLink(commands.Cog):
                 
                 return
 
+    #endregion
+
+#endregion
+
+#region helper methods
 
     async def _process_role_update(self, before, after):
         removed_roles = before.roles
@@ -351,7 +359,7 @@ class ModeratorLink(commands.Cog):
         player_name = ""
         rewards = ""
         for char in name[::-1]:
-            if char not in self.LEAGUE_REWARDS:
+            if char not in LEAGUE_REWARDS:
                 break
             rewards = char + rewards
 
@@ -365,15 +373,21 @@ class ModeratorLink(commands.Cog):
             new_name += " {}".format(rewards)
         return new_name
 
-    async def _save_event_log_channel(self, guild, event_channel):
+#endregion
+
+#region load/save methods
+
+    async def _save_event_log_channel(self, guild: discord.Guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
         # await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
 
-    async def _event_log_channel(self, guild):
+    async def _event_log_channel(self, guild: discord.Guild):
         return guild.get_channel(await self.config.guild(guild).EventLogChannel())
 
-    async def _save_shared_roles(self, guild, shared_role_names):
-        await self.config.guild(guild).SharedRoles.set(shared_roles)
+    async def _save_shared_roles(self, guild: discord.Guild, shared_role_names):
+        await self.config.guild(guild).SharedRoles.set(shared_role_names)
 
-    async def _get_shared_role_names(self, guild):
+    async def _get_shared_role_names(self, guild: discord.Guild):
         return await self.config.guild(guild).SharedRoles()
+
+#endregion
