@@ -348,7 +348,7 @@ class Transactions(commands.Cog):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
         if leagueRole is not None:
-            prefix = await self.prefix_cog._get_franchise_prefix(ctx, franchise_role)
+            prefix = await self.prefix_cog.get_franchise_prefix(ctx.guild, franchise_role)
             if prefix is not None:
                 currentTier = await self.team_manager_cog.get_current_tier_role(ctx, user)
                 if currentTier is not None and currentTier != tier_role:
