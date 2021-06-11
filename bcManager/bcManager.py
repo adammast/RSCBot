@@ -1,18 +1,17 @@
-from .config import config
-import requests
-import tempfile
-import os
-import json
-import discord
 import asyncio
+import tempfile
+from datetime import datetime
 
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.predicates import ReactionPredicate
+import discord
+import requests
+from discord.ext.commands import Context
+from match import Match
+from redbot.core import Config, checks, commands
 from redbot.core.utils.menus import start_adding_reactions
-from datetime import datetime, timezone
+from redbot.core.utils.predicates import ReactionPredicate
+from teamManager import TeamManager
 
+from .config import config
 
 defaults = {
     "AuthToken": config.auth_token,
@@ -21,7 +20,8 @@ defaults = {
     "ReplayDumpChannel": None
 }
 global_defaults = {"AccountRegister": {}}
-verify_timeout = 30
+
+VERIFY_TIMEOUT = 30
 
 class BCManager(commands.Cog):
     """Manages aspects of Ballchasing Integrations with RSC"""
@@ -30,12 +30,14 @@ class BCManager(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
         self.config.register_global(**global_defaults)
-        self.team_manager_cog = bot.get_cog("TeamManager")
-        self.match_cog = bot.get_cog("Match")
+        self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
+        self.match_cog: Match = bot.get_cog("Match")
     
+#region commmands
+
     @commands.command(aliases=['bcr', 'bcpull'])
     @commands.guild_only()
-    async def bcreport(self, ctx, team_name=None, match_day=None):
+    async def bcreport(self, ctx: Context, team_name=None, match_day=None):
         """Finds match games from recent public uploads, and adds them to the correct Ballchasing subgroup
         """
 
@@ -115,11 +117,11 @@ class BCManager(commands.Cog):
     @commands.command(aliases=['setAuthKey'])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setAuthToken(self, ctx, auth_token):
+    async def setAuthToken(self, ctx: Context, auth_token):
         """Sets the Auth Key for Ballchasing API requests.
         Note: Auth Token must be generated from the Ballchasing group owner
         """
-        token_set = await self._save_auth_token(ctx, auth_token)
+        token_set = await self._save_auth_token(ctx.guild, auth_token)
         if token_set:
             await ctx.send("Done.")
         else:
@@ -128,7 +130,7 @@ class BCManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setTierRank(self, ctx, tier, rank):
+    async def setTierRank(self, ctx: Context, tier, rank):
         """Declares a ranking of tiers so that they are sorted in accordance with skill distribution
         """
         tiers = await self.team_manager_cog.tiers(ctx)
@@ -139,7 +141,7 @@ class BCManager(commands.Cog):
                 break
         
         old_rank = None
-        tier_ranks = await self._get_tier_ranks(ctx)
+        tier_ranks = await self._get_tier_ranks(ctx.guild)
         if tier in tier_ranks:
             old_rank = tier_ranks['tier']
         
@@ -151,11 +153,11 @@ class BCManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setTopLevelGroup(self, ctx, top_level_group):
+    async def setTopLevelGroup(self, ctx: Context, top_level_group):
         """Sets the Top Level Ballchasing Replay group for saving match replays.
         Note: Auth Token must be generated from the Ballchasing group owner
         """
-        group_set = await self._save_top_level_group(ctx, top_level_group)
+        group_set = await self._save_top_level_group(ctx.guild, top_level_group)
         if(group_set):
             await ctx.send("Done.")
         else:
@@ -163,9 +165,9 @@ class BCManager(commands.Cog):
     
     @commands.command(aliases=['bcGroup', 'ballchasingGroup', 'bcg'])
     @commands.guild_only()
-    async def bcgroup(self, ctx):
+    async def bcgroup(self, ctx: Context):
         """Links to the top level ballchasing group for the current season."""
-        group_code = await self._get_top_level_group(ctx)
+        group_code = await self._get_top_level_group(ctx.guild)
         url = "https://ballchasing.com/group/{}".format(group_code)
         if group_code:
             await ctx.send("See all season replays in the top level ballchasing group: {}".format(url))
@@ -174,7 +176,7 @@ class BCManager(commands.Cog):
 
     @commands.command(aliases=['accountRegister', 'addAccount'])
     @commands.guild_only()
-    async def registerAccount(self, ctx, platform, identifier):
+    async def registerAccount(self, ctx: Context, platform, identifier):
         """Allows user to register account for ballchasing requests. This may be found by searching your appearances on ballchasing.com
         
         Examples:
@@ -221,7 +223,7 @@ class BCManager(commands.Cog):
     
     @commands.command(aliases=['rmaccount', 'removeAccount'])
     @commands.guild_only()
-    async def unregisterAccount(self, ctx, platform, identifier=None):
+    async def unregisterAccount(self, ctx: Context, platform, identifier=None):
         """Removes one or more registered accounts."""
         remove_accs = []
         account_register = await self._get_account_register()
@@ -250,7 +252,7 @@ class BCManager(commands.Cog):
 
     @commands.command(aliases=['rmaccounts', 'clearaccounts', 'clearAccounts'])
     @commands.guild_only()
-    async def unregisterAccounts(self, ctx):
+    async def unregisterAccounts(self, ctx: Context):
         """Unlinks registered account for ballchasing requests."""
         account_register = await self._get_account_register(ctx.guild)
         discord_id = str(ctx.message.author.id)
@@ -268,7 +270,7 @@ class BCManager(commands.Cog):
 
     @commands.command(aliases=['accs', 'myAccounts', 'registeredAccounts'])
     @commands.guild_only()
-    async def accounts(self, ctx):
+    async def accounts(self, ctx: Context):
         """View all accounts that have been registered to with your discord account in this guild."""
         member = ctx.message.author
         accounts = await self._get_member_accounts(member)
@@ -282,14 +284,14 @@ class BCManager(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def massAddAccounts(self, ctx):
+    async def massAddAccounts(self, ctx: Context):
         """Adds accounts in bulk -- This is not supported yet"""
         pass
     
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearAccountData(self, ctx):
+    async def clearAccountData(self, ctx: Context):
         """Clears all account data -- This is not supported yet"""
         pass
 
@@ -298,8 +300,11 @@ class BCManager(commands.Cog):
     # async def on_message(self, message):
     #     member = message.author
 
+#endregion
 
-    async def _bc_get_request(self, ctx, endpoint, params=[], auth_token=None):
+#region helper methods
+
+    async def _bc_get_request(self, ctx: Context, endpoint, params=[], auth_token=None):
         if not auth_token:
             auth_token = await self._get_auth_token(ctx.guild)
         
@@ -311,7 +316,7 @@ class BCManager(commands.Cog):
         
         return requests.get(url, headers={'Authorization': auth_token})
 
-    async def _bc_post_request(self, ctx, endpoint, params=[], auth_token=None, json=None, data=None, files=None):
+    async def _bc_post_request(self, ctx: Context, endpoint, params=[], auth_token=None, json=None, data=None, files=None):
         if not auth_token:
             auth_token = await self._get_auth_token(ctx.guild)
         
@@ -323,7 +328,7 @@ class BCManager(commands.Cog):
         
         return requests.post(url, headers={'Authorization': auth_token}, json=json, data=data, files=files)
 
-    async def _bc_patch_request(self, ctx, endpoint, params=[], auth_token=None, json=None, data=None):
+    async def _bc_patch_request(self, ctx: Context, endpoint, params=[], auth_token=None, json=None, data=None):
         if not auth_token:
             auth_token = await self._get_auth_token(ctx.guild)
 
@@ -335,7 +340,7 @@ class BCManager(commands.Cog):
         
         return requests.patch(url, headers={'Authorization': auth_token}, json=json, data=data)
 
-    async def _react_prompt(self, ctx, prompt, if_not_msg=None, embed:discord.Embed=None):
+    async def _react_prompt(self, ctx: Context, prompt, if_not_msg=None, embed:discord.Embed=None):
         user = ctx.message.author
         if embed:
             embed.description = prompt
@@ -345,7 +350,7 @@ class BCManager(commands.Cog):
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         try:
             pred = ReactionPredicate.yes_or_no(react_msg, user)
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result:
                 return True
             if if_not_msg:
@@ -355,7 +360,7 @@ class BCManager(commands.Cog):
             await ctx.send("Sorry {}, you didn't react quick enough. Please try again.".format(user.mention))
             return False
 
-    async def _embed_react_prompt(self, ctx, embed, existing_message=None, success_embed=None, reject_embed=None, clear_after_confirm=True):
+    async def _embed_react_prompt(self, ctx: Context, embed, existing_message=None, success_embed=None, reject_embed=None, clear_after_confirm=True):
         user = ctx.message.author
         if existing_message:
             react_msg = existing_message
@@ -366,7 +371,7 @@ class BCManager(commands.Cog):
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         try:
             pred = ReactionPredicate.yes_or_no(react_msg, user)
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result:
                 await react_msg.edit(embed=success_embed)
                 if clear_after_confirm:
@@ -399,7 +404,7 @@ class BCManager(commands.Cog):
                 accs.append(account)
         return accs
     
-    async def _validate_account(self, ctx, platform, identifier):
+    async def _validate_account(self, ctx: Context, platform, identifier):
         auth_token = config.auth_token
         endpoint = '/replays'
         params = [
@@ -452,7 +457,7 @@ class BCManager(commands.Cog):
         }
         return teams
 
-    async def _get_steam_id_from_token(self, ctx, auth_token=None):
+    async def _get_steam_id_from_token(self, ctx: Context, auth_token=None):
         if not auth_token:
             auth_token = await self._get_auth_token(ctx.guild)
         r = await self._bc_get_request(ctx, "")
@@ -465,7 +470,7 @@ class BCManager(commands.Cog):
         player_id = "{}:{}".format(arr[0], arr[1])
         return player_id
 
-    async def _get_uploader_id(self, ctx, discord_id):
+    async def _get_uploader_id(self, ctx: Context, discord_id):
         account_register = await self._get_account_register()
         if ctx.member.id in account_register:
             if account_register[discord_id][0] != 'steam':
@@ -501,23 +506,23 @@ class BCManager(commands.Cog):
 
         return home_team_found and away_team_found
 
-    async def get_match(self, ctx, member, team=None, match_day=None):
+    async def get_match(self, ctx: Context, member, team=None, match_day=None):
         if not match_day:
-            match_day = await self.match_cog._match_day(ctx)
+            match_day = await self.match_cog._match_day(ctx.guild)
         if not team:
             team = (await self.team_manager_cog.teams_for_user(ctx, member))[0]
         
-        match = await self.match_cog.get_match_from_day_team(ctx, match_day, team)
+        match = await self.match_cog.get_match_from_day_team(ctx.guild, match_day, team)
         return match
 
-    async def _get_replay_destination(self, ctx, match, top_level_group=None, group_owner_discord_id=None):
+    async def _get_replay_destination(self, ctx: Context, match, top_level_group=None, group_owner_discord_id=None):
         
         auth_token = await self._get_auth_token(ctx.guild)
 
         # needs both to override default -- TODO: Remove non-match params (derive logically)
         if not group_owner_discord_id or not top_level_group:
             bc_group_owner = await self._get_steam_id_from_token(ctx, auth_token)
-            top_level_group = await self._get_top_level_group(ctx)
+            top_level_group = await self._get_top_level_group(ctx.guild)
         else:
             bc_group_owner = await self._get_uploader_id(ctx, group_owner_discord_id)  # config.group_owner_discord_id
 
@@ -586,7 +591,7 @@ class BCManager(commands.Cog):
             
         return next_subgroup_id
 
-    async def _find_match_replays(self, ctx, member, match):
+    async def _find_match_replays(self, ctx: Context, member, match):
         # search for appearances in private matches
         endpoint = "/replays"
         sort = 'replay-date' # 'created
@@ -669,7 +674,7 @@ class BCManager(commands.Cog):
                     return replay_ids, series_summary, winner
         return None
     
-    async def _download_replays(self, ctx, replay_ids):
+    async def _download_replays(self, ctx: Context, replay_ids):
         auth_token = await self._get_auth_token(ctx.guild)
         tmp_replay_files = []
         this_game = 1
@@ -688,7 +693,7 @@ class BCManager(commands.Cog):
 
         return tmp_replay_files
 
-    async def _upload_replays(self, ctx, subgroup_id, files_to_upload):
+    async def _upload_replays(self, ctx: Context, subgroup_id, files_to_upload):
         endpoint = "/v2/upload"
         params = [
             'visibility={}'.format(config.visibility),
@@ -723,7 +728,7 @@ class BCManager(commands.Cog):
         
         return replay_ids_in_group
         
-    async def _rename_replays(self, ctx, uploaded_replays_ids):
+    async def _rename_replays(self, ctx: Context, uploaded_replays_ids):
         auth_token = await self._get_auth_token(ctx.guild)
         renamed = []
 
@@ -744,11 +749,11 @@ class BCManager(commands.Cog):
             game_number += 1
         return renamed
 
-    async def _get_tier_subgroup_name(self, ctx, tier):
-        tier_num = (await self._get_tier_ranks(ctx))[tier]
+    async def _get_tier_subgroup_name(self, ctx: Context, tier):
+        tier_num = (await self._get_tier_ranks(ctx.guild))[tier]
         return '{}{}'.format(tier_num, tier)
 
-    async def _get_all_match_players(self, ctx, match):
+    async def _get_all_match_players(self, ctx: Context, match):
         players = []
         for team in ['home', 'away']:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, match[team])
@@ -757,27 +762,29 @@ class BCManager(commands.Cog):
                 players.append(player)
         return players
 
-# json db
+#endregion
 
-    async def _get_auth_token(self, guild):
+#region load/save methods
+
+    async def _get_auth_token(self, guild: discord.Guild):
         return await self.config.guild(guild).AuthToken()
     
-    async def _save_auth_token(self, ctx, token):
-        await self.config.guild(ctx.guild).AuthToken.set(token)
+    async def _save_auth_token(self, guild: discord.Guild, token):
+        await self.config.guild(guild).AuthToken.set(token)
         return True
 
-    async def _get_top_level_group(self, ctx):
-        return await self.config.guild(ctx.guild).TopLevelGroup()
+    async def _get_top_level_group(self, guild: discord.Guild):
+        return await self.config.guild(guild).TopLevelGroup()
     
-    async def _save_top_level_group(self, ctx, group_id):
-        await self.config.guild(ctx.guild).TopLevelGroup.set(group_id)
+    async def _save_top_level_group(self, guild: discord.Guild, group_id):
+        await self.config.guild(guild).TopLevelGroup.set(group_id)
         return True
     
-    async def _get_tier_ranks(self, ctx):
-        return await self.config.guild(ctx.guild).TierRank()
+    async def _get_tier_ranks(self, guild: discord.Guild):
+        return await self.config.guild(guild).TierRank()
     
-    async def _save_tier_ranks(self, ctx, tier_ranks):
-        await self.config.guild(ctx.guild).TierRanks.set(tier_ranks)
+    async def _save_tier_ranks(self, guild: discord.Guild, tier_ranks):
+        await self.config.guild(guild).TierRanks.set(tier_ranks)
         return True
 
     async def _get_account_register(self):
@@ -786,4 +793,5 @@ class BCManager(commands.Cog):
     async def _save_account_register(self, account_register):
         await self.config.AccountRegister.set(account_register)
 
+#endregion
     
