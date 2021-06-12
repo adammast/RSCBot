@@ -8,8 +8,12 @@ import discord
 from .strings import Strings
 from .queue import SixMansQueue
 
-RANDOM_TS = "random"
-CAPTAIN_TS = "captains"
+SHUFFLE_REACT = "\U0001F500"    # :twisted_rightwards_arrows:
+VOTE_TS = 'vote'
+RANDOM_TS = 'random'
+SHUFFLE_TS = 'shuffle'
+CAPTAINS_TS = 'captains'
+BALANCED_TS = 'balanced'
 SELECTION_MODES  = {
     0x1F3B2: RANDOM_TS, # game_die
     0x1F1E8: CAPTAIN_TS # C
@@ -49,6 +53,8 @@ class Game:
             observer._subject = self
     
         self.bot.loop.create_task(self._notify())
+        self.bot.loop.create_task(self._process_team_selection_method())
+        
         
         if self.teamSelection == RANDOM_TS:
             pass 
@@ -126,16 +132,12 @@ class Game:
         await self.textChannel.send(', '.join(player.mention for player in self.players))
         embed = self._get_vote_embed()
         self.info_message = await self.textChannel.send(embed=embed)
-        await self._add_reactions(SELECTION_MODES.keys(), self.teams_message)
+        await self._add_reactions(SELECTION_MODES.keys(), self.info_message)
 
     async def pick_balanced_teams(self):
         pass
 
     async def pick_random_teams(self):
-        await self.shuffle_players()
-        await self._notify(new_state="ongoing")
-
-    async def shuffle_players(self):
         self.blue = set()
         self.orange = set()
         for player in random.sample(self.players, int(len(self.players)/2)):
@@ -146,7 +148,15 @@ class Game:
         self.reset_players()
         self.get_new_captains_from_teams()
 
-    async def captains_pick_teams(self, helper_role):
+        await self.update_game_info()
+
+    async def shuffle_players(self):
+        await self.pick_random_teams()
+        await self.info_message.add_reaction(SHUFFLE_REACT)
+
+    async def captains_pick_teams(self, helper_role=None):
+        if not helper_role:
+            helper_role = self.helper_role
         # Mentions all players
         await self.textChannel.send(', '.join(player.mention for player in self.players))
         # Pick captains
@@ -172,9 +182,24 @@ class Game:
         embed = self._get_captains_embed('blue')
         self.info_message = await self.textChannel.send(embed=embed)
         
-        await self._add_reactions(self.react_player_picks.keys(), self.teams_message)
+        await self._add_reactions(self.react_player_picks.keys(), self.info_message)
 
 # Team Selection helpers
+    async def _process_team_selection_method(self):
+        helper_role = await self.helper_role
+        if self.teamSelection == VOTE_TS:
+            await self.vote_team_selection()
+        elif self.teamSelection == CAPTAINS_TS:
+            await self.captains_pick_teams(helper_role)
+        elif self.teamSelection == RANDOM_TS:
+            await self.pick_random_teams()
+        elif self.teamSelection == SHUFFLE_TS:
+            await self.shuffle_players()
+        elif self.teamSelection == BALANCED_TS:
+            await self.pick_balanced_teams()
+        else:
+            return print("you messed up fool")
+
     async def process_captains_pick(self, reaction, user):
         teams_complete = False
         pick_i = len(self.blue)+len(self.orange)-2
@@ -215,8 +240,8 @@ class Game:
             for player in self.orange:
                 await self.add_to_orange(player)
             self.reset_players()
+            await self.update_game_info()
         
-        await self._notify(new_state="ongoing")
         return teams_complete
     
     async def process_team_select_vote(self, reaction, member):
@@ -228,7 +253,7 @@ class Game:
 
         # RECORD VOTES
         votes = {}
-        for react in self.teams_message.reactions:
+        for react in self.info_message.reactions:
             # player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
             react_hex = self._hex_from_emoji(reaction.emoji)
             if react_hex in SELECTION_MODES:
@@ -261,6 +286,7 @@ class Game:
         # Vote Complete if...
         if pending_votes == 0 or pending_votes + runner_up <= self.vote[1]:
             voted_mode = self.vote[0]
+            self.teamSelection = voted_mode
             return voted_mode
 
     def _get_vote_embed(self, voted=0):
@@ -374,6 +400,42 @@ class Game:
             players += "{} {}\n".format(react, player.mention)
         return players
 
+    async def update_game_info(self, helper_role=None, invalid=False, prefix='?'):
+        if not helper_role:
+            helper_role = self.helper_role
+        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queueMaxSize)
+        embed_color = discord.Colour.green()
+        if invalid:
+            sm_title += " :x: [Teams Changed]"
+            embed_color = discord.Colour.red()
+        embed = discord.Embed(title=sm_title, color=embed_color)
+        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.orange])), inline=False)
+        if not invalid:
+            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(self.captains[0].mention, self.captains[1].mention), inline=False)
+        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(self.roomName, self.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(self.queue.points[PP_PLAY_KEY], self.queue.points[PP_WIN_KEY]), inline=False)
+        if not invalid:
+            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
+                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+                "cancel the game.".format(prefix), inline=False)
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
+        embed.set_footer(text="Game ID: {}".format(game.id))
+        
+        # try:
+        #     await self.info_message.edit(embed=embed)
+        # except:
+        #     await self.info_message = self.textChannel.send(embed=embed)
+        await self.info_message = self.textChannel.send(embed=embed)
+        await self._notify(new_state="ongoing")
+
 # General Helper Commands
     def reset_players(self):
         self.players.update(self.orange)
@@ -439,7 +501,8 @@ class Game:
             "InfoMessage": self.info_message.id,
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
-            "MessageId": self.teams_message.id,
+            "MessageId": self.info_message.id,
             "HelperRole": self.helper_role,
+            "TeamSelection": self.teamSelection,
             "State": self.game_state
         }

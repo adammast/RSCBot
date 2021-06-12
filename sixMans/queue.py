@@ -8,7 +8,8 @@ import discord
 
 
 class SixMansQueue:
-    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, queueMaxSize, teamSelection):
+    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
+        points, players, gamesPlayed, queueMaxSize, teamSelection='random'):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -47,13 +48,17 @@ class SixMansQueue:
         for channel in self.channels:
             await channel.send(message, embed=embed)
 
+    def set_team_selection(self, team_selection):
+        self.teamSelection = team_selection
+
     def _to_dict(self):
         return {
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
             "Points": self.points,
             "Players": self.players,
-            "GamesPlayed": self.gamesPlayed
+            "GamesPlayed": self.gamesPlayed,
+            "TeamSelection": self.teamSelection
         }
 
 

@@ -27,12 +27,18 @@ SHUFFLE_REACT = "\U0001F500"                # :twisted_rightwards_arrows:
 WHITE_X_REACT = "\U0000274E"                # :negative_squared_cross_mark:
 WHITE_CHECK_REACT = "\U00002705"            # :white_check_mark:
 
+VOTE_TS = 'vote'
+RANDOM_TS = 'random'
+SHUFFLE_TS = 'shuffle'
+CAPTAINS_TS = 'captains'
+BALANCED_TS = 'balanced'
+TS_METHODS = [RANDOM_TS, SHUFFLE_TS, CAPTAINS_TS, BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
     "HelperRole": None,
     "AutoMove": False,
     "QLobby": None,
-    "DefaultTeamSelection": "random",
+    "DefaultTeamSelection": RANDOM_TS,
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -149,6 +155,28 @@ class SixMans(commands.Cog):
         await ctx.send("Done")
 
     @commands.guild_only()
+    @commands.command(aliases=['setQTS', 'setQueueTeamSelection', 'sqts'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setQueueTS(self, ctx: Context, queue_name, team_selection):
+        """Sets the team selection mode for a specific queue"""
+        await self._pre_load_queues(ctx.guild)
+        six_mans_queue = None
+        for queue in self.queues:
+            if queue.name == current_name:
+                six_mans_queue = queue
+                break
+
+        if six_mans_queue is None:
+            await ctx.send(":x: No queue found with name: {0}".format(current_name))
+            return
+        if team_selection in TS_METHODS:
+            six_mans_queue.set_team_selection(team_selection)
+            await self._save_queues(ctx.guild, self.queues)
+            await ctx.send("Done")
+        else:
+            await ctx.send(":x: **{}** is not a valid team selection method.".format(team_selection))
+
+    @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeQueue(self, ctx: Context, *, queue_name):
@@ -199,7 +227,7 @@ class SixMans(commands.Cog):
                 break
             await self._add_to_queue(member, six_mans_queue)
         if six_mans_queue._queue_full():
-            await self._select_teams(ctx, six_mans_queue)
+            await self._pop_queue(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["q"])
@@ -220,7 +248,7 @@ class SixMans(commands.Cog):
 
         await self._add_to_queue(player, six_mans_queue)
         if six_mans_queue._queue_full():
-            await self._select_teams(ctx, six_mans_queue)
+            await self._pop_queue(ctx, six_mans_queue)
 
     @commands.guild_only()
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
@@ -421,7 +449,7 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add", "on_reaction_remove")
-    async def process_shuffle_vote(self, reaction, user):
+    async def process_six_mans_reaction(self, reaction, user):
         if user.bot:
             return
         message = reaction.message
@@ -437,23 +465,23 @@ class SixMans(commands.Cog):
         if message != game.info_message:
             return False
 
-        team_selection_mode = await self._team_selection(user.guild)
+        # team_selection_mode = await self._team_selection(user.guild)
+        team_selection_mode = game.teamSelection
 
-        if team_selection_mode == 'vote':
-            teams_complete = await game.process_team_select_vote(reaction, user)
-            if teams_complete:
-                embed = await self.embed_game_info(user.guild, game, queue)
-                await self._display_teams(game, embed)
+        if game.teamSelection == VOTE_TS:
+            await game.process_team_select_vote(reaction, user)
 
-        elif team_selection_mode == 'captains':
+        elif game.teamSelection == CAPTAINS_TS:
             teams_complete = await game.process_captains_pick(reaction, user)
-            if teams_complete:
-                embed = await self.embed_game_info(user.guild, game, queue)
-                await self._display_teams(game, embed)
 
-        elif team_selection_mode == 'shuffle':
+        elif game.teamSelection == SHUFFLE_TS:
             if reaction.emoji is not SHUFFLE_REACT:
                 return
+
+            guild = reaction.message.channel.guild
+            
+            # Check if Shuffle is enabled
+            message = self.info_message
             now = datetime.datetime.utcnow()
             time_since_last_team = (now - message.created_at).seconds
             time_since_q_pop = (now - message.channel.created_at).seconds
@@ -463,19 +491,11 @@ class SixMans(commands.Cog):
             if time_since_last_team > 180:
                 await reaction.clear()
                 return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
-            
-            # Is vote enough?
-            # if user not in game.voted_remake:
-            #     game.voted_remake.append(user)
-            guild = reaction.message.channel.guild
-            
-            if reaction.count >= int(len(game.players)/2)+1:
+
+            shuffle_players = reaction.count >= int(len(game.players)/2)+1
+            if shuffle_players:
                 await channel.send("{} _Generating New teams..._".format(SHUFFLE_REACT))
-                await message.edit(embed=await self.embed_game_info(guild, game, queue, invalid=True, prefix='?'))
                 await game.shuffle_players()
-                embed = await self.embed_game_info(guild, game, queue, invalid=False, prefix='?')
-                lobby_info_message = await self._display_teams(game, embed)
-                await lobby_info_message.add_reaction(SHUFFLE_REACT)
 
     @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
@@ -685,7 +705,7 @@ class SixMans(commands.Cog):
 
     #endregion
 
-    #region get and set commands
+#region get and set commands
 
     @commands.guild_only()
     @commands.command(aliases=["cq", "status"])
@@ -768,10 +788,10 @@ class SixMans(commands.Cog):
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
-        if team_selection_method not in ['random', 'shuffle', 'captains', 'balanced']:
+        if team_selection_method not in TS_METHODS:
             return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
 
-        if team_selection_method in ['option', 'balanced']:
+        if team_selection_method in ['vote', 'balanced']:
             return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
         
         await self._save_team_selection(ctx.guild, team_selection_method)
@@ -1055,7 +1075,7 @@ class SixMans(commands.Cog):
         sorted_players = sorted(player_dict.items(), key=lambda x: x[1][PLAYER_WINS_KEY], reverse=True)
         return sorted(sorted_players, key=lambda x: x[1][PLAYER_POINTS_KEY], reverse=True)
 
-    async def _select_teams(self, ctx: Context, six_mans_queue: SixMansQueue):
+    async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue):
         game = await self._create_game(ctx.guild, six_mans_queue)
         if game is None:
             return False
@@ -1065,40 +1085,13 @@ class SixMans(commands.Cog):
             for queue in self.queues:
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
-
-        team_selection = await self._team_selection(ctx.guild) # TODO: add other methods of player selection (i.e. captains)
         
-        if team_selection == 'random':
-            await game.pick_random_teams()
-        elif team_selection == 'shuffle':
-            await game.shuffle_players()
-        elif team_selection == 'optional':
-            pass
-        elif team_selection == 'captains':
-            await game.captains_pick_teams(await self._helper_role(ctx.guild))
-        elif team_selection == 'balanced':
-            await game.pick_balanced_teams()
-        else:
-            return print("you messed up fool")
+        # Notify all players that queue has popped
+        await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
 
-        # Display teams
-        if team_selection in ['shuffle', 'random']:
-            await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
-            embed = await self.embed_game_info(ctx.guild, game, six_mans_queue, False, ctx.prefix)
-            lobby_info_message = await self._display_teams(game, embed)
-            if team_selection == 'shuffle':
-                await lobby_info_message.add_reaction(SHUFFLE_REACT)
-        
         self.games.append(game)
         await self._save_games(ctx.guild, self.games)
         return True
-
-    async def _display_teams(self, game: Game, embed):
-        try:
-            await game.info_message.edit(embed=embed)
-        except:
-            game.info_message = await game.textChannel.send(embed=embed)
-        return game.info_message
 
     async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue):
         if not six_mans_queue._queue_full():
@@ -1213,35 +1206,6 @@ class SixMans(commands.Cog):
             embed.add_field(name="{}:".format(queueName), value="{}".format("\n".join(["{0}\n{1}".format(str(game.id), ", ".join([player.mention for player in game.players])) for game in games])), inline=False)
         return embed
 
-    async def embed_game_info(self, guild, game: Game, six_mans_queue: SixMansQueue, invalid=False, prefix='?'):
-        helper_role = await self._helper_role(guild)
-        sm_title = "{0} {1} Mans Game Info".format(six_mans_queue.name, self.queueMaxSize)
-        embed_color = discord.Colour.green()
-        if invalid:
-            sm_title += " :x: [Teams Changed]"
-            embed_color = discord.Colour.red()
-        embed = discord.Embed(title=sm_title, color=embed_color)
-        embed.set_thumbnail(url=guild.icon_url)
-        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in game.blue])), inline=False)
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in game.orange])), inline=False)
-        if not invalid:
-            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(game.captains[0].mention, game.captains[1].mention), inline=False)
-        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(game.roomName, game.roomPass), inline=False)
-        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
-            .format(six_mans_queue.points[PP_PLAY_KEY], six_mans_queue.points[PP_WIN_KEY]), inline=False)
-        if not invalid:
-            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-                "cancel the game.".format(prefix), inline=False)
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
-        if helper_role:
-            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
-        embed.add_field(name="Help", value=help_message, inline=False)
-        embed.set_footer(text="Game ID: {}".format(game.id))
-        return embed
-
     async def embed_leaderboard(self, ctx: Context, sorted_players, queue_name, games_played, lb_format):
         embed = discord.Embed(title="{0} {1} Mans {2} Leaderboard".format(queue_name, self.queueMaxSize, lb_format), color=discord.Colour.blue())
         embed.add_field(name="Games Played", value="{}\n".format(games_played), inline=True)
@@ -1315,10 +1279,11 @@ class SixMans(commands.Cog):
         if self.queues is None or self.queues == [] or self.queues[0].guild != guild:
             queues = await self._queues(guild)
             self.queues = []
+            team_selection = await self._team_selection(guild)
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
-                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize)
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, team_selection)
                 six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 
