@@ -256,8 +256,9 @@ class SixMans(commands.Cog):
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         await self._pre_load_queues(ctx.guild)
         await self._pre_load_games(ctx.guild)
-        game, six_mans_queue = await self._get_info(ctx)
-        if game is None or six_mans_queue is None:
+        game = await self._get_game_by_text_channel(ctx.channel)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
             return
 
         opposing_captain = self._get_opposing_captain(ctx.author, game)
@@ -293,8 +294,9 @@ class SixMans(commands.Cog):
         await self._pre_load_games(ctx.guild)
         game = None
         if gameId is None:
-            game, six_mans_queue = await self._get_info(ctx)
-            if game is None or six_mans_queue is None:
+            game = await self._get_game_by_text_channel(ctx.channel)
+            if game is None:
+                await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
                 return
         else:
             for active_game in self.games:
@@ -432,7 +434,7 @@ class SixMans(commands.Cog):
         
         if not game:
             return False
-        if message != game.teams_message:
+        if message != game.info_message:
             return False
 
         team_selection_mode = await self._team_selection(user.guild)
@@ -1093,10 +1095,10 @@ class SixMans(commands.Cog):
 
     async def _display_teams(self, game: Game, embed):
         try:
-            await game.teams_message.edit(embed=embed)
+            await game.info_message.edit(embed=embed)
         except:
-            game.teams_message = await game.textChannel.send(embed=embed)
-        return game.teams_message
+            game.info_message = await game.textChannel.send(embed=embed)
+        return game.info_message
 
     async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue):
         if not six_mans_queue._queue_full():
@@ -1108,13 +1110,11 @@ class SixMans(commands.Cog):
         game = Game(
             players,
             six_mans_queue,
-            guild=guild,
-            category=await self._category(guild),
             helper_role=await self._helper_role(guild),
             automove=await self._get_automove(guild),
             observers=self.observers
         )
-        await game.create_game_channels(six_mans_queue, await self._category(guild))
+        await game.create_game_channels(guild, await self._category(guild))
         return game
 
     async def _get_info(self, ctx: Context):
@@ -1124,7 +1124,7 @@ class SixMans(commands.Cog):
             return None
 
         for queue in self.queues:
-            if queue == game.queue:
+            if queue.id == game.queue.id:
                 return game, queue
 
         await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
@@ -1345,6 +1345,10 @@ class SixMans(commands.Cog):
                 game.orange = set([guild.get_member(x) for x in value["Orange"]])
                 game.roomName = value["RoomName"]
                 game.roomPass = value["RoomPass"]
+                try:
+                    game.info_message = await game.textChannel.fetch_message(value["InfoMessage"])
+                except:
+                    pass
                 game.scoreReported = value["ScoreReported"]
                 game_list.append(game)
 
