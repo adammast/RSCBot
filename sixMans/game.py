@@ -7,6 +7,10 @@ import discord
 from .strings import Strings
 from .queue import SixMansQueue
 
+SELECTION_MODES  = {
+    0x1F3B2: "random",  # game_die
+    0x1F1E8: "captains" # C
+}
 
 class Game:
     def __init__(
@@ -15,6 +19,7 @@ class Game:
             category=None,
             helper_role=None,
             automove=False,
+            teamsMessage: discord.Message=None,
             text_channel: discord.TextChannel=None, 
             voice_channels=None,
             observers=None):
@@ -27,6 +32,7 @@ class Game:
         self.roomPass = self._generate_name_pass()
         self.queue = queue
         self.scoreReported = False
+        self.teamSelection = queue.teamSelection
         self.game_state = "team selection"
         
         # Optional params
@@ -36,7 +42,7 @@ class Game:
         self.automove = automove
         self.observers = observers if observers else []
 
-        self.teams_message = None
+        self.teams_message = teamsMessage
         if text_channel and voice_channels:
             self.textChannel = text_channel
             self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
@@ -62,6 +68,7 @@ class Game:
                 #TODO: Log error without preventing code from continuing to run
                 pass
 
+# Team Management
     async def create_game_channels(self, six_mans_queue, category=None):
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
@@ -114,6 +121,61 @@ class Game:
             except:
                 pass
 
+# Team Selection
+    async def vote_team_selection(self, helper_role=None):
+        # Mentions all players
+        await self.textChannel.send(', '.join(player.mention for player in self.players))
+        embed = self._get_vote_embed()
+        self.teams_message = await self.textChannel.send(embed=embed)
+        await self._add_reactions(SELECTION_MODES.keys(), self.teams_message)
+
+    async def process_team_select_vote(self, reaction, member, helper_role):
+        if member not in self.players:
+            return
+        # COUNT UP VOTE TOTALS
+        if not self.vote:
+            self.vote = [None, 0]
+
+        # RECORD VOTES
+        votes = {}
+        for react in self.teams_message.reactions:
+            # player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
+            react_hex = self._hex_from_emoji(reaction.emoji)
+            if react_hex in SELECTION_MODES:
+                # players only get one vote
+                if react != reaction and member in (await react.users()):
+                    await react.remove(member)
+                
+                votes[react_hex] = reaction.count - 1
+
+        # COUNT VOTES
+        total_votes = 0
+        runner_up = 0
+        running_vote = [None, 0]
+        for react_hex, num_votes in votes:
+            if num_votes > running_vote[1]:
+                running_vote = [react_hex, num_votes]
+            
+            if num_votes > runner_up and num_votes <= running_vote[1]:
+                runner_up = num_votes
+
+            total_votes += num_votes
+        
+        # track top vote
+        if running_vote[1] > self.vote[1]:
+            self.vote = running_vote
+        
+        pending_votes = len(self.players) - total_votes
+        
+        voted_mode = None
+        # Vote Complete if...
+        if pending_votes == 0 or pending_votes + runner_up <= self.vote[1]:
+            voted_mode = self.vote[0]
+            return voted_mode
+
+    async def pick_balanced_teams(self):
+        pass
+
     async def pick_random_teams(self):
         await self.shuffle_players()
         await self._notify(new_state="ongoing")
@@ -155,10 +217,9 @@ class Game:
         embed = self._get_captains_embed('blue')
         self.teams_message = await self.textChannel.send(embed=embed)
         
-        for react_hex in self.react_player_picks.keys():
-            react = struct.pack('<I', int(react_hex, base=16)).decode('utf-32le')
-            await self.teams_message.add_reaction(react)
+        await self._add_reactions(self.react_player_picks.keys(), self.teams_message)
 
+# Team Selection helpers
     async def process_captains_pick(self, reaction, user):
         teams_complete = False
         pick_i = len(self.blue)+len(self.orange)-2
@@ -203,6 +264,28 @@ class Game:
         await self._notify(new_state="ongoing")
         return teams_complete
 
+    def _get_vote_embed(self, voted=0):
+        pending = len(self.players) - voted
+        description = "Please vote for your preferred team selection!"
+        embed = discord.Embed(
+            title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
+            color=self._get_completion_color(voted, len(self.players)-voted),
+            description=description
+        )
+
+        vote_options = []
+        votes_casted = []
+        for react_hex, mode in SELECTION_MODES.items():
+            react = self._get_pick_reaction(react_hex)
+            vote_options.append("{} {}".format(react, mode))
+            votes_casted.append(0)
+
+        # embed.add_field()
+        embed.add_field(name="Options", value='\n'.join(vote_options), inline=True)
+        # embed.add_field(name="Votes", value='\n'.join(votes_casted))
+
+        return embed
+
     def _get_captains_embed(self, pick, guild=None):
         # Determine who picks next
         if pick:
@@ -240,29 +323,9 @@ class Game:
         embed.set_footer(text="Game ID: {}".format(self.id))
 
         return embed
-      
-    async def report_winner(self, winner):
-        await self.color_embed_for_winners(winner)
-        await self._notify(new_state="game over")
-
-    async def color_embed_for_winners(self, winner):
-        winner = winner.lower()
-        if winner == 'blue':
-            color = discord.Colour.blue()
-        elif winner == 'orange':
-            color = discord.Colour.orange()
-        else:
-            color = discord.Colour.green()  # catch all for errors hopefully
-
-        try:
-            # TODO: Look into saving the teams_message id so it can be loaded later
-            embed = self.teams_message.embeds[0]
-            embed_dict = embed.to_dict()
-            embed_dict['color'] = color.value
-            embed = discord.Embed.from_dict(embed_dict)
-            await self.teams_message.edit(embed=embed)
-        except:
-            pass
+    
+    def _hex_from_emoji(self, emoji):
+        return hex(ord(emoji))
 
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None
@@ -292,9 +355,7 @@ class Game:
             players += "{} {}\n".format(react, player.mention)
         return players
 
-    async def pick_balanced_teams(self):
-        pass
-
+# General Helper Commands
     def reset_players(self):
         self.players.update(self.orange)
         self.players.update(self.blue)
@@ -304,6 +365,45 @@ class Game:
         self.captains.append(random.sample(list(self.blue), 1)[0])
         self.captains.append(random.sample(list(self.orange), 1)[0])
 
+    def _generate_name_pass(self):
+        return Strings.room_pass[random.randrange(len(Strings.room_pass))]
+
+    async def _add_reactions(self, react_hex_codes, message):
+        for react_hex_i in react_hex_codes:
+            react = struct.pack('<I', int(react_hex_i, base=16)).decode('utf-32le')
+            await message.add_reaction(react)
+
+    def _get_wp(self, wins, losses):
+        return wins/(wins+losses)
+
+    def _get_completion_color(self, voted:int, pending:int):
+        if not (wins or losses):
+            return discord.Color.default()
+        red = (255, 0, 0)
+        yellow = (255, 255, 0)
+        green = (0, 255, 0)
+        wp = self._get_wp(wins, losses)
+        
+        if wp == 0:
+            return discord.Color.from_rgb(*red)
+        if wp == 0.5:
+            return discord.Color.from_rgb(*yellow)
+        if wp == 1:
+            return discord.Color.from_rgb(*green)
+        
+        blue_scale = 0
+        if wp < 0.5:
+            wp_adj = wp/0.5
+            red_scale = 255
+            green_scale = round(255*wp_adj)
+            return discord.Color.from_rgb(red_scale, green_scale, blue_scale)
+        else:
+            #sub_wp = ((wp-50)/50)*100
+            wp_adj = (wp-0.5)/0.5
+            green_scale = 255
+            red_scale = 255 - round(255*wp_adj)
+            return discord.Color.from_rgb(red_scale, green_scale, blue_scale)
+            
     def __contains__(self, item):
         return item in self.players or item in self.orange or item in self.blue
 
@@ -319,7 +419,5 @@ class Game:
             "VoiceChannels": [x.id for x in self.voiceChannels],
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
+            "MessageId": self.teams_message.id
         }
-
-    def _generate_name_pass(self):
-        return Strings.room_pass[random.randrange(len(Strings.room_pass))]

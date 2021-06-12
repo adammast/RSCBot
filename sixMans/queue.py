@@ -8,7 +8,7 @@ import discord
 
 
 class SixMansQueue:
-    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, queueMaxSize):
+    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, queueMaxSize, teamSelection):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -18,6 +18,7 @@ class SixMansQueue:
         self.players = players
         self.gamesPlayed = gamesPlayed
         self.queueMaxSize = queueMaxSize
+        self.teamSelection = teamSelection
         self.activeJoinLog = {}
 
     def _put(self, player):

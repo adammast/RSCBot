@@ -418,8 +418,10 @@ class SixMans(commands.Cog):
     #region listeners
 
     @commands.guild_only()
-    @commands.Cog.listener("on_reaction_add")
+    @commands.Cog.listener("on_reaction_add", "on_reaction_remove")
     async def process_shuffle_vote(self, reaction, user):
+        if user.bot:
+            return
         message = reaction.message
         channel = reaction.message.channel
         if user.id == self.bot.user.id:
@@ -435,7 +437,13 @@ class SixMans(commands.Cog):
 
         team_selection_mode = await self._team_selection(user.guild)
 
-        if team_selection_mode == 'captains':
+        if team_selection_mode == 'vote':
+            teams_complete = await game.process_team_select_vote(reaction, user)
+            if teams_complete:
+                embed = await self.embed_game_info(user.guild, game, queue)
+                await self._display_teams(game, embed)
+
+        elif team_selection_mode == 'captains':
             teams_complete = await game.process_captains_pick(reaction, user)
             if teams_complete:
                 embed = await self.embed_game_info(user.guild, game, queue)
@@ -751,10 +759,10 @@ class SixMans(commands.Cog):
         
         Valid team selecion methods options:
         - **random**: selects random teams
-        - **shuffle**: selects random teams, but allows re-shuffling teams after they have been set
         - **captains**: selects a captain for each team
-        - **balanced**: creates balanced teams from all participating players
-        - **option**: choose from the methods listed above when a queue pops
+        - **vote**: players vote for team selection method after queue pops
+        - ~~**balanced**: creates balanced teams from all participating players~~
+        - ~~**shuffle**: selects random teams, but allows re-shuffling teams after they have been set~~
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
@@ -1124,7 +1132,12 @@ class SixMans(commands.Cog):
 
     # adds observer
     def add_observer(self, observer):
-        self.observers.add(observer)
+        if observer not in self.observers:
+            self.observers.add(observer)
+
+    def remove_observer(self, observer):
+        while observer in self.observers:
+            self.observers.remove(observer)
 
     def _get_game_and_queue(self, channel: discord.TextChannel):
         game = self._get_game_by_text_channel(channel)
