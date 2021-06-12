@@ -105,7 +105,7 @@ class Match(commands.Cog):
 
         opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
         
-        opp_franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, opposing_team)
+        opp_franchise_role, tier_role = await self.team_manager.get_roles_for_team(ctx.guild, opposing_team)
         opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
         opposing_roster = self.team_manager.members_from_team(ctx, opp_franchise_role, tier_role)
         opposing_roster.remove(opp_captain)
@@ -153,7 +153,7 @@ class Match(commands.Cog):
             await player.send(embed)
         
         # Don't double send to GM
-        opposing_gm = self.team_manager._get_gm(ctx, opp_franchise_role)
+        opposing_gm = self.team_manager.get_gm_by_franchise_role(ctx, opp_franchise_role)
         if opposing_gm in opposing_roster:
             return
 
@@ -263,8 +263,8 @@ class Match(commands.Cog):
             datetime.strptime(match_date, '%B %d, %Y').date()
         except Exception as err:
             match_date_error = "Date not valid: {0}".format(err)
-        homeRoles = await self.team_manager._roles_for_team(ctx, home)
-        awayRoles = await self.team_manager._roles_for_team(ctx, away)
+        homeRoles = await self.team_manager.get_roles_for_team(ctx.guild, home)
+        awayRoles = await self.team_manager.get_roles_for_team(ctx.guild, away)
         roomName = args[0] if args else self.generate_name_pass()
         roomPass = args[1] if len(args) > 1 else self.generate_name_pass()
 
@@ -434,7 +434,7 @@ class Match(commands.Cog):
         home = match['home']
         away = match['away']
 
-        tier_role = (await self.team_manager._roles_for_team(ctx, home))[1]
+        tier_role = (await self.team_manager.get_roles_for_team(ctx.guild, home))[1]
 
         title = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
         description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)

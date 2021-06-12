@@ -172,7 +172,7 @@ class PlayerRatings(commands.Cog):
             await ctx.send("{} has no player information at this time".format(member.name))
             return
         team_name = await self.team_manager.get_current_team_name(ctx, member)
-        franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
+        franchise_role, tier_role = await self.team_manager.get_roles_for_team(ctx.guild, team_name)
         await ctx.send(embed=self.embed_player_info(player, team_name, tier_role))
 
     @commands.guild_only()

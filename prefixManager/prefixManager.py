@@ -203,7 +203,7 @@ class PrefixManager(commands.Cog):
         except:
             return None
 
-    async def get_franchise_prefix(self, guild: discord.Guild, franchise_role):
+    async def get_franchise_prefix(self, guild: discord.Guild, franchise_role: discord.Role):
         prefixes = await self._prefixes(guild)
         try:
             gm_name = re.findall(r'(?<=\().*(?=\))', franchise_role.name)[0]

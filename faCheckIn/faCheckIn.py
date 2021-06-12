@@ -65,7 +65,7 @@ class FaCheckIn(commands.Cog):
     async def checkAvailability(self, ctx: Context, tier_name: str, match_day: str = None):
         if match_day is None:
             match_day = await self.match_cog._match_day(ctx)
-        tier = await self.team_manager_cog._match_tier_name(ctx, tier_name)
+        tier = await self.team_manager_cog.match_tier_name(ctx.guild, tier_name)
         if tier is None:
             await ctx.send("No tier with name: `{0}`".format(tier_name))
             return
@@ -169,7 +169,7 @@ class FaCheckIn(commands.Cog):
         await self._save_tier_data(guild, match_day, tier, tier_list)
 
     async def find_tier_from_fa_role(self, ctx: Context, member: discord.Member):
-        tiers = await self.team_manager_cog.tiers(ctx)
+        tiers = await self.team_manager_cog._tiers(ctx.guild)
         for tier in tiers:
             fa_role = self.team_manager_cog._find_role_by_name(ctx, tier + "FA")
             if fa_role in member.roles:

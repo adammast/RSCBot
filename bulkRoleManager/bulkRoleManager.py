@@ -330,7 +330,7 @@ class BulkRoleManager(commands.Cog):
             self.team_manager_cog._find_role_by_name(ctx, "Free Agent"),
             self.team_manager_cog._find_role_by_name(ctx, self.PERM_FA_ROLE)
         ]
-        tiers = await self.team_manager_cog.tiers(ctx)
+        tiers = await self.team_manager_cog._tiers(ctx.guild)
         for tier in tiers:
             tier_role = self.team_manager_cog._get_tier_role(ctx, tier)
             if tier_role:

@@ -52,7 +52,7 @@ class BCManager(commands.Cog):
 
         # Get team/tier information
         match_day = match['matchDay']
-        franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, match['home'])
+        franchise_role, tier_role = await self.team_manager_cog.get_roles_for_team(ctx.guild, match['home'])
         emoji_url = ctx.guild.icon_url
 
         embed = discord.Embed(
@@ -78,8 +78,8 @@ class BCManager(commands.Cog):
         replay_ids, summary, winner = replays_found
         
         if winner:
-            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, winner)
-            emoji = await self.team_manager_cog._get_franchise_emoji(ctx, franchise_role)
+            franchise_role, tier_role = await self.team_manager_cog.get_roles_for_team(ctx.guild, winner)
+            emoji = await self.team_manager_cog.get_franchise_emoji(ctx.guild, franchise_role)
             emoji_url = emoji.url
         
 
@@ -133,7 +133,7 @@ class BCManager(commands.Cog):
     async def setTierRank(self, ctx: Context, tier, rank):
         """Declares a ranking of tiers so that they are sorted in accordance with skill distribution
         """
-        tiers = await self.team_manager_cog.tiers(ctx)
+        tiers = await self.team_manager_cog._tiers(ctx.guild)
         tier_found = False
         for t in tiers:
             if t.lower() == tier.lower():
@@ -527,7 +527,7 @@ class BCManager(commands.Cog):
             bc_group_owner = await self._get_uploader_id(ctx, group_owner_discord_id)  # config.group_owner_discord_id
 
         # RSC/<top level group>/<tier num><tier>/Match Day <match day>/<Home> vs <Away>
-        tier = (await self.team_manager_cog._roles_for_team(ctx, match['home']))[1].name  # Get tier role's name
+        tier = (await self.team_manager_cog.get_roles_for_team(ctx.guild, match['home']))[1].name  # Get tier role's name
         tier_group = await self._get_tier_subgroup_name(ctx, tier)
         ordered_subgroups = [
             tier_group,
@@ -756,7 +756,7 @@ class BCManager(commands.Cog):
     async def _get_all_match_players(self, ctx: Context, match):
         players = []
         for team in ['home', 'away']:
-            franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, match[team])
+            franchise_role, tier_role = await self.team_manager_cog.get_roles_for_team(ctx.guild, match[team])
             team_members = self.team_manager_cog.members_from_team(ctx, franchise_role, tier_role)
             for player in team_members:
                 players.append(player)
