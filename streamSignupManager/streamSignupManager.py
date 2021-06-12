@@ -1,10 +1,20 @@
-import discord
 import asyncio
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.predicates import ReactionPredicate
+
+import discord
+from redbot.core import Config, checks, commands
 from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import ReactionPredicate
+
+from .strings import Strings
+
+MEDIA_ROLE_STR = "Media Committee"
+
+# Application statuses
+PENDING_OPP_CONFIRMATION_STATUS = "PENDING_OPP_CONFIRMATION"
+PENDING_LEAGUE_APPROVAL_STATUS = "PENDING_LEAGUE_APPROVAL"
+SCHEDULED_ON_STREAM_STATUS = "SCHEDULED_ON_STREAM"
+REJECTED_STATUS = "REJECTED"
+RESCINDED_STATUS = "RESCINDED"
 
 defaults = {"Applications": {}, "Schedule": {}, "TimeSlots": {}, "LiveStreamChannels": [], "StreamFeedChannel": None}
 verify_timeout = 30
@@ -22,14 +32,8 @@ class StreamSignupManager(commands.Cog):
         self.match_cog = bot.get_cog("Match")
         self.team_manager_cog = bot.get_cog("TeamManager")
         self.bot = bot
-        self.MEDIA_ROLE_STR = "Media Committee"
 
-        # Application statuses
-        self.PENDING_OPP_CONFIRMATION_STATUS = "PENDING_OPP_CONFIRMATION"
-        self.PENDING_LEAGUE_APPROVAL_STATUS = "PENDING_LEAGUE_APPROVAL"
-        self.SCHEDULED_ON_STREAM_STATUS = "SCHEDULED_ON_STREAM"
-        self.REJECTED_STATUS = "REJECTED"
-        self.RESCINDED_STATUS = "RESCINDED"
+#region commmands
     
     @commands.group(aliases=["streamapp", "streamapply", "streamApplications", "streamapplications"])
     @commands.guild_only()
@@ -63,7 +67,7 @@ class StreamSignupManager(commands.Cog):
             if not await self._verify_gm_team(ctx, requesting_member, team):  # function contains error message
                 return False
         else:
-            team = await team_manager_cog.get_current_team_name(ctx, requesting_member)
+            team = await self.team_manager_cog.get_current_team_name(ctx, requesting_member)
 
         if not time_slot:
             await ctx.send(":x: stream slot must be included in an application.")
@@ -134,12 +138,12 @@ class StreamSignupManager(commands.Cog):
         """
         View all completed stream applications that are pending league approval. Match Day and Time Slot filters are optional.
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
-        message = await self._format_apps(ctx, True, match_day, time_slot)
+        message = await self.format_apps(ctx, True, match_day, time_slot)
         if message:
             await ctx.send(message)
         else:
@@ -157,12 +161,12 @@ class StreamSignupManager(commands.Cog):
         """
         View all stream applications and their corresponding statuses. This is largely used for debugging purposes.
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
-        message = await self._format_apps(ctx, False, match_day, time_slot)
+        message = await self.format_apps(ctx, False, match_day, time_slot)
         if message:
             await ctx.send(message)
         else:
@@ -178,9 +182,9 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def clearApps(self, ctx):
         """Clears all saved applications."""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         await self._clear_applications(ctx.guild)
@@ -193,9 +197,9 @@ class StreamSignupManager(commands.Cog):
         """Approve application for stream.
         
         Applications that have `PENDING_LEAUGE_APPROVAL`, `REJECTED`, or `RESCINDED` status may be approved."""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         apps = await self._applications(ctx.guild)
@@ -204,10 +208,10 @@ class StreamSignupManager(commands.Cog):
             await ctx.send("\"__{url}__\" is not a valid url or id association. Use `{p}getLiveStreams` to see registered live stream pages.".format(url=url_or_id, p=ctx.prefix))
             return False
         for app in apps[match_day]:
-            if (app['status'] == (self.PENDING_LEAGUE_APPROVAL_STATUS or app['status'] == self.REJECTED_STATUS or app['status'] == self.RESCINDED_STATUS)
+            if (app['status'] == (PENDING_LEAGUE_APPROVAL_STATUS or app['status'] == REJECTED_STATUS or app['status'] == RESCINDED_STATUS)
                 and (app['home'] == team or app['away'] == team)):
                 # Update App Status
-                app['status'] = self.SCHEDULED_ON_STREAM_STATUS
+                app['status'] = SCHEDULED_ON_STREAM_STATUS
                 slot = app['slot']
 
                 # Add to Stream Schedule
@@ -226,21 +230,21 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def rejectApp(self, ctx, match_day, team):
         """Reject application for stream"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         apps = await self._applications(ctx.guild)
         # stream_channel = self._get_live_stream(ctx.guild, url_or_id)
         for app in apps[match_day]:
-            if (app['home'] == team or app['away'] == team) and app['status'] == self.PENDING_LEAGUE_APPROVAL_STATUS:
+            if (app['home'] == team or app['away'] == team) and app['status'] == PENDING_LEAGUE_APPROVAL_STATUS:
                 # Update App Status
-                app['status'] = self.REJECTED_STATUS
+                app['status'] = REJECTED_STATUS
                 await self._save_applications(ctx.guild, apps)
 
                 # Inform applicants that their application has been rejected
-                message = league_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                message = Strings.league_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                 for member_id in [app['requested_by'], app['request_recipient']]:
                     member = self._get_member_from_id(ctx.guild, member_id)
                     await self._send_member_message(ctx, member, message)
@@ -260,9 +264,9 @@ class StreamSignupManager(commands.Cog):
         [p]setMatchOnStream 1 1 1 Spartans
         [p]setMatchOnStream https://twitch.tv/rocketsoccarconfederation 2 8 Vikings
         """
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         match = await self.match_cog.get_match_from_day_team(ctx, match_day, team)
@@ -272,7 +276,7 @@ class StreamSignupManager(commands.Cog):
         
         stream_channel = await self._get_live_stream(ctx.guild, stream_url_or_id)
         if not stream_channel:
-            await ctx.send(":x: \"{0}\" is not a valid stream url or id".format(url_or_id))
+            await ctx.send(":x: \"{0}\" is not a valid stream url or id".format(stream_url_or_id))
             return False
         
         time = await self._get_time_from_slot(ctx.guild, slot)
@@ -302,7 +306,7 @@ class StreamSignupManager(commands.Cog):
                     try:
                         for app in apps[match_day]:
                             if (app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold()):
-                                app['status'] = self.SCHEDULED_ON_STREAM_STATUS
+                                app['status'] = SCHEDULED_ON_STREAM_STATUS
                                 app['slot'] = slot
                                 await self._save_applications(ctx.guild, apps)
                                 break
@@ -384,9 +388,9 @@ class StreamSignupManager(commands.Cog):
     @commands.guild_only()
     async def getStreamLobbies(self, ctx, stream_url_or_id=None, match_day=None):
         """Get Private Lobby information for matches that will be scheduled on stream"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
     
         # Parse match day to int
@@ -410,12 +414,12 @@ class StreamSignupManager(commands.Cog):
                 await ctx.send(":x: {0} is not a valid stream url or ID".format(stream_url_or_id))
                 return False
             
-            embed = await self._format_match_lobby_info(ctx, match_day, live_stream)
+            embed = await self.embed_match_lobby_info(ctx, match_day, live_stream)
             if embed:
                 lobbies_embeds.append(embed)
         else:
             for live_stream in await self._get_live_stream_channels(ctx.guild):
-                embed = await self._format_match_lobby_info(ctx, match_day, live_stream)
+                embed = await self.embed_match_lobby_info(ctx, match_day, live_stream)
                 if embed:
                     lobbies_embeds.append(embed)
 
@@ -436,9 +440,9 @@ class StreamSignupManager(commands.Cog):
         """Removes stream schedule
         Note: This will **not** update information in the match cog."""
 
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         msg = "Are you sure you want to remove all scheduled live stream matches?"
@@ -460,9 +464,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def rescindStreamMatch(self, ctx, match_day, team):
         """Removes a match from the stream schedule"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         schedule = await self._stream_schedule(ctx.guild)
@@ -497,9 +501,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def setStreamFeedChannel(self, ctx, channel: discord.TextChannel):
         """Sets the channel where all stream application notification messages will be posted"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
 
         await self._save_stream_feed_channel(ctx, channel.id)
@@ -528,9 +532,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addTimeSlot(self, ctx, slot, *, time):
         """Adds a time slot association"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         if await self._get_time_from_slot(ctx.guild, slot):
@@ -558,9 +562,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeTimeSlot(self, ctx, slot):
         """Remove time slot association"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         time_slots = await self.config.guild(ctx.guild).TimeSlots()
@@ -578,9 +582,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearTimeSlots(self, ctx):
         """Removes all time slot associations"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         await self._save_time_slots(ctx.guild, {})
@@ -591,9 +595,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def addLiveStream(self, ctx, url):
         """Adds a new live stream page for stream signups"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         msg = "Add \"__{0}__\" to list of stream pages?".format(url)
@@ -630,9 +634,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def removeLiveStream(self, ctx, url_or_id):
         """Removes live stream pages"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         streams = await self._get_live_stream_channels(ctx.guild)
@@ -660,9 +664,9 @@ class StreamSignupManager(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def clearLiveStreams(self, ctx, slot):
         """Removes all saved stream urls"""
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
         if not media_role or media_role not in ctx.message.author.roles:
-            await ctx.send(":x: You must have the **{0}** role to run this command.".format(self.MEDIA_ROLE_STR))
+            await ctx.send(":x: You must have the **{0}** role to run this command.".format(MEDIA_ROLE_STR))
             return False
         
         streams = await self._get_live_stream_channels(ctx.guild)
@@ -683,6 +687,9 @@ class StreamSignupManager(commands.Cog):
         else:
             await ctx.send("No live stream channels found.")
 
+#endregion
+
+#region helper methods
 
     async def _get_stream_matches(self, ctx, live_stream, match_day):
         matches = []
@@ -708,7 +715,7 @@ class StreamSignupManager(commands.Cog):
     async def _add_application(self, ctx, requested_by, match_data, time_slot, requesting_team=None):
         applications = await self._applications(ctx.guild)
         app = await self._get_app_from_match(ctx.guild, match_data)
-        if app and app['status'] != self.REJECTED_STATUS:
+        if app and app['status'] != REJECTED_STATUS:
             await ctx.send(":x: Application is already in progress.")
             return False
         
@@ -726,7 +733,7 @@ class StreamSignupManager(commands.Cog):
             other_captain = self.team_manager_cog._get_gm(ctx, other_franchise_role)
 
         new_payload = {
-            "status": self.PENDING_OPP_CONFIRMATION_STATUS,
+            "status": PENDING_OPP_CONFIRMATION_STATUS,
             "requested_by": requested_by.id,
             "request_recipient": other_captain.id,
             "home": match_data['home'],
@@ -745,9 +752,9 @@ class StreamSignupManager(commands.Cog):
 
         # Challenge other team
         if self.team_manager_cog.is_gm(other_captain):
-            message = gm_challenged_msg.format(match_day=match_data['matchDay'], home=match_data['home'], away=match_data['away'], time_slot=time_slot, channel=ctx.channel, gm_team=other_team)
+            message = Strings.gm_challenged_msg.format(match_day=match_data['matchDay'], home=match_data['home'], away=match_data['away'], time_slot=time_slot, channel=ctx.channel, gm_team=other_team)
         else:
-            message = challenged_msg.format(match_day=match_day, home=match_data['home'], away=match_data['away'], time_slot=time_slot, channel=ctx.channel)
+            message = Strings.challenged_msg.format(match_day=match_data['matchDay'], home=match_data['home'], away=match_data['away'], time_slot=time_slot, channel=ctx.channel)
         await self._send_member_message(ctx, other_captain, message)
         return True
 
@@ -770,7 +777,7 @@ class StreamSignupManager(commands.Cog):
         for app in applications[match_day]:
             if app['request_recipient'] == recipient.id:
                 match_matches = app['home'].casefold() == recipient_team.casefold() or app['away'].casefold() == recipient_team.casefold()
-                if app['status'] == self.PENDING_OPP_CONFIRMATION_STATUS and match_matches:
+                if app['status'] == PENDING_OPP_CONFIRMATION_STATUS and match_matches:
                     requesting_member = self._get_member_from_id(ctx.guild, app['requested_by'])
                     if is_accepted:
                         # Send update message to other team - initial requester and that team's captain
@@ -778,7 +785,7 @@ class StreamSignupManager(commands.Cog):
                         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, requesting_team)
                         requesting_team_captain = await self.team_manager_cog._get_team_captain(ctx, franchise_role, tier_role)
                         
-                        message = challenge_accepted_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                        message = Strings.challenge_accepted_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                         await self._send_member_message(ctx, requesting_member, message)
                         if requesting_team_captain and (requesting_member.id != requesting_team_captain.id):
                             await self._send_member_message(ctx, requesting_team_captain, message)
@@ -789,86 +796,17 @@ class StreamSignupManager(commands.Cog):
                             await stream_feed_channel.send("A new stream application has been submitted!")
 
                         # set status to pending league approval, save applications
-                        app['status'] = self.PENDING_LEAGUE_APPROVAL_STATUS
+                        app['status'] = PENDING_LEAGUE_APPROVAL_STATUS
                         await self._save_applications(ctx.guild, applications)
                         return True
                     else:
                         applications[match_day].remove(app)
                         await self._save_applications(ctx.guild, applications)
                         # Send rejection message to requesting player
-                        message = challenge_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
+                        message = Strings.challenge_rejected_msg.format(match_day=match_day, home=app['home'], away=app['away'])
                         await self._send_member_message(ctx, requesting_member, message)
                         return True
         return False
-
-    async def _format_match_lobby_info(self, ctx, match_day, stream_url):
-        media_role = self.team_manager_cog._find_role_by_name(ctx, self.MEDIA_ROLE_STR)
-        
-        title = "__Match Day {match_day}: {date}__".format(match_day=match_day, date="{date}")
-
-        matchups = []
-        lobby_names = []
-        passwords = []
-
-        matches = await self._get_stream_matches(ctx, stream_url, match_day)
-        for match in matches:
-            time_slot, match = match
-            home = match['home']
-            away = match['away']
-
-            matchup = '{0} | {1} vs. {2}'.format(time_slot, home, away)
-            match = await self.match_cog.get_match_from_day_team(ctx, match_day, home)
-            if match:
-                if '{date}' in title:
-                    title = title.format(date=match['matchDate'])
-                matchups.append(matchup)
-                lobby_names.append(match['roomName'])
-                passwords.append(match['roomPass'])
-
-        if not matchups:
-            return None
-
-        # Format lobby info
-        description = "Matchups and private lobby information for matches scheduled on stream"
-        description += "\n\nLive Stream: " + stream_url
-        embed = discord.Embed(title=title, description=description, color=media_role.color)
-        embed.add_field(name="Matchup", value='{}\n'.format('\n'.join(matchups)), inline=True)
-        embed.add_field(name="Room Name", value='{}\n'.format('\n'.join(lobby_names)), inline=True)
-        embed.add_field(name="Room Password", value='{}\n'.format('\n'.join(passwords)), inline=True)
-        return embed
-
-    async def _format_apps(self, ctx, for_approval=False, match_day=None, time_slot=None):
-        if for_approval:
-            message = "> __All stream applications pending league approval:__"
-        else:
-            message = "> __All stream applications in progress:__"
-        message += "\n> \n> **<time slot> | <home> vs. <away>**"
-
-        if not for_approval:
-            message += " `[<status>]`"
-
-        count = 0
-        applications = await self._applications(ctx.guild)
-        for md, apps in applications.items():
-            if apps:
-                message += "\n> \n> **__Match Day {0}__**".format(md)
-            for app in apps:
-                if (md == match_day or not match_day) and (app['slot'] == time_slot or not time_slot):
-                    if not for_approval or app['status'] == self.PENDING_LEAGUE_APPROVAL_STATUS:
-                        message += "\n> {0} | {1} vs. {2}".format(app['slot'], app['home'], app['away'])
-                        if not for_approval:
-                            message += " `[{0}]`".format(app['status'])
-                        count += 1
-                if match_day:
-                    break
-        
-        if not count:
-            return None
-
-        if for_approval:
-            message += "\n> \n> -- \n> Use `{p}approveApp` or `{p}rejectApp` to approve/reject an application.".format(p=ctx.prefix)
-
-        return message
     
     async def _remove_match_from_stream(self, ctx, match_day, team, notify_teams=True):
         schedule = await self._stream_schedule(ctx.guild)
@@ -910,7 +848,7 @@ class StreamSignupManager(commands.Cog):
             if this_match_day == match_day:
                 for app in apps:
                     if app['home'].casefold() == team.casefold() or app['away'].casefold() == team.casefold():
-                        app['status'] = self.RESCINDED_STATUS
+                        app['status'] = RESCINDED_STATUS
                         await self._save_applications(ctx.guild, applications)
                         break
         
@@ -923,7 +861,7 @@ class StreamSignupManager(commands.Cog):
             return removed_match
 
         # Notify all team members that the game is no longer on stream
-        message = rescinded_msg.format(match_day=match_day, home=removed_match['home'], away=removed_match['away'])
+        message = Strings.rescinded_msg.format(match_day=match_day, home=removed_match['home'], away=removed_match['away'])
         for team in [removed_match['home'], removed_match['away']]:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team)
             gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
@@ -974,7 +912,7 @@ class StreamSignupManager(commands.Cog):
         await self.match_cog.set_match_on_stream(ctx, match_day, home, stream_details)
 
         # Notify all team members that the game is on stream
-        message = league_approved_msg.format(match_day=match_day, home=home, away=away, slot=slot, live_stream=stream_channel, channel=stream_channel)
+        message = Strings.league_approved_msg.format(match_day=match_day, home=home, away=away, slot=slot, live_stream=stream_channel, channel=stream_channel)
         for team_name in [home, away]:
             franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
             gm, team_members = self.team_manager_cog.gm_and_members_from_team(ctx, franchise_role, tier_role)
@@ -984,6 +922,83 @@ class StreamSignupManager(commands.Cog):
                 await self._send_member_message(ctx, team_member, message)
         
         return scheduled
+
+#endregion
+
+#region embed and string format methods
+
+    async def embed_match_lobby_info(self, ctx, match_day, stream_url):
+        media_role = self.team_manager_cog._find_role_by_name(ctx, MEDIA_ROLE_STR)
+        
+        title = "__Match Day {match_day}: {date}__".format(match_day=match_day, date="{date}")
+
+        matchups = []
+        lobby_names = []
+        passwords = []
+
+        matches = await self._get_stream_matches(ctx, stream_url, match_day)
+        for match in matches:
+            time_slot, match = match
+            home = match['home']
+            away = match['away']
+
+            matchup = '{0} | {1} vs. {2}'.format(time_slot, home, away)
+            match = await self.match_cog.get_match_from_day_team(ctx, match_day, home)
+            if match:
+                if '{date}' in title:
+                    title = title.format(date=match['matchDate'])
+                matchups.append(matchup)
+                lobby_names.append(match['roomName'])
+                passwords.append(match['roomPass'])
+
+        if not matchups:
+            return None
+
+        # Format lobby info
+        description = "Matchups and private lobby information for matches scheduled on stream"
+        description += "\n\nLive Stream: " + stream_url
+        embed = discord.Embed(title=title, description=description, color=media_role.color)
+        embed.add_field(name="Matchup", value='{}\n'.format('\n'.join(matchups)), inline=True)
+        embed.add_field(name="Room Name", value='{}\n'.format('\n'.join(lobby_names)), inline=True)
+        embed.add_field(name="Room Password", value='{}\n'.format('\n'.join(passwords)), inline=True)
+        return embed
+
+    async def format_apps(self, ctx, for_approval=False, match_day=None, time_slot=None):
+        if for_approval:
+            message = "> __All stream applications pending league approval:__"
+        else:
+            message = "> __All stream applications in progress:__"
+        message += "\n> \n> **<time slot> | <home> vs. <away>**"
+
+        if not for_approval:
+            message += " `[<status>]`"
+
+        count = 0
+        applications = await self._applications(ctx.guild)
+        for md, apps in applications.items():
+            if apps:
+                message += "\n> \n> **__Match Day {0}__**".format(md)
+            for app in apps:
+                if (md == match_day or not match_day) and (app['slot'] == time_slot or not time_slot):
+                    if not for_approval or app['status'] == PENDING_LEAGUE_APPROVAL_STATUS:
+                        message += "\n> {0} | {1} vs. {2}".format(app['slot'], app['home'], app['away'])
+                        if not for_approval:
+                            message += " `[{0}]`".format(app['status'])
+                        count += 1
+                if match_day:
+                    break
+        
+        if not count:
+            return None
+
+        if for_approval:
+            message += "\n> \n> -- \n> Use `{p}approveApp` or `{p}rejectApp` to approve/reject an application.".format(p=ctx.prefix)
+
+        return message
+
+#endregion
+
+#region load/save methods
 
     async def _stream_schedule(self, guild):
         return await self.config.guild(guild).Schedule()
@@ -1078,31 +1093,4 @@ class StreamSignupManager(commands.Cog):
         await self.config.guild(guild).LiveStreamChannels.set(urls)
         return True
 
-
-challenged_msg = ("You have been asked to play **match day {match_day}** ({home} vs. {away}) on stream at **time slot {time_slot}**. "
-    "Please respond to this request in the **#{channel}** channel with one of the following:"
-    "\n\t - To accept: `[p]streamapp accept {match_day}`"
-    "\n\t - To reject: `[p]streamapp reject {match_day}`"
-    "\nThis stream application will not be considered until you respond.")
-
-gm_challenged_msg = ("You have been asked to play **match day {match_day}** ({home} vs. {away}) on stream at **time slot {time_slot}**. "
-    "Please respond to this request in the **#{channel}** channel with one of the following:"
-    "\n\t - To accept: `[p]streamapp accept {match_day} {gm_team}`"
-    "\n\t - To reject: `[p]streamapp reject {match_day} {gm_team}`"
-    "\nThis stream application will not be considered until you respond.")
-
-challenge_accepted_msg = (":white_check_mark: Your stream application for **match day {match_day}** ({home} vs. {away}) has been accepted by your opponents, and is "
-    "now pending league approval. An additional message will be sent when a decision is made regarding this application.")
-
-challenge_rejected_msg = (":x: Your stream application for **match day {match_day}** ({home} vs. {away}) has been rejected by your opponents, and will "
-    "not be considered moving forward.")
-
-league_approved_msg = ("**Congratulations!** You have been selected to play **match day {match_day}** ({home} vs. {away}) on stream at "
-    "the **{slot} time slot**. You may use the `[p]match {match_day}` in your designated bot input channel see updated "
-    "details of this match. We look forward to seeing you on the stream listed below!\n\nLive Stream Page: {live_stream}")
-
-league_rejected_msg = ("Your application to play **match day {match_day}** ({home} vs. {away}) on stream has been denied. "
-    "Your application will be kept on file in the event that an on-stream match has been rescheduled.")
-
-rescinded_msg = ("Your match that was scheduled to be played on stream (Match Day {match_day}: **{home}** vs. **{away}**) has been **rescinded**. This match will no longer be played"
-    "on stream, and will be played as it was originally scheduled. \n\nYou may use the `[p]match {match_day}` command to see your updated match information for match day {match_day}.")
+#endregion

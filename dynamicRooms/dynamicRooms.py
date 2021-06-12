@@ -1,8 +1,7 @@
 
 import discord
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
+from discord.ext.commands import Context
+from redbot.core import Config, checks, commands
 
 defaults = {"DynamicCategories": [], "DynamicRooms": [], "HideoutCategories": [], "Hiding": [], "HideVCsEnabled": False}
 
@@ -15,11 +14,13 @@ class DynamicRooms(commands.Cog):
         self.config.register_guild(**defaults)
     
 
+#region commmands
+
     # Dynamic Categories - TODO: check category for dynamic rooms
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addDynamicCategory(self, ctx, category: discord.CategoryChannel):
+    async def addDynamicCategory(self, ctx: Context, category: discord.CategoryChannel):
         """Sets existing category where each contained voice channel will become a dynamic voice channel.
         """
         categories = await self._get_dynamic_categories(ctx.guild)
@@ -33,7 +34,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearDynamicCategories(self, ctx):
+    async def clearDynamicCategories(self, ctx: Context):
         """Disables dynamic room behavior of all categories.
         """
         await self._save_dynamic_categories(ctx.guild, [])
@@ -42,7 +43,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getDynamicCategories(self, ctx):
+    async def getDynamicCategories(self, ctx: Context):
         """View all categories that are configured for dynamic room management.
         """
         categories = await self._get_dynamic_categories(ctx.guild)
@@ -56,7 +57,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addDynamicRoom(self, ctx, voice_channel: discord.VoiceChannel):
+    async def addDynamicRoom(self, ctx: Context, voice_channel: discord.VoiceChannel):
         """Sets a voice channel to be dynamic. This is independent from a dynamic category.
         """
         categories = await self._get_dynamic_categories(ctx.guild)
@@ -71,7 +72,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearDynamicRooms(self, ctx):
+    async def clearDynamicRooms(self, ctx: Context):
         """Disables dynamic room behavior of individual dynamic rooms.
         """
         await self._save_dynamic_rooms(ctx.guild, [])
@@ -80,7 +81,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getDynamicRooms(self, ctx):
+    async def getDynamicRooms(self, ctx: Context):
         """View all individiual voice channels that are configured for dynamic room management.
         """
         dynamic_vcs = await self._get_dynamic_rooms(ctx.guild)
@@ -94,7 +95,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def addHideoutCategory(self, ctx, category: discord.CategoryChannel):
+    async def addHideoutCategory(self, ctx: Context, category: discord.CategoryChannel):
         """Sets existing category where each contained voice channel will be cloned and hidden when it reaches its capacity.
         """
         categories = await self._get_hideout_categories(ctx.guild)
@@ -106,7 +107,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearHideoutCategories(self, ctx):
+    async def clearHideoutCategories(self, ctx: Context):
         """Disables hideout room behavior of all hideout categories.
         """
         await self._save_hideout_categories(ctx.guild, [])
@@ -115,7 +116,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getHideoutCategories(self, ctx):
+    async def getHideoutCategories(self, ctx: Context):
         """View all categories that are configured for hideout room management.
         """
         categories = await self._get_hideout_categories(ctx.guild)
@@ -129,7 +130,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getHiddenRooms(self, ctx):
+    async def getHiddenRooms(self, ctx: Context):
         """View all individiual voice channels that are actively hidden.
         """
         hidden_vc_ids = await self._get_hiding(ctx.guild)
@@ -142,7 +143,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearDynamicVCData(self, ctx):
+    async def clearDynamicVCData(self, ctx: Context):
         """Clears all dynamic room data in the `dynamicRooms` cog"""
         await self._save_dynamic_categories(ctx.guild, [])
         await self._save_hiding(ctx.guild, [])
@@ -152,7 +153,7 @@ class DynamicRooms(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def toggleHideoutVCs(self, ctx):
+    async def toggleHideoutVCs(self, ctx: Context):
         """Enables or disables the `[p]hide` command"""
         was_enabled = await self._is_hide_enabled(ctx.guild)
         
@@ -167,7 +168,7 @@ class DynamicRooms(commands.Cog):
         
     @commands.command(aliases=['hideme', 'hideus'])
     @commands.guild_only()
-    async def hide(self, ctx):
+    async def hide(self, ctx: Context):
         """Hides the voice channel the invoker currently occupies from other members in the guild."""
         await ctx.message.delete()
         if not await self._is_hide_enabled(ctx.guild):
@@ -181,6 +182,8 @@ class DynamicRooms(commands.Cog):
         if not await self._is_hiding(member.voice.channel):
             await self._hide_vc(member.voice.channel)
     
+    #region listeners
+
     @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
     async def on_guild_channel_delete(self, channel):
@@ -218,6 +221,11 @@ class DynamicRooms(commands.Cog):
         if before.channel:
             await self._member_leaves_voice(member, before.channel)
 
+    #endregion
+
+#endregion
+
+#region helper methods
     
     async def _member_joins_voice(self, member: discord.Member, voice_channel: discord.VoiceChannel):
         dynamic_vc = await self._is_dynamic_vc(voice_channel)
@@ -252,13 +260,13 @@ class DynamicRooms(commands.Cog):
             await voice_channel.delete()
 
 
-    def _get_category_name(self, ctx, category_id):
+    def _get_category_name(self, ctx: Context, category_id):
         for category in ctx.guild.categories:
             if category.id == category_id:
                 return "**{}** [{}]".format(category.name, category.id) 
         return None
     
-    def _get_channel_name(self, guild, channel_id):
+    def _get_channel_name(self, guild: discord.Guild, channel_id):
         for channel in guild.channels:
             if channel.id == channel_id:
                 return "**{}** [{}]".format(channel.name, channel.id) 
@@ -318,41 +326,47 @@ class DynamicRooms(commands.Cog):
         if last_index > voice_channel.position:
             await voice_channel.edit(position=last_index+3) # 3 is an arbitrary number to cover a race condition - sometimes moves to 2nd last
 
+#endregion
+
+#region load/save methods
+
     # JSON db interfaces
     # Dynamic Categories
-    async def _save_dynamic_categories(self, guild, categories):
+    async def _save_dynamic_categories(self, guild: discord.Guild, categories):
         await self.config.guild(guild).DynamicCategories.set(categories)
 
-    async def _get_dynamic_categories(self, guild):
+    async def _get_dynamic_categories(self, guild: discord.Guild):
         return await self.config.guild(guild).DynamicCategories()
 
     # Dynamic Rooms - independent from categories
-    async def _save_dynamic_rooms(self, guild, vcs):
+    async def _save_dynamic_rooms(self, guild: discord.Guild, vcs):
         await self.config.guild(guild).DynamicRooms.set(vcs)
 
-    async def _get_dynamic_rooms(self, guild):
+    async def _get_dynamic_rooms(self, guild: discord.Guild):
         return await self.config.guild(guild).DynamicRooms()
 
     # Categories where rooms hide when full
-    async def _save_hideout_categories(self, guild, categories):
+    async def _save_hideout_categories(self, guild: discord.Guild, categories):
         await self.config.guild(guild).HideoutCategories.set(categories)
 
-    async def _get_hideout_categories(self, guild):
+    async def _get_hideout_categories(self, guild: discord.Guild):
         return await self.config.guild(guild).HideoutCategories()
 
     # Rooms that are actively hiding
-    async def _save_hiding(self, guild, hidden_rooms):
+    async def _save_hiding(self, guild: discord.Guild, hidden_rooms):
         await self.config.guild(guild).Hiding.set(hidden_rooms)
 
-    async def _get_hiding(self, guild):
+    async def _get_hiding(self, guild: discord.Guild):
         return await self.config.guild(guild).Hiding()
     
     # hide vc command settings
-    async def _enable_hide_vcs(self, guild):
+    async def _enable_hide_vcs(self, guild: discord.Guild):
         await self.config.guild(guild).HideVCsEnabled.set(True)
 
-    async def _disable_hide_vcs(self, guild):
+    async def _disable_hide_vcs(self, guild: discord.Guild):
         await self.config.guild(guild).HideVCsEnabled.set(False)
 
-    async def _is_hide_enabled(self, guild):
+    async def _is_hide_enabled(self, guild: discord.Guild):
         return await self.config.guild(guild).HideVCsEnabled()
+
+#endregion

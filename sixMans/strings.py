@@ -44,3 +44,11 @@ class Strings:
         'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
         'tex', 'tusk', 'viper', 'wolfman', 'yuri'
     ]
+
+    additional_game_info = ("Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+        "When you are done playing with the current teams please report the winning team using the command `{prefix}sr [winning_team]` where "
+        "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+        "the game and allow players to queue again you can use the `{prefix}cg` command. Both teams will need to verify that they wish to "
+        "cancel the game.")
+
+    game_help = ("If you need any help or have questions please contact someone with the {helper_role} role.")

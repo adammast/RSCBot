@@ -11,6 +11,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from .game import Game
 from .queue import SixMansQueue
+from .strings import Strings
 
 DEBUG = False
 MINIMUM_GAME_TIME = 600                     # Seconds (10 Minutes)
@@ -1218,15 +1219,9 @@ class SixMans(commands.Cog):
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
             .format(six_mans_queue.points[PP_PLAY_KEY], six_mans_queue.points[PP_WIN_KEY]), inline=False)
         if not invalid:
-            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-                "cancel the game.".format(prefix), inline=False)
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+            embed.add_field(name="Additional Info", value= Strings.additional_game_info.format(prefix), inline=False)
         if helper_role:
-            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
-        embed.add_field(name="Help", value=help_message, inline=False)
+            embed.add_field(name="Help", value=Strings.game_help.format(helper_role.mention), inline=False)
         embed.set_footer(text="Game ID: {}".format(game.id))
         return embed
 

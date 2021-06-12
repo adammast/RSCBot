@@ -1,12 +1,12 @@
 import random
 import struct
-from typing import List
 import uuid
+from typing import List
 
 import discord
 
-from .strings import Strings
 from .queue import SixMansQueue
+from .strings import Strings
 
 
 class Game:
@@ -131,8 +131,6 @@ class Game:
         self.orange.add(self.captains[1])
         self.helper_role = helper_role
 
-        pick_order = ['blue', 'orange', 'orange']
-
         pickable = list(self.players)
         pickable.remove(self.captains[0])
         pickable.remove(self.captains[1])
@@ -228,7 +226,7 @@ class Game:
             embed.add_field(name="Available Players", value=pickable_players, inline=False)
         
         if self.helper_role:
-            embed.add_field(name="Help", value="If you need any help or have questions please contact someone with the {} role.".format(self.helper_role.mention))
+            embed.add_field(name="Help", value=Strings.game_help.format(self.helper_role.mention))
         
         embed.set_footer(text="Game ID: {}".format(self.id))
 

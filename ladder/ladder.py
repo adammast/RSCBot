@@ -1,24 +1,21 @@
-import discord
-import collections
-import operator
-import random
 import asyncio
-import datetime
+import random
 import uuid
 
-from queue import Queue
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
+import discord
+from discord.ext.commands import Context
+from match.strings import Strings
+from redbot.core import Config, checks, commands
+from redbot.core.utils.menus import (DEFAULT_CONTROLS, menu,
+                                     start_adding_reactions)
 from redbot.core.utils.predicates import ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions, menu, DEFAULT_CONTROLS
 
-team_size = 3
-minimum_game_time = 600 #Seconds (10 Minutes)
-verify_timeout = 15
-start_game_verify_timeout = 60
-k_factor = 50
-default_elo = 1500
+TEAM_SIZE = 3
+MINIMUM_GAME_TIME = 600             #Seconds (10 Minutes)
+VERIFY_TIMEOUT = 15
+START_GAME_VERIFY_TIMEOUT = 60
+K_FACTOR = 50
+DEFAULT_ELO = 1500
 
 defaults = {"CategoryChannel": None, "TextChannel": None, "HelperRole": None, "Games": {}, "GamesPlayed": 0, "Teams": {}, "Scores": []}
 
@@ -31,12 +28,14 @@ class Ladder(commands.Cog):
         self.games = []
         self.teams = []
 
+#region commmands
+
     @commands.guild_only()
     @commands.command(aliases=["rlt"])
-    async def registerLadderTeam(self, ctx, team_name, captain: discord.Member, *players: discord.Member):
+    async def registerLadderTeam(self, ctx: Context, team_name, captain: discord.Member, *players: discord.Member):
         """Creates a team with a given name and players. The team will need to be approved first before it can actually begin participating.
         The first player listed when using the command will be made captain of the team. **Team names will need to be in quotes.**"""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         if any(team.name.lower() == team_name.lower() for team in self.teams):
             await ctx.send(":x: {} is already the name of a team".format(team_name))
             return
@@ -44,23 +43,23 @@ class Ladder(commands.Cog):
         player_list = list(players)
         if captain not in player_list:
             player_list.append(captain)
-        if len(player_list) != team_size:
-            await ctx.send(":x: Teams must be {} players exactly".format(team_size))
+        if len(player_list) != TEAM_SIZE:
+            await ctx.send(":x: Teams must be {} players exactly".format(TEAM_SIZE))
             return
         if ctx.author not in player_list:
             await ctx.send(":x: You can only register a team that you're a player on")
             return
         
-        team = Team(team_name, captain, player_list, 0, 0, default_elo, False)
+        team = Team(team_name, captain, player_list, 0, 0, DEFAULT_ELO, False)
         self.teams.append(team)
-        await self._save_teams(ctx, self.teams)
+        await self._save_teams(ctx.guild, self.teams)
         await ctx.send("Done\nYour team will need to be approved first before you can participate in the event. You'll get a dm when that has occurred.")
 
     @commands.guild_only()
     @commands.command(aliases=["glt"])
-    async def getLadderTeams(self, ctx):
+    async def getLadderTeams(self, ctx: Context):
         """Gets info for all the ladder teams that have been approved already."""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         approvedTeams = [team for team in self.teams if team.approved]
         if not approvedTeams:
             ctx.send("There are no approved teams at this time")
@@ -74,11 +73,11 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["gult"])
-    async def getUnapprovedLadderTeams(self, ctx):
+    async def getUnapprovedLadderTeams(self, ctx: Context):
         """Gets a list of the registered teams that haven't been approved to participate yet. This should help when determining whether to approve a team or not."""
         if not await self.has_perms(ctx):
             return
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         unapprovedTeams = [team for team in self.teams if not team.approved]
         if not unapprovedTeams:
             ctx.send("There are no unapproved teams at this time")
@@ -92,7 +91,7 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["alt"])
-    async def approveLadderTeam(self, ctx, team_name, elo_rating: int = default_elo):
+    async def approveLadderTeam(self, ctx: Context, team_name, elo_rating: int = DEFAULT_ELO):
         """Approves a team to participate in the event. Make sure that they fit under whatever guidelines we set before approving them.
         The players will get a dm saying their team has been approved."""
         if not await self.has_perms(ctx):
@@ -107,7 +106,7 @@ class Ladder(commands.Cog):
             return
         team.elo_rating = elo_rating
         team.approved = True
-        await self._save_teams(ctx, self.teams)
+        await self._save_teams(ctx.guild, self.teams)
         for player in team.players:
             try:
                 await player.send(":white_check_mark: Your ladder team, {0}, has been approved to participate in the ladder event within {1}".format(team.name, ctx.guild.name))
@@ -117,7 +116,7 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["rjlt"])
-    async def rejectLadderTeam(self, ctx, team_name, *reason):
+    async def rejectLadderTeam(self, ctx: Context, team_name, *reason):
         """Rejects a team and prevents them from participating in the event. This cannot be undone, but the team can try and register again.
         There's an optional parameter for including a reason why they were rejected. The players will get a dm saying their team was rejected along with the reason if given."""
         if not await self.has_perms(ctx):
@@ -131,7 +130,7 @@ class Ladder(commands.Cog):
             await ctx.send(":x: {} has already been approved".format(team_name))
             return
         self.teams.remove(team)
-        await self._save_teams(ctx, self.teams)
+        await self._save_teams(ctx.guild, self.teams)
         for player in team.players:
             try:
                 if len(reason) > 0:
@@ -146,10 +145,10 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["slg"])
-    async def startLadderGame(self, ctx, team_1_name, team_2_name):
+    async def startLadderGame(self, ctx: Context, team_1_name, team_2_name):
         """Attempts to start a ladder game between the two teams. You'll need to be a player on one of the teams to use this
         command and the other team's captain will need to agree to start the game as well."""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         try:
             team_1 = next(team for team in self.teams if team.name.lower() == team_1_name.lower())
             team_2 = next(team for team in self.teams if team.name.lower() == team_2_name.lower())
@@ -170,15 +169,15 @@ class Ladder(commands.Cog):
             game = await self.create_game(ctx, team_1, team_2)
             await self.send_game_info(ctx, game)
             self.games.append(game)
-            await self._save_games(ctx, self.games)
+            await self._save_games(ctx.guild, self.games)
             await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command(aliases=["fslg"])
     @checks.admin_or_permissions(manage_guild=True)
-    async def forceStartLadderGame(self, ctx, team_1_name, team_2_name):
+    async def forceStartLadderGame(self, ctx: Context, team_1_name, team_2_name):
         """Primarily for testing. Forces a new game between two teams."""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         try:
             team_1 = next(team for team in self.teams if team.name.lower() == team_1_name.lower())
             team_2 = next(team for team in self.teams if team.name.lower() == team_2_name.lower())
@@ -198,16 +197,16 @@ class Ladder(commands.Cog):
         game = await self.create_game(ctx, team_1, team_2)
         await self.send_game_info(ctx, game)
         self.games.append(game)
-        await self._save_games(ctx, self.games)
+        await self._save_games(ctx.guild, self.games)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command(aliases=["clg"])
-    async def cancelLadderGame(self, ctx):
+    async def cancelLadderGame(self, ctx: Context):
         """Cancel the current ladder game. Can only be used in a ladder game channel.
         The game will end with no wins given to either team. The teams will then be allowed to start a new game."""
-        await self.load_teams(ctx)
-        await self.load_games(ctx)
+        await self.load_teams(ctx.guild)
+        await self.load_games(ctx.guild)
         try:
             game = next(game for game in self.games if game.textChannel == ctx.channel)
         except:
@@ -219,12 +218,12 @@ class Ladder(commands.Cog):
             await ctx.send(":x: Only players on one of the two teams can cancel the game.")
             return
 
-        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, verify_timeout))
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, VERIFY_TIMEOUT))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
         try:
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result is True:
                 await ctx.send("Done. Feel free to start a new game.\n**This channel will be deleted in 30 seconds**")
                 await self.remove_game(ctx, game)
@@ -236,14 +235,14 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["fclg"])
-    async def forceCancelLadderGame(self, ctx):
+    async def forceCancelLadderGame(self, ctx: Context):
         """Cancel the current ladder game. Can only be used in a ladder game channel.
         The game will end with no wins given to either team. The teams will then be allowed to start a new game."""
         if not await self.has_perms(ctx):
             return
 
-        await self.load_teams(ctx)
-        await self.load_games(ctx)
+        await self.load_teams(ctx.guild)
+        await self.load_games(ctx.guild)
         try:
             game = next(game for game in self.games if game.textChannel == ctx.channel)
         except:
@@ -256,7 +255,7 @@ class Ladder(commands.Cog):
         game.scoreReported = True
         pred = ReactionPredicate.yes_or_no(msg, ctx.author)
         try:
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result is True:
                 await ctx.send("Done. Feel free to start a new game.\n**This channel will be deleted in 30 seconds**")
                 await self.remove_game(ctx, game)
@@ -267,11 +266,11 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["lr"])
-    async def ladderResult(self, ctx, blue_team_wins: int, orange_team_wins: int):
+    async def ladderResult(self, ctx: Context, blue_team_wins: int, orange_team_wins: int):
         """Submits the result of the ladder game. Should be used in the text channel corresponding to the game.
         Both teams need to agree on the result before it is finalized."""
-        await self.load_teams(ctx)
-        await self.load_games(ctx)
+        await self.load_teams(ctx.guild)
+        await self.load_games(ctx.guild)
         try:
             game = next(game for game in self.games if game.textChannel == ctx.channel)
         except:
@@ -281,7 +280,7 @@ class Ladder(commands.Cog):
             await ctx.send(":x: Someone has already reported the results or is waiting for verification")
             return
         game_time = ctx.message.created_at - ctx.channel.created_at
-        if game_time.seconds < minimum_game_time:
+        if game_time.seconds < MINIMUM_GAME_TIME:
             await ctx.send(":x: You can't report a game outcome until at least **10 minutes** have passed since the game was created."
                 "\nCurrent time that's passed = **{0} minute(s)**".format(game_time.seconds // 60))
             return
@@ -297,13 +296,13 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["flr"])
-    async def forceLadderResult(self, ctx, blue_team_wins: int, orange_team_wins: int):
+    async def forceLadderResult(self, ctx: Context, blue_team_wins: int, orange_team_wins: int):
         """Overrides the verification process for submitting the result of a game in the case that the two teams can't submit it themselves."""
         if not await self.has_perms(ctx):
             return
 
-        await self.load_teams(ctx)
-        await self.load_games(ctx)
+        await self.load_teams(ctx.guild)
+        await self.load_games(ctx.guild)
         try:
             game = next(game for game in self.games if game.textChannel == ctx.channel)
         except:
@@ -317,22 +316,24 @@ class Ladder(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=["llb"])
-    async def ladderLeaderboard(self, ctx):
+    async def ladderLeaderboard(self, ctx: Context):
         """Shows the top ten teams in terms of current Elo rating"""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         approvedTeams = [team for team in self.teams if team.approved]
         if not approvedTeams:
             ctx.send("There are no approved teams at this time")
             return
         approvedTeams.sort(key=lambda team: team.elo_rating, reverse=True)
-        await ctx.send(embed=self.embed_leaderboard(ctx, approvedTeams, await self._games_played(ctx)))
+        await ctx.send(embed=self.embed_leaderboard(ctx, approvedTeams, await self._games_played(ctx.guild)))
+
+    #region get and set commands
 
     @commands.guild_only()
     @commands.command(aliases=["glti"])
-    async def getLadderTeamInfo(self, ctx, team_name):
+    async def getLadderTeamInfo(self, ctx: Context, team_name):
         """"Gets all the info corresponding to a ladder team. **Team names will need to be in quotes.**
         Shows the captain, players, team record, and Elo rating."""
-        await self.load_teams(ctx)
+        await self.load_teams(ctx.guild)
         try:
             team = next(team for team in self.teams if team.name.lower() == team_name.lower())
             await ctx.send(embed=self.embed_team_info(team))
@@ -342,98 +343,104 @@ class Ladder(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setLadderTextChannel(self, ctx, text_channel: discord.TextChannel):
+    async def setLadderTextChannel(self, ctx: Context, text_channel: discord.TextChannel):
         """Sets the ladder text channel where general ladder info will be sent"""
-        await self._save_text_channel(ctx, text_channel.id)
+        await self._save_text_channel(ctx.guild, text_channel.id)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getLadderTextChannel(self, ctx):
+    async def getLadderTextChannel(self, ctx: Context):
         """Gets the ladder text channel"""
         try:
-            await ctx.send("Ladder text channel set to: {0}".format((await self._text_channel(ctx)).mention))
+            await ctx.send("Ladder text channel set to: {0}".format((await self._text_channel(ctx.guild)).mention))
         except:
             await ctx.send(":x: Ladder text channel not set")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def unsetLadderTextChannel(self, ctx):
+    async def unsetLadderTextChannel(self, ctx: Context):
         """Unsets the ladder text channel"""
-        await self._save_text_channel(ctx, None)
+        await self._save_text_channel(ctx.guild, None)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setLadderCategory(self, ctx, category_channel: discord.CategoryChannel):
+    async def setLadderCategory(self, ctx: Context, category_channel: discord.CategoryChannel):
         """Sets the ladder category channel where all ladder channels will be created under"""
-        await self._save_category(ctx, category_channel.id)
+        await self._save_category(ctx.guild, category_channel.id)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getLadderCategory(self, ctx):
+    async def getLadderCategory(self, ctx: Context):
         """Gets the channel currently assigned as the ladder category channel"""
         try:
-            await ctx.send("Ladder category channel set to: {0}".format((await self._category(ctx)).mention))
+            await ctx.send("Ladder category channel set to: {0}".format((await self._category(ctx.guild)).mention))
         except:
             await ctx.send(":x: Ladder category channel not set")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def unsetLadderCategory(self, ctx):
+    async def unsetLadderCategory(self, ctx: Context):
         """Unsets the ladder category channel. Ladder channels will not be created if this is not set"""
-        await self._save_category(ctx, None)
+        await self._save_category(ctx.guild, None)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setLadderHelperRole(self, ctx, helper_role: discord.Role):
+    async def setLadderHelperRole(self, ctx: Context, helper_role: discord.Role):
         """Sets the ladder helper role. Anyone with this role will be able to see all the ladder game channels that are created"""
-        await self._save_helper_role(ctx, helper_role.id)
+        await self._save_helper_role(ctx.guild, helper_role.id)
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def getLadderHelperRole(self, ctx):
+    async def getLadderHelperRole(self, ctx: Context):
         """Gets the ladder helper role"""
         try:
-            await ctx.send("Ladder helper role set to: {0}".format((await self._helper_role(ctx)).name))
+            await ctx.send("Ladder helper role set to: {0}".format((await self._helper_role(ctx.guild)).name))
         except:
             await ctx.send(":x: ladder helper role not set")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def unsetLadderHelperRole(self, ctx):
+    async def unsetLadderHelperRole(self, ctx: Context):
         """Unsets the ladder helper role"""
-        await self._save_helper_role(ctx, None)
+        await self._save_helper_role(ctx.guild, None)
         await ctx.send("Done")
 
-    async def has_perms(self, ctx):
-        helper_role = await self._helper_role(ctx)
+    #endregion
+
+#endregion
+
+#region helper methods
+
+    async def has_perms(self, ctx: Context):
+        helper_role = await self._helper_role(ctx.guild)
         if ctx.author.guild_permissions.administrator:
             return True
         elif helper_role and helper_role in ctx.author.roles:
             return True
 
-    async def create_game(self, ctx, team_1, team_2):
+    async def create_game(self, ctx: Context, team_1, team_2):
         text_channel, voice_channels = await self.create_game_channels(ctx, team_1, team_2)
         players = list(team_1.players) + list(team_2.players)
         for player in players:
             await text_channel.set_permissions(player, read_messages=True)
         return Game(team_1, team_2, text_channel, voice_channels)
 
-    async def create_game_channels(self, ctx, team_1, team_2):
+    async def create_game_channels(self, ctx: Context, team_1, team_2):
         guild = ctx.message.guild
-        helper_role = await self._helper_role(ctx)
+        helper_role = await self._helper_role(ctx.guild)
         if helper_role:
             text_overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
@@ -452,19 +459,19 @@ class Ladder(commands.Cog):
             }
         
         text_channel = await guild.create_text_channel("{0} vs {1} Ladder Game".format(team_1.name, team_2.name), overwrites= text_overwrites,
-            category= await self._category(ctx))
+            category= await self._category(ctx.guild))
         voice_channels = [
-            await guild.create_voice_channel("{}".format(team_1.name), overwrites= voice_overwrites, category= await self._category(ctx)),
-            await guild.create_voice_channel("{}".format(team_2.name), overwrites= voice_overwrites, category= await self._category(ctx))
+            await guild.create_voice_channel("{}".format(team_1.name), overwrites= voice_overwrites, category= await self._category(ctx.guild)),
+            await guild.create_voice_channel("{}".format(team_2.name), overwrites= voice_overwrites, category= await self._category(ctx.guild))
         ]
         return text_channel, voice_channels
 
-    async def verify_start_game(self, ctx, team_1, team_2, opposing_captain: discord.Member):
+    async def verify_start_game(self, ctx: Context, team_1, team_2, opposing_captain: discord.Member):
         msg = await ctx.send("{0} Please verify that you want to start the game between these two teams:".format(opposing_captain.mention), embed=self.embed_team_comparison(team_1, team_2))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
         try:
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=start_game_verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=START_GAME_VERIFY_TIMEOUT)
             if pred.result is True:
                 return True
             else:
@@ -474,14 +481,14 @@ class Ladder(commands.Cog):
             await ctx.send(":x: Ladder game between **{0}** and **{1}** not verified in time.\nTo try and start a new game again use the `{2}slg` command.".format(team_1.name, team_2.name, ctx.prefix))
             return False
 
-    async def verify_game_results(self, ctx, game, blue_team_wins, orange_team_wins, verifier: discord.Member):
+    async def verify_game_results(self, ctx: Context, game, blue_team_wins, orange_team_wins, verifier: discord.Member):
         msg = await ctx.send("{0} Please verify the results:\n**{1}** {2} - {3} **{4}**".format(verifier.mention, game.blue.name,
             blue_team_wins, orange_team_wins, game.orange.name))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         game.scoreReported = True
         pred = ReactionPredicate.yes_or_no(msg, verifier)
         try:
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
             if pred.result is True:
                 return True
             else:
@@ -494,28 +501,28 @@ class Ladder(commands.Cog):
                 "**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
             return False
 
-    async def finish_game(self, ctx, game, blue_team_wins, orange_team_wins):
+    async def finish_game(self, ctx: Context, game, blue_team_wins, orange_team_wins):
         blue_team = game.blue
         orange_team = game.orange
         blue_team_new_elo, orange_team_new_elo = self.update_elo(blue_team.elo_rating, orange_team.elo_rating, blue_team_wins / (blue_team_wins + orange_team_wins))
         await ctx.send(embed=self.embed_game_results(blue_team, blue_team_wins, orange_team_wins, orange_team, blue_team_new_elo, orange_team_new_elo))
         self.update_team_info(blue_team, blue_team_wins, orange_team_wins, blue_team_new_elo)
         self.update_team_info(orange_team, orange_team_wins, blue_team_wins, orange_team_new_elo)
-        await self._save_teams(ctx, self.teams)
-        await self._save_games_played(ctx, (await self._games_played(ctx)) + blue_team_wins + orange_team_wins)
+        await self._save_teams(ctx.guild, self.teams)
+        await self._save_games_played(ctx.guild, (await self._games_played(ctx.guild)) + blue_team_wins + orange_team_wins)
 
-    async def remove_game(self, ctx, game):
+    async def remove_game(self, ctx: Context, game):
         self.games.remove(game)
-        await self._save_games(ctx, self.games)
+        await self._save_games(ctx.guild, self.games)
         await asyncio.sleep(30)
         await ctx.channel.delete()
         for vc in game.voiceChannels:
             await vc.delete()
 
-    def get_opposing_captain(self, ctx, game):
+    def get_opposing_captain(self, ctx: Context, game):
         return self.get_opposing_captain_by_teams(ctx, game.blue, game.orange)
 
-    def get_opposing_captain_by_teams(self, ctx, team_1, team_2):
+    def get_opposing_captain_by_teams(self, ctx: Context, team_1, team_2):
         opposing_captain = None
         if ctx.author in team_1.players:
             opposing_captain = team_2.captain
@@ -535,20 +542,12 @@ class Ladder(commands.Cog):
         elo_dif = team_1_elo - team_2_elo
         exponent = -1 * (elo_dif / 100)
         expectation = 1 / (1 + pow(10, exponent))
-        team_1_new_elo = round(team_1_elo + (k_factor * (result - expectation)))
-        team_2_new_elo = round(team_2_elo + (k_factor * ((1 - result) - (1 - expectation))))
+        team_1_new_elo = round(team_1_elo + (K_FACTOR * (result - expectation)))
+        team_2_new_elo = round(team_2_elo + (K_FACTOR * ((1 - result) - (1 - expectation))))
         return team_1_new_elo, team_2_new_elo
 
-    def embed_team_comparison(self, team_1, team_2):
-        embed = discord.Embed(title="{0} vs. {1} Team Comparison".format(team_1.name, team_2.name), color=discord.Colour.blue())
-        embed.add_field(name="Players", value="**{0}**: {1}\n**{2}**: {3}\n".format(team_1.name, ", ".join([player.mention for player in team_1.players]),
-            team_2.name, ", ".join([player.mention for player in team_2.players])), inline=False)
-        embed.add_field(name="Records", value="**{0}**: {1} - {2}\n**{3}**: {4} - {5}\n".format(team_1.name, team_1.wins, team_1.losses, team_2.name, team_2.wins, team_2.losses), inline=False)
-        embed.add_field(name="Elo Ratings", value="**{0}**: {1}\n**{2}**: {3}\n".format(team_1.name, team_1.elo_rating, team_2.name, team_2.elo_rating), inline=False)
-        return embed
-
-    async def send_game_info(self, ctx, game):
-        helper_role = await self._helper_role(ctx)
+    async def send_game_info(self, ctx: Context, game):
+        helper_role = await self._helper_role(ctx.guild)
         await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
         embed = discord.Embed(title="{0} vs. {1} Ladder Game Info".format(game.blue.name, game.orange.name), color=discord.Colour.blue())
         embed.add_field(name="Blue Team", value="**{0}**: {1}\n".format(game.blue.name, ", ".join([player.mention for player in game.blue.players])), inline=False)
@@ -564,6 +563,18 @@ class Ladder(commands.Cog):
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
         await game.textChannel.send(embed=embed)
+
+#endregion
+
+#region embed and string format methods
+
+    def embed_team_comparison(self, team_1, team_2):
+        embed = discord.Embed(title="{0} vs. {1} Team Comparison".format(team_1.name, team_2.name), color=discord.Colour.blue())
+        embed.add_field(name="Players", value="**{0}**: {1}\n**{2}**: {3}\n".format(team_1.name, ", ".join([player.mention for player in team_1.players]),
+            team_2.name, ", ".join([player.mention for player in team_2.players])), inline=False)
+        embed.add_field(name="Records", value="**{0}**: {1} - {2}\n**{3}**: {4} - {5}\n".format(team_1.name, team_1.wins, team_1.losses, team_2.name, team_2.wins, team_2.losses), inline=False)
+        embed.add_field(name="Elo Ratings", value="**{0}**: {1}\n**{2}**: {3}\n".format(team_1.name, team_1.elo_rating, team_2.name, team_2.elo_rating), inline=False)
+        return embed
 
     def embed_game_results(self, team_1, team_1_wins: int, team_2_wins: int, team_2, team_1_new_elo, team_2_new_elo):
         embed = discord.Embed(title="{0} vs. {1}".format(team_1.name, team_2.name), color=discord.Colour.blue())
@@ -587,7 +598,7 @@ class Ladder(commands.Cog):
         embed.add_field(name="Elo Rating", value="{}\n".format(team.elo_rating), inline=False)
         return embed
 
-    def embed_leaderboard(self, ctx, sorted_teams, games_played):
+    def embed_leaderboard(self, ctx: Context, sorted_teams, games_played):
         embed = discord.Embed(title="{0} Ladder Leaderboard".format(ctx.guild.name), color=discord.Colour.blue())
         embed.add_field(name="Total Games Played", value="{}\n".format(games_played), inline=True)
         
@@ -603,14 +614,18 @@ class Ladder(commands.Cog):
         embed.add_field(name="Highest Elo Rating", value=message, inline=False)
         return embed
 
-    async def load_teams(self, ctx, force_load = False):
+#endregion
+
+#region load/save methods
+
+    async def load_teams(self, guild: discord.Guild, force_load = False):
         if self.teams is None or self.teams == [] or force_load:
-            teams = await self._teams(ctx)
+            teams = await self._teams(guild)
             team_list = []
             for key, value in teams.items():
                 name = value["Name"]
-                captain = ctx.guild.get_member(value["Captain"])
-                players = [ctx.guild.get_member(x) for x in value["Players"]]
+                captain = guild.get_member(value["Captain"])
+                players = [guild.get_member(x) for x in value["Players"]]
                 wins = value["Wins"]
                 losses = value["Losses"]
                 elo_rating = value["EloRating"]
@@ -621,23 +636,23 @@ class Ladder(commands.Cog):
 
             self.teams = team_list
 
-    async def _teams(self, ctx):
-        return await self.config.guild(ctx.guild).Teams()
+    async def _teams(self, guild: discord.Guild):
+        return await self.config.guild(guild).Teams()
 
-    async  def _save_teams(self, ctx, teams):
+    async  def _save_teams(self, guild: discord.Guild, teams):
         team_dict = {}
         for team in teams:
             team_dict[team.id] = team._to_dict()
-        await self.config.guild(ctx.guild).Teams.set(team_dict)
+        await self.config.guild(guild).Teams.set(team_dict)
 
-    async def load_games(self, ctx, force_load = False):
+    async def load_games(self, guild: discord.Guild, force_load = False):
         if self.games is None or self.games == [] or force_load:
-            self.load_teams(ctx, force_load)
-            games = await self._games(ctx)
+            self.load_teams(guild, force_load)
+            games = await self._games(guild)
             game_list = []
             for key, value in games.items():
-                text_channel = ctx.guild.get_channel(value["TextChannel"])
-                voice_channels = [ctx.guild.get_channel(x) for x in value["VoiceChannels"]]
+                text_channel = guild.get_channel(value["TextChannel"])
+                voice_channels = [guild.get_channel(x) for x in value["VoiceChannels"]]
                 blue_team_id = value["Blue"]
                 orange_team_id = value["Orange"]
                 blue_team = next(x for x in self.teams if x.id == blue_team_id)
@@ -651,44 +666,46 @@ class Ladder(commands.Cog):
 
             self.games = game_list
 
-    async def _games(self, ctx):
-        return await self.config.guild(ctx.guild).Games()
+    async def _games(self, guild: discord.Guild):
+        return await self.config.guild(guild).Games()
 
-    async  def _save_games(self, ctx, games):
+    async  def _save_games(self, guild: discord.Guild, games):
         game_dict = {}
         for game in games:
             game_dict[game.id] = game._to_dict()
-        await self.config.guild(ctx.guild).Games.set(game_dict)
+        await self.config.guild(guild).Games.set(game_dict)
 
-    async def _scores(self, ctx):
-        return await self.config.guild(ctx.guild).Scores()
+    async def _scores(self, guild: discord.Guild):
+        return await self.config.guild(guild).Scores()
 
-    async def _save_scores(self, ctx, scores):
-        await self.config.guild(ctx.guild).Scores.set(scores)
+    async def _save_scores(self, guild: discord.Guild, scores):
+        await self.config.guild(guild).Scores.set(scores)
 
-    async def _games_played(self, ctx):
-        return await self.config.guild(ctx.guild).GamesPlayed()
+    async def _games_played(self, guild: discord.Guild):
+        return await self.config.guild(guild).GamesPlayed()
 
-    async def _save_games_played(self, ctx, games_played):
-        await self.config.guild(ctx.guild).GamesPlayed.set(games_played)
+    async def _save_games_played(self, guild: discord.Guild, games_played):
+        await self.config.guild(guild).GamesPlayed.set(games_played)
 
-    async def _category(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).CategoryChannel())
+    async def _category(self, guild: discord.Guild):
+        return guild.get_channel(await self.config.guild(guild).CategoryChannel())
 
-    async def _save_category(self, ctx, category):
-        await self.config.guild(ctx.guild).CategoryChannel.set(category)
+    async def _save_category(self, guild: discord.Guild, category):
+        await self.config.guild(guild).CategoryChannel.set(category)
 
-    async def _text_channel(self, ctx):
-        return ctx.guild.get_channel(await self.config.guild(ctx.guild).TextChannel())
+    async def _text_channel(self, guild: discord.Guild):
+        return guild.get_channel(await self.config.guild(guild).TextChannel())
 
-    async def _save_text_channel(self, ctx, text_channel):
-        await self.config.guild(ctx.guild).TextChannel.set(text_channel)
+    async def _save_text_channel(self, guild: discord.Guild, text_channel):
+        await self.config.guild(guild).TextChannel.set(text_channel)
 
-    async def _helper_role(self, ctx):
-        return ctx.guild.get_role(await self.config.guild(ctx.guild).HelperRole())
+    async def _helper_role(self, guild: discord.Guild):
+        return guild.get_role(await self.config.guild(guild).HelperRole())
 
-    async def _save_helper_role(self, ctx, helper_role):
-        await self.config.guild(ctx.guild).HelperRole.set(helper_role)
+    async def _save_helper_role(self, guild: discord.Guild, helper_role):
+        await self.config.guild(guild).HelperRole.set(helper_role)
+
+#endregion
 
 class Team:
     def __init__(self, name, captain, players, wins, losses, elo_rating, approved):
@@ -737,50 +754,4 @@ class Game:
         }
 
     def _generate_name_pass(self):
-        return room_pass[random.randrange(len(room_pass))]
-
-# TODO: Load from file?
-room_pass = [
-    'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
-    'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
-    'xdevil', 'endo', 'masamune', 'merc', 'backfire', 'gizmo',
-    'roadhog', 'armadillo', 'hogsticker', 'luigi', 'mario', 'samus',
-    'sweettooth', 'cyclone', 'imperator', 'jager', 'mantis', 'nimbus',
-    'samurai', 'twinzer', 'werewolf', 'maverick', 'artemis', 'charger',
-    'skyline', 'aftershock', 'boneshaker', 'delorean', 'esper',
-    'fast4wd', 'gazella', 'grog', 'jeep', 'marauder', 'mclaren',
-    'mr11', 'proteus', 'ripper', 'scarab', 'tumbler', 'triton',
-    'vulcan', 'zippy',
-
-    'aquadome', 'beckwith', 'champions', 'dfh', 'mannfield',
-    'neotokyo', 'saltyshores', 'starbase', 'urban', 'utopia',
-    'wasteland', 'farmstead', 'arctagon', 'badlands', 'core707',
-    'dunkhouse', 'throwback', 'underpass', 'badlands',
-
-    '20xx', 'biomass', 'bubbly', 'chameleon', 'dissolver', 'heatwave',
-    'hexed', 'labyrinth', 'parallax', 'slipstream', 'spectre',
-    'stormwatch', 'tora', 'trigon', 'wetpaint',
-
-    'ara51', 'ballacarra', 'chrono', 'clockwork', 'cruxe',
-    'discotheque', 'draco', 'dynamo', 'equalizer', 'gernot', 'hikari',
-    'hypnotik', 'illuminata', 'infinium', 'kalos', 'lobo', 'looper',
-    'photon', 'pulsus', 'raijin', 'reactor', 'roulette', 'turbine',
-    'voltaic', 'wonderment', 'zomba',
-
-    'unranked', 'prospect', 'challenger', 'risingstar', 'allstar',
-    'superstar', 'champion', 'grandchamp', 'bronze', 'silver', 'gold',
-    'platinum', 'diamond',
-
-    'dropshot', 'hoops', 'soccar', 'rumble', 'snowday', 'solo',
-    'doubles', 'standard', 'chaos',
-
-    'armstrong', 'bandit', 'beast', 'boomer', 'buzz', 'cblock',
-    'casper', 'caveman', 'centice', 'chipper', 'cougar', 'dude',
-    'foamer', 'fury', 'gerwin', 'goose', 'heater', 'hollywood',
-    'hound', 'iceman', 'imp', 'jester', 'junker', 'khan', 'marley',
-    'maverick', 'merlin', 'middy', 'mountain', 'myrtle', 'outlaw',
-    'poncho', 'rainmaker', 'raja', 'rex', 'roundhouse', 'sabretooth',
-    'saltie', 'samara', 'scout', 'shepard', 'slider', 'squall',
-    'sticks', 'stinger', 'storm', 'sultan', 'sundown', 'swabbie',
-    'tex', 'tusk', 'viper', 'wolfman', 'yuri'
-]
+        return Strings.room_pass[random.randrange(len(Strings.room_pass))]

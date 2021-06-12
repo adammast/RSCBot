@@ -1,11 +1,10 @@
-import discord
 import asyncio
 
-from redbot.core import commands
-from redbot.core import checks
-from redbot.core.utils.predicates import MessagePredicate
-from redbot.core.utils.predicates import ReactionPredicate
+import discord
+from discord.ext.commands import Context
+from redbot.core import checks, commands
 from redbot.core.utils.menus import start_adding_reactions
+from redbot.core.utils.predicates import MessagePredicate, ReactionPredicate
 
 verify_timeout = 30
 
@@ -15,7 +14,7 @@ class Notice(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
-    async def notice(self, ctx, message, *pingRole: discord.Role):
+    async def notice(self, ctx: Context, message, *pingRole: discord.Role):
         """Sends a notice to a text channel and pings the specified role(s). Channel will be set through a prompt
         
         Arguments:
