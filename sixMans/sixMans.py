@@ -114,7 +114,8 @@ class SixMans(commands.Cog):
                     return
 
         points = {PP_PLAY_KEY: points_per_play, PP_WIN_KEY: points_per_win}
-        six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.queueMaxSize)
+        team_selection = await self._team_selection(ctx.guild)
+        six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.queueMaxSize, team_selection)
         self.queues.append(six_mans_queue)
         await self._save_queues(ctx.guild, self.queues)
         await ctx.send("Done")
@@ -1185,6 +1186,7 @@ class SixMans(commands.Cog):
 
     def embed_queue_info(self, queue: SixMansQueue):
         embed = discord.Embed(title="{0} {1} Mans Info".format(queue.name, self.queueMaxSize), color=discord.Colour.blue())
+        embed.add_field(name="Team Selection", value=queue.teamSelection, inline=False)
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
@@ -1283,7 +1285,7 @@ class SixMans(commands.Cog):
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
-                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, team_selection)
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, value["TeamSelection"])
                 six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 
