@@ -32,7 +32,7 @@ RANDOM_TS = 'random'
 SHUFFLE_TS = 'shuffle'
 CAPTAINS_TS = 'captains'
 BALANCED_TS = 'balanced'
-TS_METHODS = [RANDOM_TS, SHUFFLE_TS, CAPTAINS_TS, BALANCED_TS]
+TS_METHODS = [VOTE_TS, CAPTAINS_TS, RANDOM_TS]  # , SHUFFLE_TS, BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
     "HelperRole": None,
@@ -163,7 +163,7 @@ class SixMans(commands.Cog):
         await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
         for queue in self.queues:
-            if queue.name == current_name:
+            if queue.name == queue_name:
                 six_mans_queue = queue
                 break
 
@@ -449,8 +449,10 @@ class SixMans(commands.Cog):
     #region listeners
 
     @commands.guild_only()
-    @commands.Cog.listener("on_reaction_add", "on_reaction_remove")
+    @commands.Cog.listener("on_reaction_add")
+    @commands.Cog.listener("on_reaction_remove")
     async def process_six_mans_reaction(self, reaction, user):
+        await reaction.message.channel.send(":)")
         if user.bot:
             return
         message = reaction.message
@@ -1088,7 +1090,7 @@ class SixMans(commands.Cog):
                     await self._remove_from_queue(player, queue)
         
         # Notify all players that queue has popped
-        await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
+        # await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
 
         self.games.append(game)
         await self._save_games(ctx.guild, self.games)
@@ -1098,8 +1100,10 @@ class SixMans(commands.Cog):
         if not six_mans_queue._queue_full():
             return None
         players = [six_mans_queue._get() for _ in range(self.queueMaxSize)]
-        for channel in six_mans_queue.channels:
-            await channel.send("**Queue is full! Game is being created.**")
+        # for channel in six_mans_queue.channels:
+        #     await channel.send("**Queue is full! Game is being created.**")
+
+        await six_mans_queue.send_message(message="**Queue is full! Game is being created.**")
 
         game = Game(
             players,
@@ -1108,7 +1112,7 @@ class SixMans(commands.Cog):
             automove=await self._get_automove(guild),
             observers=self.observers
         )
-        await game.create_game_channels(guild, await self._category(guild))
+        await game.create_game_channels(await self._category(guild))
         return game
 
     async def _get_info(self, ctx: Context):
@@ -1281,16 +1285,18 @@ class SixMans(commands.Cog):
         if self.queues is None or self.queues == [] or self.queues[0].guild != guild:
             queues = await self._queues(guild)
             self.queues = []
-            team_selection = await self._team_selection(guild)
+            default_team_selection = await self._team_selection(guild)
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
-                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, value["TeamSelection"])
+                team_selection = value["TeamSelection"] if "TeamSelection" in value else default_team_selection
+                six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, team_selection)
                 six_mans_queue.id = int(key)
                 self.queues.append(six_mans_queue)
 
     async def _pre_load_games(self, guild: discord.Guild):
         await self._pre_load_queues(guild)
+        category = await self._category(guild)
         if self.games is None or self.games == [] or self.games[0].queue.guild != guild:
             games = await self._games(guild)
             game_list = []
@@ -1324,7 +1330,7 @@ class SixMans(commands.Cog):
     async def _games(self, guild: discord.Guild):
         return await self.config.guild(guild).Games()
 
-    async  def _save_games(self, guild: discord.Guild, games: List[Game]):
+    async def _save_games(self, guild: discord.Guild, games: List[Game]):
         game_dict = {}
         for game in games:
             game_dict[game.id] = game._to_dict()

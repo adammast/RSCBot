@@ -2,6 +2,7 @@ import random
 import struct
 from typing import List
 import uuid
+import asyncio
 
 import discord
 
@@ -16,7 +17,7 @@ CAPTAINS_TS = 'captains'
 BALANCED_TS = 'balanced'
 SELECTION_MODES  = {
     0x1F3B2: RANDOM_TS, # game_die
-    0x1F1E8: CAPTAIN_TS # C
+    0x1F1E8: CAPTAINS_TS # C
 }
 
 class Game:
@@ -52,12 +53,13 @@ class Game:
         for observer in self.observers:
             observer._subject = self
     
-        self.bot.loop.create_task(self._notify())
-        self.bot.loop.create_task(self._process_team_selection_method())
+        asyncio.create_task(self._notify())
+        # asyncio.create_task(self.create_game_channels())
+        # asyncio.create_task(self._process_team_selection_method())
         
         
-        if self.teamSelection == RANDOM_TS:
-            pass 
+        if self.teamSelection == VOTE_TS:
+            self.vote = None
         
     # @property
     # def subject_state(self):
@@ -74,11 +76,12 @@ class Game:
                 pass
 
 # Team Management
-    async def create_game_channels(self, guild: discord.Guild, category: discord.CategoryChannel=None):
+    async def create_game_channels(self, category=None):
+        guild = self.queue.guild
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
         self.textChannel = await guild.create_text_channel(
-            "{} {} 6 Mans".format(code, self.queue.name), 
+            "{} {} {} Mans".format(code, self.queue.name, self.queue.queueMaxSize), 
             permissions_synced=True,
             category=category
         )
@@ -97,6 +100,8 @@ class Game:
             await oran_vc.set_permissions(self.helper_role, connect=True)
         
         self.voiceChannels = [blue_vc, oran_vc]
+
+        await self._process_team_selection_method()
 
     async def add_to_blue(self, player):
         self.players.remove(player)
@@ -132,7 +137,8 @@ class Game:
         await self.textChannel.send(', '.join(player.mention for player in self.players))
         embed = self._get_vote_embed()
         self.info_message = await self.textChannel.send(embed=embed)
-        await self._add_reactions(SELECTION_MODES.keys(), self.info_message)
+        reacts = [hex(key) for key in SELECTION_MODES.keys()]
+        await self._add_reactions(reacts, self.info_message)
 
     async def pick_balanced_teams(self):
         pass
@@ -186,7 +192,7 @@ class Game:
 
 # Team Selection helpers
     async def _process_team_selection_method(self):
-        helper_role = await self.helper_role
+        helper_role = self.helper_role
         if self.teamSelection == VOTE_TS:
             await self.vote_team_selection()
         elif self.teamSelection == CAPTAINS_TS:
@@ -433,7 +439,7 @@ class Game:
         #     await self.info_message.edit(embed=embed)
         # except:
         #     await self.info_message = self.textChannel.send(embed=embed)
-        await self.info_message = self.textChannel.send(embed=embed)
+        self.info_message = await self.textChannel.send(embed=embed)
         await self._notify(new_state="ongoing")
 
 # General Helper Commands
@@ -451,19 +457,23 @@ class Game:
 
     async def _add_reactions(self, react_hex_codes, message):
         for react_hex_i in react_hex_codes:
-            react = struct.pack('<I', int(react_hex_i, base=16)).decode('utf-32le')
-            await message.add_reaction(react)
+            if type(react_hex_i) == int:
+                react = struct.pack('<I', react_hex_i).decode('utf-32le')
+                await message.add_reaction(react)
+            elif type(react_hex_i) == str:
+                react = struct.pack('<I', int(react_hex_i, base=16)).decode('utf-32le')
+                await message.add_reaction(react)
 
     def _get_wp(self, wins, losses):
         return wins/(wins+losses)
 
     def _get_completion_color(self, voted:int, pending:int):
-        if not (wins or losses):
+        if not (voted or pending):
             return discord.Color.default()
         red = (255, 0, 0)
         yellow = (255, 255, 0)
         green = (0, 255, 0)
-        wp = self._get_wp(wins, losses)
+        wp = self._get_wp(voted, pending)
         
         if wp == 0:
             return discord.Color.from_rgb(*red)
@@ -489,7 +499,7 @@ class Game:
         return item in self.players or item in self.orange or item in self.blue
 
     def _to_dict(self):
-        return {
+        game_dict = {
             "Players": [x.id for x in self.players],
             "Captains": [x.id for x in self.captains],
             "Blue": [x.id for x in self.blue],
@@ -498,11 +508,12 @@ class Game:
             "RoomPass": self.roomPass,
             "TextChannel": self.textChannel.id,
             "VoiceChannels": [x.id for x in self.voiceChannels],
-            "InfoMessage": self.info_message.id,
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
-            "MessageId": self.info_message.id,
-            "HelperRole": self.helper_role,
+            "HelperRole": self.helper_role.id,
             "TeamSelection": self.teamSelection,
             "State": self.game_state
         }
+        if self.info_message:
+            game_dict["InfoMessage"] = self.info_message.id
+        return game_dict

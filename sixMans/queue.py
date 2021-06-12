@@ -9,7 +9,7 @@ import discord
 
 class SixMansQueue:
     def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
-        points, players, gamesPlayed, queueMaxSize, teamSelection='random'):
+        points, players, gamesPlayed, queueMaxSize, teamSelection='random', category: discord.CategoryChannel=None,):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
