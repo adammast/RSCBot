@@ -453,6 +453,7 @@ class SixMans(commands.Cog):
     async def process_six_mans_reaction(self, reaction, user):
         if user.bot:
             return
+        await self._pre_load_games(user.guild)
         message = reaction.message
         channel = reaction.message.channel
         
@@ -500,7 +501,7 @@ class SixMans(commands.Cog):
     async def process_six_mans_vote_rm(self, reaction, user):
         if user.bot:
             return
-        
+        await self._pre_load_games(user.guild)
         # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
             game, queue = self._get_game_and_queue(reaction.message.channel)
@@ -1332,8 +1333,10 @@ class SixMans(commands.Cog):
                 game.roomPass = value["RoomPass"]
                 try:
                     game.info_message = await game.textChannel.fetch_message(value["InfoMessage"])
+                    game.teamSelection = value["TeamSelection"]
                 except:
-                    pass
+                    game.teamSelection = game.queue.teamSelection
+                    await game.process_team_selection_method()
                 game.scoreReported = value["ScoreReported"]
                 game_list.append(game)
 

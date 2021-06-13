@@ -191,7 +191,7 @@ class Game:
         await self._add_reactions(self.react_player_picks.keys(), self.info_message)
 
 # Team Selection helpers
-    async def _process_team_selection_method(self):
+    async def process_team_selection_method(self):
         helper_role = self.helper_role
         if self.teamSelection == VOTE_TS:
             await self.vote_team_selection()
@@ -204,7 +204,7 @@ class Game:
         elif self.teamSelection == BALANCED_TS:
             await self.pick_balanced_teams()
         else:
-            return print("you messed up fool")
+            return print("you messed up fool: {}".format(self.teamSelection))
 
     async def process_captains_pick(self, reaction, user):
         teams_complete = False
@@ -251,31 +251,29 @@ class Game:
         return teams_complete
     
     async def process_team_select_vote(self, reaction, member, added=True):
-        if member not in self.players:
-            return
+        # if member not in self.players:
+        #     return
 
-        # if self._hex_from_emoji(reaction.emoji) not in SELECTION_MODES.keys()
+        if self._hex_i_from_emoji(reaction.emoji) not in SELECTION_MODES:
+            return 
+        
         # COUNT UP VOTE TOTALS
         if not self.vote:
             self.vote = [None, 0]
 
         # RECORD VOTES
-
-        # help: https://github.com/Rapptz/discord.py/issues/861
-        # info_msg = discord.utils.get(reaction.message.author.messages, id=self.info_message.id)
-        # self.info_message.id = reaction.message
         self.info_message = await self.textChannel.fetch_message(self.info_message.id)
-
         votes = {}
         for this_react in self.info_message.reactions:
             # here maybe
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
-            reacted_members = await this_react.users().flatten()
-            count = this_react.count - 1
-            if added and this_react.emoji != reaction.emoji and member in reacted_members:
-                await this_react.remove(member)
-                count -= 1
-            votes[react_hex_i] = {'count': count, 'emoji': this_react.emoji}
+            if react_hex_i in SELECTION_MODES:
+                reacted_members = await this_react.users().flatten()
+                count = this_react.count - 1
+                if added and this_react.emoji != reaction.emoji and member in reacted_members:
+                    await this_react.remove(member)
+                    count -= 1
+                votes[react_hex_i] = {'count': count, 'emoji': this_react.emoji}
 
         # Update embed
         embed = self._get_vote_embed(votes)
@@ -289,8 +287,8 @@ class Game:
         for react_hex, data in votes.items():
             num_votes = data['count']
             if num_votes > running_vote[1]:
-                running_vote = [react_hex, num_votes]
                 runner_up = running_vote[1]
+                running_vote = [react_hex, num_votes]
 
             elif num_votes > runner_up and num_votes <= running_vote[1]:
                 runner_up = num_votes
@@ -305,12 +303,10 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        print("total: {}".format(len(self.players)))
-        print("top: {}".format(self.vote(1)))
-        print("remaining: {}".format(pending_votes))
-        if pending_votes == 0 or pending_votes + runner_up <= self.vote[1]:
-            voted_mode = self.vote[0]
+        if pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
+            voted_mode = SELECTION_MODES[self.vote[0]]
             self.teamSelection = voted_mode
+            # await self.process_team_selection_method()
             return voted_mode
 
     def _get_vote_embed(self, vote=None):
