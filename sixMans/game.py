@@ -9,15 +9,11 @@ import discord
 from .strings import Strings
 from .queue import SixMansQueue
 
-SHUFFLE_REACT = "\U0001F500"    # :twisted_rightwards_arrows:
-VOTE_TS = 'vote'
-RANDOM_TS = 'random'
-SHUFFLE_TS = 'shuffle'
-CAPTAINS_TS = 'captains'
-BALANCED_TS = 'balanced'
+
 SELECTION_MODES  = {
-    0x1F3B2: RANDOM_TS, # game_die
-    0x1F1E8: CAPTAINS_TS # C
+    0x1F3B2: Strings.RANDOM_TS, # game_die
+    0x1F1E8: Strings.CAPTAINS_TS, # C
+    0x0262F: Strings.BALANCED_TS # Ying&Yang
 }
 
 class Game:
@@ -39,7 +35,7 @@ class Game:
         self.queue = queue
         self.scoreReported = False
         self.teamSelection = queue.teamSelection
-        self.game_state = "team selection"
+        self.game_state = Strings.TEAM_SELECTION_GS
         
         # Optional params
         self.helper_role = helper_role
@@ -57,8 +53,7 @@ class Game:
         # asyncio.create_task(self.create_game_channels())
         # asyncio.create_task(self.process_team_selection_method())
         
-        
-        if self.teamSelection == VOTE_TS:
+        if self.teamSelection == Strings.VOTE_TS:
             self.vote = None
         
     # @property
@@ -158,7 +153,7 @@ class Game:
 
     async def shuffle_players(self):
         await self.pick_random_teams()
-        await self.info_message.add_reaction(SHUFFLE_REACT)
+        await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
 
     async def captains_pick_teams(self, helper_role=None):
         if not helper_role:
@@ -193,15 +188,15 @@ class Game:
 # Team Selection helpers
     async def process_team_selection_method(self):
         helper_role = self.helper_role
-        if self.teamSelection == VOTE_TS:
+        if self.teamSelection == Strings.VOTE_TS:
             await self.vote_team_selection()
-        elif self.teamSelection == CAPTAINS_TS:
+        elif self.teamSelection == Strings.CAPTAINS_TS:
             await self.captains_pick_teams(helper_role)
-        elif self.teamSelection == RANDOM_TS:
+        elif self.teamSelection == Strings.RANDOM_TS:
             await self.pick_random_teams()
-        elif self.teamSelection == SHUFFLE_TS:
+        elif self.teamSelection == Strings.SHUFFLE_TS:
             await self.shuffle_players()
-        elif self.teamSelection == BALANCED_TS:
+        elif self.teamSelection == Strings.BALANCED_TS:
             await self.pick_balanced_teams()
         else:
             return print("you messed up fool: {}".format(self.teamSelection))
@@ -303,14 +298,19 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        # member.name == 'nullidea'
         if added and pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
+            # Update Embed
+            embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
+            await self.info_message.edit(embed=embed)
+
+            # Next Step: Select Teams
             voted_mode = SELECTION_MODES[self.vote[0]]
             self.teamSelection = voted_mode
-            # await self.process_team_selection_method()
+            await self.textChannel.send(voted_mode)
+            await self.process_team_selection_method()
             return voted_mode
 
-    def _get_vote_embed(self, vote=None):
+    def _get_vote_embed(self, vote=None, winning_vote=None):
         if not vote:
             vote = {}
             # Skeleton Vote if no votes
@@ -335,15 +335,19 @@ class Game:
         pending = len(self.players) - total_votes
         description = "Please vote for your preferred team selection method!"
         embed = discord.Embed(
-            title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
+            title="{} Game | Team Selection Vote".format(self.textChannel.name.replace('-', ' ').title()[4:]),
             color=self._get_completion_color(total_votes, pending),
             description=description
         )
 
-
         # embed.add_field()
         embed.add_field(name="Options", value='\n'.join(vote_options), inline=True)
-        embed.add_field(name="Votes", value='\n'.join(votes_casted))
+        embed.add_field(name="Votes", value='\n'.join(votes_casted), inline=True)
+        
+        if winning_vote:
+            voted = "{} {}".format(self._get_pick_reaction(winning_vote), SELECTION_MODES[winning_vote])
+            embed.add_field(name="Vote Complete!", value=voted, inline=False)
+        
         embed.set_footer(text="Game ID: {}".format(self.id))
         return embed
 
@@ -390,7 +394,7 @@ class Game:
 
     async def report_winner(self, winner):
         await self.color_embed_for_winners(winner)
-        await self._notify(new_state="game over")
+        await self._notify(new_state=Strings.GAME_OVER_GS)
 
     async def color_embed_for_winners(self, winner):
         if self.info_message is not None:
@@ -470,7 +474,7 @@ class Game:
         # except:
         #     await self.info_message = self.textChannel.send(embed=embed)
         self.info_message = await self.textChannel.send(embed=embed)
-        await self._notify(new_state="ongoing")
+        await self._notify(new_state=Strings.ONGOING_GS)
 
 # General Helper Commands
     def reset_players(self):

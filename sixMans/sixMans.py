@@ -11,6 +11,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 
 from .game import Game
 from .queue import SixMansQueue
+from .strings import Strings
 
 DEBUG = True
 MINIMUM_GAME_TIME = 600                     # Seconds (10 Minutes)
@@ -18,27 +19,20 @@ PLAYER_TIMEOUT_TIME = 14400                 # How long players can be in a queue
 LOOP_TIME = 5                               # How often to check the queues in seconds
 VERIFY_TIMEOUT = 15                         # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30     # How long channels will persist after a game's score has been reported (seconds)
-PP_PLAY_KEY = "Play"
-PP_WIN_KEY = "Win"
-PLAYER_POINTS_KEY = "Points"
-PLAYER_GP_KEY = "GamesPlayed"
-PLAYER_WINS_KEY = "Wins"
-SHUFFLE_REACT = "\U0001F500"                # :twisted_rightwards_arrows:
-WHITE_X_REACT = "\U0000274E"                # :negative_squared_cross_mark:
-WHITE_CHECK_REACT = "\U00002705"            # :white_check_mark:
 
-VOTE_TS = 'vote'
-RANDOM_TS = 'random'
-SHUFFLE_TS = 'shuffle'
-CAPTAINS_TS = 'captains'
-BALANCED_TS = 'balanced'
-TS_METHODS = [VOTE_TS, CAPTAINS_TS, RANDOM_TS]  # , SHUFFLE_TS, BALANCED_TS]
+
+
+TS_METHODS = [
+    Strings.VOTE_TS,
+    Strings.CAPTAINS_TS,
+    Strings.RANDOM_TS
+]  # , Strings.SHUFFLE_TS, Strings.BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
     "HelperRole": None,
     "AutoMove": False,
     "QLobby": None,
-    "DefaultTeamSelection": RANDOM_TS,
+    "DefaultTeamSelection": Strings.RANDOM_TS,
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -113,7 +107,7 @@ class SixMans(commands.Cog):
                     await ctx.send(":x: {0} is already being used for queue: {1}".format(channel.mention, queue.name))
                     return
 
-        points = {PP_PLAY_KEY: points_per_play, PP_WIN_KEY: points_per_win}
+        points = {Strings.PP_PLAY_KEY: points_per_play, Strings.PP_WIN_KEY: points_per_win}
         team_selection = await self._team_selection(ctx.guild)
         six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.queueMaxSize, team_selection)
         self.queues.append(six_mans_queue)
@@ -150,7 +144,7 @@ class SixMans(commands.Cog):
                         return
 
         six_mans_queue.name = new_name
-        six_mans_queue.points = {PP_PLAY_KEY: points_per_play, PP_WIN_KEY: points_per_win}
+        six_mans_queue.points = {Strings.PP_PLAY_KEY: points_per_play, Strings.PP_WIN_KEY: points_per_win}
         six_mans_queue.channels = queue_channels
         await self._save_queues(ctx.guild, self.queues)
         await ctx.send("Done")
@@ -204,13 +198,13 @@ class SixMans(commands.Cog):
                     await player.move_to(game.voiceChannels[0])
                 if player in game.orange:
                     await player.move_to(game.voiceChannels[1])
-                await ctx.message.add_reaction(WHITE_CHECK_REACT) # white_check_mark
+                await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
             except:
-                await ctx.message.add_reaction(WHITE_X_REACT) # negative_squared_cross_mark
+                await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
                 if not player.voice:
                     await ctx.send("{}, you must be connected to a voice channel to be moved to your Six Man's team channel.".format(player.mention))
         else:
-            await ctx.message.add_reaction(WHITE_X_REACT) # negative_squared_cross_mark
+            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
             await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
             # TODO: determine a workaround from filtering through all active games
 
@@ -468,14 +462,14 @@ class SixMans(commands.Cog):
         # team_selection_mode = await self._team_selection(user.guild)
         team_selection_mode = game.teamSelection
 
-        if game.teamSelection == VOTE_TS:
+        if game.teamSelection == Strings.VOTE_TS:
             await game.process_team_select_vote(reaction, user)
 
-        elif game.teamSelection == CAPTAINS_TS:
+        elif game.teamSelection == Strings.CAPTAINS_TS:
             teams_complete = await game.process_captains_pick(reaction, user)
 
-        elif game.teamSelection == SHUFFLE_TS:
-            if reaction.emoji is not SHUFFLE_REACT:
+        elif game.teamSelection == Strings.SHUFFLE_TS:
+            if reaction.emoji is not Strings.SHUFFLE_REACT:
                 return
 
             guild = reaction.message.channel.guild
@@ -494,7 +488,7 @@ class SixMans(commands.Cog):
 
             shuffle_players = reaction.count >= int(len(game.players)/2)+1
             if shuffle_players:
-                await channel.send("{} _Generating New teams..._".format(SHUFFLE_REACT))
+                await channel.send("{} _Generating New teams..._".format(Strings.SHUFFLE_REACT))
                 await game.shuffle_players()
 
     @commands.Cog.listener("on_reaction_remove")
@@ -505,7 +499,7 @@ class SixMans(commands.Cog):
         # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
             game, queue = self._get_game_and_queue(reaction.message.channel)
-            if game.teamSelection == VOTE_TS:
+            if game.teamSelection == Strings.VOTE_TS:
                 await game.process_team_select_vote(reaction, user, added=False)
         except:
             pass
@@ -1052,16 +1046,16 @@ class SixMans(commands.Cog):
         win = score["Win"]
 
         player_dict = players_dict.setdefault("{0}".format(player_id), {})
-        player_dict[PLAYER_POINTS_KEY] = player_dict.get(PLAYER_POINTS_KEY, 0) + points_earned
-        player_dict[PLAYER_GP_KEY] = player_dict.get(PLAYER_GP_KEY, 0) + 1
-        player_dict[PLAYER_WINS_KEY] = player_dict.get(PLAYER_WINS_KEY, 0) + win
+        player_dict[Strings.PLAYER_POINTS_KEY] = player_dict.get(Strings.PLAYER_POINTS_KEY, 0) + points_earned
+        player_dict[Strings.PLAYER_GP_KEY] = player_dict.get(Strings.PLAYER_GP_KEY, 0) + 1
+        player_dict[Strings.PLAYER_WINS_KEY] = player_dict.get(Strings.PLAYER_WINS_KEY, 0) + win
 
     def _create_player_score(self, six_mans_queue: SixMansQueue, game: Game, player: discord.Member, win, date_time):
         points_dict = six_mans_queue.points
         if win:
-            points_earned = points_dict[PP_PLAY_KEY] + points_dict[PP_WIN_KEY]
+            points_earned = points_dict[Strings.PP_PLAY_KEY] + points_dict[Strings.PP_WIN_KEY]
         else:
-            points_earned = points_dict[PP_PLAY_KEY]
+            points_earned = points_dict[Strings.PP_PLAY_KEY]
         return {
             "Game": game.id,
             "Queue": six_mans_queue.id,
@@ -1085,8 +1079,8 @@ class SixMans(commands.Cog):
         return players, games_played
 
     def _sort_player_dict(self, player_dict):
-        sorted_players = sorted(player_dict.items(), key=lambda x: x[1][PLAYER_WINS_KEY], reverse=True)
-        return sorted(sorted_players, key=lambda x: x[1][PLAYER_POINTS_KEY], reverse=True)
+        sorted_players = sorted(player_dict.items(), key=lambda x: x[1][Strings.PLAYER_WINS_KEY], reverse=True)
+        return sorted(sorted_players, key=lambda x: x[1][Strings.PLAYER_POINTS_KEY], reverse=True)
 
     async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue):
         game = await self._create_game(ctx.guild, six_mans_queue)
@@ -1208,7 +1202,7 @@ class SixMans(commands.Cog):
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
         embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
-            .format(queue.points[PP_PLAY_KEY], queue.points[PP_WIN_KEY]), inline=False)
+            .format(queue.points[Strings.PP_PLAY_KEY], queue.points[Strings.PP_WIN_KEY]), inline=False)
         return embed
 
     def embed_queue_players(self, queue: SixMansQueue):
@@ -1243,8 +1237,8 @@ class SixMans(commands.Cog):
 
             player_info = player[1]
             playerStrings.append("`{0}` **{1:25s}:**".format(index, member.display_name))
-            statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[PLAYER_POINTS_KEY],
-                player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY]))
+            statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[Strings.PLAYER_POINTS_KEY],
+                player_info[Strings.PLAYER_WINS_KEY], player_info[Strings.PLAYER_GP_KEY]))
             
             index += 1
             if index > 10:
@@ -1256,8 +1250,8 @@ class SixMans(commands.Cog):
             if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
                 playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name))
-                statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(author_info[PLAYER_POINTS_KEY],
-                author_info[PLAYER_WINS_KEY], author_info[PLAYER_GP_KEY]))
+                statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(author_info[Strings.PLAYER_POINTS_KEY],
+                author_info[Strings.PLAYER_WINS_KEY], author_info[Strings.PLAYER_GP_KEY]))
         except Exception:
             pass
 
@@ -1270,9 +1264,9 @@ class SixMans(commands.Cog):
             num_players = len(sorted_players)
             points_index = [y[0] for y in sorted_players].index("{0}".format(player.id))
             player_info = sorted_players[points_index][1]
-            points, wins, games_played = player_info[PLAYER_POINTS_KEY], player_info[PLAYER_WINS_KEY], player_info[PLAYER_GP_KEY]
-            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][PLAYER_WINS_KEY], reverse=True)].index("{0}".format(player.id))
-            games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][PLAYER_GP_KEY], reverse=True)].index("{0}".format(player.id))
+            points, wins, games_played = player_info[Strings.PLAYER_POINTS_KEY], player_info[Strings.PLAYER_WINS_KEY], player_info[Strings.PLAYER_GP_KEY]
+            wins_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][Strings.PLAYER_WINS_KEY], reverse=True)].index("{0}".format(player.id))
+            games_played_index = [y[0] for y in sorted(sorted_players, key=lambda x: x[1][Strings.PLAYER_GP_KEY], reverse=True)].index("{0}".format(player.id))
             embed = discord.Embed(title="{0} {1} {2} Mans {3} Rank".format(player.display_name, queue_name, self.queueMaxSize, rank_format), color=discord.Colour.blue())
             embed.set_thumbnail(url=player.avatar_url)
             embed.add_field(name="Points:", value="**Value:** {2} | **Rank:** {0}/{1}".format(points_index + 1, num_players, points), inline=True)

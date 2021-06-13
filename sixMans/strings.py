@@ -1,5 +1,30 @@
 
 class Strings:
+    # Keys
+    PP_PLAY_KEY = "Play"
+    PP_WIN_KEY = "Win"
+    PLAYER_POINTS_KEY = "Points"
+    PLAYER_GP_KEY = "GamesPlayed"
+    PLAYER_WINS_KEY = "Wins"
+
+    # Team Selection
+    VOTE_TS = 'Vote'
+    RANDOM_TS = 'Random'
+    SHUFFLE_TS = 'Shuffle'
+    CAPTAINS_TS = 'Captains'
+    BALANCED_TS = 'Balanced (beta)'
+
+    # Reactions
+    SHUFFLE_REACT = "\U0001F500"                # :twisted_rightwards_arrows:
+    WHITE_X_REACT = "\U0000274E"                # :negative_squared_cross_mark:
+    WHITE_CHECK_REACT = "\U00002705"            # :white_check_mark:
+
+    # Game states
+    TEAM_SELECTION_GS = "team selection"
+    ONGOING_GS = "ongoing"
+    GAME_OVER_GS = "game over"
+
+    # Lobby Info
     room_pass = [
         'octane', 'takumi', 'dominus', 'hotshot', 'batmobile', 'mantis',
         'paladin', 'twinmill', 'centio', 'breakout', 'animus', 'venom',
