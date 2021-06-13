@@ -55,7 +55,7 @@ class Game:
     
         asyncio.create_task(self._notify())
         # asyncio.create_task(self.create_game_channels())
-        # asyncio.create_task(self._process_team_selection_method())
+        # asyncio.create_task(self.process_team_selection_method())
         
         
         if self.teamSelection == VOTE_TS:
@@ -101,7 +101,7 @@ class Game:
         
         self.voiceChannels = [blue_vc, oran_vc]
 
-        await self._process_team_selection_method()
+        await self.process_team_selection_method()
 
     async def add_to_blue(self, player):
         self.players.remove(player)
@@ -303,14 +303,13 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        if pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
+        if added and pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
             voted_mode = SELECTION_MODES[self.vote[0]]
             self.teamSelection = voted_mode
             # await self.process_team_selection_method()
             return voted_mode
 
     def _get_vote_embed(self, vote=None):
-        voted = 0
         if not vote:
             vote = {}
             # Skeleton Vote if no votes
@@ -336,7 +335,7 @@ class Game:
         description = "Please vote for your preferred team selection method!"
         embed = discord.Embed(
             title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
-            color=self._get_completion_color(voted, len(self.players)-voted),
+            color=self._get_completion_color(total_votes, pending),
             description=description
         )
 
