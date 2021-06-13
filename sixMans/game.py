@@ -251,8 +251,8 @@ class Game:
         return teams_complete
     
     async def process_team_select_vote(self, reaction, member, added=True):
-        # if member not in self.players:
-        #     return
+        if member not in self.players:
+            return
 
         if self._hex_i_from_emoji(reaction.emoji) not in SELECTION_MODES:
             return 
@@ -303,6 +303,7 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
+        # member.name == 'nullidea'
         if added and pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
             voted_mode = SELECTION_MODES[self.vote[0]]
             self.teamSelection = voted_mode
