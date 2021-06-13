@@ -53,7 +53,7 @@ class Game:
         # asyncio.create_task(self.create_game_channels())
         # asyncio.create_task(self.process_team_selection_method())
         
-        if self.teamSelection == Strings.VOTE_TS:
+        if self.teamSelection.lower() == Strings.VOTE_TS.lower():
             self.vote = None
         
     # @property
@@ -96,7 +96,8 @@ class Game:
         
         self.voiceChannels = [blue_vc, oran_vc]
 
-        await self.process_team_selection_method()
+        # Mentions all players
+        await self.textChannel.send(', '.join(player.mention for player in self.players))
 
     async def add_to_blue(self, player):
         self.players.remove(player)
@@ -186,15 +187,15 @@ class Game:
 # Team Selection helpers
     async def process_team_selection_method(self):
         helper_role = self.helper_role
-        if self.teamSelection == Strings.VOTE_TS:
+        if self.teamSelection.lower() == Strings.VOTE_TS.lower():
             await self.vote_team_selection()
-        elif self.teamSelection == Strings.CAPTAINS_TS:
+        elif self.teamSelection.lower() == Strings.CAPTAINS_TS.lower():
             await self.captains_pick_teams(helper_role)
-        elif self.teamSelection == Strings.RANDOM_TS:
+        elif self.teamSelection.lower() == Strings.RANDOM_TS.lower():
             await self.pick_random_teams()
-        elif self.teamSelection == Strings.SHUFFLE_TS:
+        elif self.teamSelection.lower() == Strings.SHUFFLE_TS.lower():
             await self.shuffle_players()
-        elif self.teamSelection == Strings.BALANCED_TS:
+        elif self.teamSelection.lower() == Strings.BALANCED_TS.lower():
             await self.pick_balanced_teams()
         else:
             return print("you messed up fool: {}".format(self.teamSelection))

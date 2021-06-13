@@ -460,15 +460,15 @@ class SixMans(commands.Cog):
             return False
 
         # team_selection_mode = await self._team_selection(user.guild)
-        team_selection_mode = game.teamSelection
+        team_selection_mode = game.teamSelection.lower()
 
-        if game.teamSelection == Strings.VOTE_TS:
+        if team_selection_mode == Strings.VOTE_TS.lower():
             await game.process_team_select_vote(reaction, user)
 
-        elif game.teamSelection == Strings.CAPTAINS_TS:
+        elif team_selection_mode == Strings.CAPTAINS_TS.lower():
             teams_complete = await game.process_captains_pick(reaction, user)
 
-        elif game.teamSelection == Strings.SHUFFLE_TS:
+        elif team_selection_mode == Strings.SHUFFLE_TS.lower():
             if reaction.emoji is not Strings.SHUFFLE_REACT:
                 return
 
@@ -499,7 +499,7 @@ class SixMans(commands.Cog):
         # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
             game, queue = self._get_game_and_queue(reaction.message.channel)
-            if game.teamSelection == Strings.VOTE_TS:
+            if game.teamSelection.lower() == Strings.VOTE_TS.lower():
                 await game.process_team_select_vote(reaction, user, added=False)
         except:
             pass
@@ -1104,8 +1104,6 @@ class SixMans(commands.Cog):
         if not six_mans_queue._queue_full():
             return None
         players = [six_mans_queue._get() for _ in range(self.queueMaxSize)]
-        # for channel in six_mans_queue.channels:
-        #     await channel.send("**Queue is full! Game is being created.**")
 
         await six_mans_queue.send_message(message="**Queue is full! Game is being created.**")
 
@@ -1117,7 +1115,7 @@ class SixMans(commands.Cog):
             observers=self.observers
         )
         await game.create_game_channels(await self._category(guild))
-        await game.textChannel.send(', '.join(player.mention for player in game.players))
+        await game.process_team_selection_method()
         return game
 
     async def _get_info(self, ctx: Context):
