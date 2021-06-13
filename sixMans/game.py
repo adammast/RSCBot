@@ -129,7 +129,6 @@ class Game:
 # Team Selection
     async def vote_team_selection(self, helper_role=None):
         # Mentions all players
-        await self.textChannel.send(', '.join(player.mention for player in self.players))
         embed = self._get_vote_embed()
         self.info_message = await self.textChannel.send(embed=embed)
         reacts = [hex(key) for key in SELECTION_MODES.keys()]
@@ -158,8 +157,7 @@ class Game:
     async def captains_pick_teams(self, helper_role=None):
         if not helper_role:
             helper_role = self.helper_role
-        # Mentions all players
-        await self.textChannel.send(', '.join(player.mention for player in self.players))
+        
         # Pick captains
         self.captains = random.sample(self.players, 2)
         self.blue.add(self.captains[0])

@@ -1117,6 +1117,7 @@ class SixMans(commands.Cog):
             observers=self.observers
         )
         await game.create_game_channels(await self._category(guild))
+        await game.textChannel.send(', '.join(player.mention for player in game.players))
         return game
 
     async def _get_info(self, ctx: Context):
