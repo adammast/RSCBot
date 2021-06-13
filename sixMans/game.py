@@ -250,34 +250,49 @@ class Game:
         
         return teams_complete
     
-    async def process_team_select_vote(self, reaction, member):
+    async def process_team_select_vote(self, reaction, member, added=True):
         if member not in self.players:
             return
+
+        # if self._hex_from_emoji(reaction.emoji) not in SELECTION_MODES.keys()
         # COUNT UP VOTE TOTALS
         if not self.vote:
             self.vote = [None, 0]
 
         # RECORD VOTES
-        votes = {}
-        for react in self.info_message.reactions:
-            # player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
-            react_hex = self._hex_from_emoji(reaction.emoji)
-            if react_hex in SELECTION_MODES:
-                # players only get one vote
-                if react != reaction and member in (await react.users()):
-                    await react.remove(member)
-                
-                votes[react_hex] = reaction.count - 1
 
-        # COUNT VOTES
+        # help: https://github.com/Rapptz/discord.py/issues/861
+        # info_msg = discord.utils.get(reaction.message.author.messages, id=self.info_message.id)
+        # self.info_message.id = reaction.message
+        self.info_message = await self.textChannel.fetch_message(self.info_message.id)
+
+        votes = {}
+        for this_react in self.info_message.reactions:
+            # here maybe
+            react_hex_i = self._hex_i_from_emoji(this_react.emoji)
+            reacted_members = await this_react.users().flatten()
+            count = this_react.count - 1
+            if added and this_react.emoji != reaction.emoji and member in reacted_members:
+                await this_react.remove(member)
+                count -= 1
+            votes[react_hex_i] = {'count': count, 'emoji': this_react.emoji}
+
+        # Update embed
+        embed = self._get_vote_embed(votes)
+        await self.info_message.edit(embed=embed)
+
+        # COUNT VOTES - Check if complete
         total_votes = 0
         runner_up = 0
         running_vote = [None, 0]
-        for react_hex, num_votes in votes:
+
+        for react_hex, data in votes.items():
+            num_votes = data['count']
             if num_votes > running_vote[1]:
                 running_vote = [react_hex, num_votes]
-            
-            if num_votes > runner_up and num_votes <= running_vote[1]:
+                runner_up = running_vote[1]
+
+            elif num_votes > runner_up and num_votes <= running_vote[1]:
                 runner_up = num_votes
 
             total_votes += num_votes
@@ -287,34 +302,53 @@ class Game:
             self.vote = running_vote
         
         pending_votes = len(self.players) - total_votes
-        
+
         voted_mode = None
         # Vote Complete if...
+        print("total: {}".format(len(self.players)))
+        print("top: {}".format(self.vote(1)))
+        print("remaining: {}".format(pending_votes))
         if pending_votes == 0 or pending_votes + runner_up <= self.vote[1]:
             voted_mode = self.vote[0]
             self.teamSelection = voted_mode
             return voted_mode
 
-    def _get_vote_embed(self, voted=0):
-        pending = len(self.players) - voted
-        description = "Please vote for your preferred team selection!"
+    def _get_vote_embed(self, vote=None):
+        voted = 0
+        if not vote:
+            vote = {}
+            # Skeleton Vote if no votes
+            for react_hex, mode in SELECTION_MODES.items():
+                react_emoji = self._get_pick_reaction(react_hex)
+                vote[react_hex] = {'count': 0, 'emoji': react_emoji}
+            
+        # Count Votes, prep embed fields
+        vote_options = []
+        votes_casted = []
+        total_votes = 0
+        for react_hex, mode in SELECTION_MODES.items():
+            react_emoji = self._get_pick_reaction(react_hex)
+            vote_options.append("{} {}".format(react_emoji, mode))
+            try:
+                num_votes = vote[react_hex]['count']
+            except:
+                num_votes = 0
+            votes_casted.append(str(num_votes))
+            total_votes += num_votes
+
+        pending = len(self.players) - total_votes
+        description = "Please vote for your preferred team selection method!"
         embed = discord.Embed(
             title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
             color=self._get_completion_color(voted, len(self.players)-voted),
             description=description
         )
 
-        vote_options = []
-        votes_casted = []
-        for react_hex, mode in SELECTION_MODES.items():
-            react = self._get_pick_reaction(react_hex)
-            vote_options.append("{} {}".format(react, mode))
-            votes_casted.append(0)
 
         # embed.add_field()
         embed.add_field(name="Options", value='\n'.join(vote_options), inline=True)
-        # embed.add_field(name="Votes", value='\n'.join(votes_casted))
-
+        embed.add_field(name="Votes", value='\n'.join(votes_casted))
+        embed.set_footer(text="Game ID: {}".format(self.id))
         return embed
 
     def _get_captains_embed(self, pick, guild=None):
@@ -355,9 +389,9 @@ class Game:
 
         return embed
     
-    def _hex_from_emoji(self, emoji):
-        return hex(ord(emoji))
-      
+    def _hex_i_from_emoji(self, emoji):
+        return ord(emoji)
+
     async def report_winner(self, winner):
         await self.color_embed_for_winners(winner)
         await self._notify(new_state="game over")
@@ -499,6 +533,13 @@ class Game:
         return item in self.players or item in self.orange or item in self.blue
 
     def _to_dict(self):
+        info_msg = self.info_message.id if self.info_message else None
+        txt_channel = self.textChannel.id if self.textChannel else None
+        try:
+            vc_channels = [x.id for x in self.voiceChannels]
+        except:
+            vc_channels = None
+
         game_dict = {
             "Players": [x.id for x in self.players],
             "Captains": [x.id for x in self.captains],
@@ -506,14 +547,14 @@ class Game:
             "Orange": [x.id for x in self.orange],
             "RoomName": self.roomName,
             "RoomPass": self.roomPass,
-            "TextChannel": self.textChannel.id,
-            "VoiceChannels": [x.id for x in self.voiceChannels],
+            "TextChannel": txt_channel,
+            "VoiceChannels": vc_channels,
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
             "HelperRole": self.helper_role.id,
             "TeamSelection": self.teamSelection,
+            "InfoMessage": info_msg,
             "State": self.game_state
         }
-        if self.info_message:
-            game_dict["InfoMessage"] = self.info_message.id
+
         return game_dict

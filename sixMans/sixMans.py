@@ -12,7 +12,7 @@ from redbot.core.utils.predicates import ReactionPredicate
 from .game import Game
 from .queue import SixMansQueue
 
-DEBUG = False
+DEBUG = True
 MINIMUM_GAME_TIME = 600                     # Seconds (10 Minutes)
 PLAYER_TIMEOUT_TIME = 14400                 # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                               # How often to check the queues in seconds
@@ -450,15 +450,11 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
-    @commands.Cog.listener("on_reaction_remove")
     async def process_six_mans_reaction(self, reaction, user):
-        await reaction.message.channel.send(":)")
         if user.bot:
             return
         message = reaction.message
         channel = reaction.message.channel
-        if user.id == self.bot.user.id:
-            return False
         
         # Find Game and Queue
         game, queue = self._get_game_and_queue(channel)
@@ -499,6 +495,19 @@ class SixMans(commands.Cog):
             if shuffle_players:
                 await channel.send("{} _Generating New teams..._".format(SHUFFLE_REACT))
                 await game.shuffle_players()
+
+    @commands.Cog.listener("on_reaction_remove")
+    async def process_six_mans_vote_rm(self, reaction, user):
+        if user.bot:
+            return
+        
+        # Un-vote if reaction pertains to a Six Mans TS Vote
+        try:
+            game, queue = self._get_game_and_queue(reaction.message.channel)
+            if game.teamSelection == VOTE_TS:
+                await game.process_team_select_vote(reaction, user, added=False)
+        except:
+            pass
 
     @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
@@ -1139,7 +1148,10 @@ class SixMans(commands.Cog):
 
     def _get_game_and_queue(self, channel: discord.TextChannel):
         game = self._get_game_by_text_channel(channel)
-        return game, game.queue
+        if game:
+            return game, game.queue
+        else:
+            return None, None
 
     def _get_game_by_text_channel(self, channel: discord.TextChannel):
         for game in self.games:
