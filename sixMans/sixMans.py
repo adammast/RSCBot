@@ -20,8 +20,6 @@ LOOP_TIME = 5                               # How often to check the queues in s
 VERIFY_TIMEOUT = 15                         # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30     # How long channels will persist after a game's score has been reported (seconds)
 
-
-
 TS_METHODS = [
     Strings.VOTE_TS,
     Strings.CAPTAINS_TS,
@@ -447,7 +445,7 @@ class SixMans(commands.Cog):
     async def process_six_mans_reaction(self, reaction, user):
         if user.bot:
             return
-        await self._pre_load_games(user.guild)
+        # await self._pre_load_games(user.guild)
         message = reaction.message
         channel = reaction.message.channel
         
@@ -495,7 +493,7 @@ class SixMans(commands.Cog):
     async def process_six_mans_vote_rm(self, reaction, user):
         if user.bot:
             return
-        await self._pre_load_games(user.guild)
+        # await self._pre_load_games(user.guild)
         # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
             game, queue = self._get_game_and_queue(reaction.message.channel)

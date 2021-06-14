@@ -11,9 +11,9 @@ from .queue import SixMansQueue
 
 
 SELECTION_MODES  = {
-    0x1F3B2: Strings.RANDOM_TS, # game_die
-    0x1F1E8: Strings.CAPTAINS_TS, # C
-    0x0262F: Strings.BALANCED_TS # Ying&Yang
+    0x1F3B2: Strings.RANDOM_TS,     # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,   # C
+    0x0262F: Strings.BALANCED_TS    # Ying&Yang
 }
 
 class Game:
@@ -136,7 +136,14 @@ class Game:
         await self._add_reactions(reacts, self.info_message)
 
     async def pick_balanced_teams(self):
-        pass
+        team_options = self.get_balanced_teams()
+        blue_players = random.choice(team_options)
+        orange_players = []
+        for player in self.players:
+            if player not in blue_players:
+                orange_players.append(player)
+        
+        # Create team embed, set state to started
 
     async def pick_random_teams(self):
         self.blue = set()
@@ -297,17 +304,43 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        if added and pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]:
-            # Update Embed
-            embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
-            await self.info_message.edit(embed=embed)
+        if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
+            # action and update first - help with race conditions
+            voted_mode = SELECTION_MODES[self.vote[0]]
+            if self.teamSelection.lower() == Strings.VOTE_TS.lower():
+                self.teamSelection = voted_mode
+                # await self.textChannel.send(self.teamSelection)
+                embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
+                await self.info_message.edit(embed=embed)
+                await self.process_team_selection_method()
+            else:
+                # in case of weird stuff? This should never be hit.
+                embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
+                await self.info_message.edit(embed=embed)
 
             # Next Step: Select Teams
-            voted_mode = SELECTION_MODES[self.vote[0]]
-            self.teamSelection = voted_mode
-            await self.textChannel.send(voted_mode)
-            await self.process_team_selection_method()
             return voted_mode
+
+    def get_balanced_teams():
+        pass
+
+    def get_team_combos(players):
+        team_combos = []
+        for a_player in players:
+            for b_player in players:
+                for c_player in players:
+                    if a_player != b_player and b_player != c_player and a_player != c_player:
+                        lineup = [a_player, b_player, c_player]
+                        if not in_team_options(lineup, team_combos):
+                            team_combos.append(lineup)
+        return team_combos
+    
+    def in_team_options(lineup, team_lineups):
+        order_combos = (factorial_equation)
+        for team_order in order_combos:
+            if team_order in team_lineups:
+                return True
+        False
 
     def _get_vote_embed(self, vote=None, winning_vote=None):
         if not vote:
@@ -347,6 +380,11 @@ class Game:
             voted = "{} {}".format(self._get_pick_reaction(winning_vote), SELECTION_MODES[winning_vote])
             embed.add_field(name="Vote Complete!", value=voted, inline=False)
         
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if self.helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(self.helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
+        
         embed.set_footer(text="Game ID: {}".format(self.id))
         return embed
 
@@ -366,6 +404,8 @@ class Game:
             color=team_color,
             description=description
         )
+        ts_emoji = self._get_ts_emoji()
+        embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, self.teamSelection), inline=False)
 
         if pick:
             embed.set_thumbnail(url=player.avatar_url)
@@ -442,20 +482,24 @@ class Game:
     async def update_game_info(self, helper_role=None, invalid=False, prefix='?'):
         if not helper_role:
             helper_role = self.helper_role
-        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queueMaxSize)
+        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.queueMaxSize)
         embed_color = discord.Colour.green()
         if invalid:
             sm_title += " :x: [Teams Changed]"
             embed_color = discord.Colour.red()
         embed = discord.Embed(title=sm_title, color=embed_color)
         embed.set_thumbnail(url=self.queue.guild.icon_url)
+
+        if self.queue.teamSelection == Strings.VOTE_TS:
+            ts_emoji = self._get_ts_emoji()
+            embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, self.teamSelection), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.orange])), inline=False)
         if not invalid:
             embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(self.captains[0].mention, self.captains[1].mention), inline=False)
         embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(self.roomName, self.roomPass), inline=False)
         embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
-            .format(self.queue.points[PP_PLAY_KEY], self.queue.points[PP_WIN_KEY]), inline=False)
+            .format(self.queue.points[Strings.PP_PLAY_KEY], self.queue.points[Strings.PP_WIN_KEY]), inline=False)
         if not invalid:
             embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
                 "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
@@ -466,16 +510,17 @@ class Game:
         if helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
-        embed.set_footer(text="Game ID: {}".format(game.id))
+        embed.set_footer(text="Game ID: {}".format(self.id))
         
-        # try:
-        #     await self.info_message.edit(embed=embed)
-        # except:
-        #     await self.info_message = self.textChannel.send(embed=embed)
         self.info_message = await self.textChannel.send(embed=embed)
         await self._notify(new_state=Strings.ONGOING_GS)
 
 # General Helper Commands
+    def _get_ts_emoji(self):
+        for key, value in SELECTION_MODES.items():
+            if value == self.teamSelection:
+                return self._get_pick_reaction(key)
+
     def reset_players(self):
         self.players.update(self.orange)
         self.players.update(self.blue)

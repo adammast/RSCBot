@@ -34,6 +34,12 @@ class SixMansQueue:
             pass
         return player
 
+    def _get_player_summary(self, player: discord.User):
+        try:
+            return self.players[str(player.id)]
+        except:
+            return None
+
     def _remove(self, player):
         self.queue._remove(player)
         try:
