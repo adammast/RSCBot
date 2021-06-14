@@ -277,7 +277,7 @@ class SixMans(commands.Cog):
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
         await self._pre_load_queues(ctx.guild)
         await self._pre_load_games(ctx.guild)
-        game = await self._get_game_by_text_channel(ctx.channel)
+        game = self._get_game_by_text_channel(ctx.channel)
         if game is None:
             await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
             return
@@ -315,7 +315,7 @@ class SixMans(commands.Cog):
         await self._pre_load_games(ctx.guild)
         game = None
         if gameId is None:
-            game = await self._get_game_by_text_channel(ctx.channel)
+            game = self._get_game_by_text_channel(ctx.channel)
             if game is None:
                 await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
                 return
