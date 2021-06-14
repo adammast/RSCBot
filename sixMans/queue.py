@@ -3,13 +3,13 @@ import datetime
 import uuid
 from queue import Queue
 from typing import List
+from .strings import Strings
 
 import discord
 
-
 class SixMansQueue:
     def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
-        points, players, gamesPlayed, queueMaxSize, teamSelection='random', category: discord.CategoryChannel=None,):
+        points, players, gamesPlayed, queueMaxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None,):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -34,7 +34,7 @@ class SixMansQueue:
             pass
         return player
 
-    def _get_player_summary(self, player: discord.User):
+    def get_player_summary(self, player: discord.User):
         try:
             return self.players[str(player.id)]
         except:

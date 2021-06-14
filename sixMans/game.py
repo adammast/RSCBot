@@ -304,6 +304,7 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
+        # here
         if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
             # action and update first - help with race conditions
             voted_mode = SELECTION_MODES[self.vote[0]]
@@ -322,7 +323,46 @@ class Game:
             return voted_mode
 
     def get_balanced_teams():
-        pass
+        # Get Player Stats
+        scores = {}
+        ranked_players = 0
+        rank_total = 0
+        wp_players = 0
+        wp_total = 0
+        for player in self.players:
+            player_stats = self.queue.get_player_summary(player)
+
+            rank = 1  # get_player_rank
+            if player_stats:
+                p_wins = player_stats['wins']
+                p_losses = player_status['gamesPlayed'] - wins
+                qwp = self._get_wp(p_wins, p_losses)
+            else:
+                qwp = None
+
+            scores[player] = {"Rank": rank, "QWP": qwp}
+            if rank: 
+                ranked_players += 1
+                rank_total += rank 
+            if wp:
+                wp_players += 1
+                wp_total += qwp
+        
+        rank_avg = rank_total/ranked_players if ranked_players else 1
+        
+        # Score Players, Avg
+        score_total = 0
+        for player, p_data in scores.items():
+            p_rank = p_data['Rank'] if 'Rank' in p_data else rank_avg
+            p_wp = p_data['QWP'] if ('QWP' in p_data and p_data['QWP']) else 0.5
+            score_adj = (p_wp * 2) - 1  # +/- 1
+            
+            score = p_rank + score_adj 
+            p_data['Score'] = score
+            score_total += score
+        
+        avg_team_score = score_total/(len(self.players)/2)
+
 
     def get_team_combos(players):
         team_combos = []
@@ -334,7 +374,8 @@ class Game:
                         if not in_team_options(lineup, team_combos):
                             team_combos.append(lineup)
         return team_combos
-    
+
+    # TODO: perform sort    
     def in_team_options(lineup, team_lineups):
         order_combos = (factorial_equation)
         for team_order in order_combos:
@@ -543,7 +584,10 @@ class Game:
                 await message.add_reaction(react)
 
     def _get_wp(self, wins, losses):
-        return wins/(wins+losses)
+        try:
+            return wins/(wins+losses)
+        except ZeroDivisionError:
+            return None
 
     def _get_completion_color(self, voted:int, pending:int):
         if not (voted or pending):
