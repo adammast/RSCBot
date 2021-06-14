@@ -7,6 +7,13 @@ from .strings import Strings
 
 import discord
 
+SELECTION_MODES  = {
+    0x1F3B2: Strings.RANDOM_TS,     # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,   # C
+    0x0262F: Strings.BALANCED_TS,   # Ying&Yang
+    0x1F64C: Strings.VOTE_TS        # Raised Hands
+}
+
 class SixMansQueue:
     def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
         points, players, gamesPlayed, queueMaxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None,):
@@ -54,8 +61,27 @@ class SixMansQueue:
         for channel in self.channels:
             await channel.send(message, embed=embed)
 
-    def set_team_selection(self, team_selection):
+    async def set_team_selection(self, team_selection):
         self.teamSelection = team_selection
+        emoji = self._get_ts_emoji()
+        if emoji:
+            await self.send_message("Queue Team Selection has been set to {} **{}**.".format(emoji, team_selection))
+        else:
+            await self.send_message("Queue Team Selection has been set to **{}**.".format(team_selection))
+
+    def _get_ts_emoji(self):
+        for key, value in SELECTION_MODES.items():
+            if value == self.teamSelection:
+                return self._get_pick_reaction(key)
+    
+    def _get_pick_reaction(self, int_or_hex):
+        try:
+            if type(int_or_hex) == int:
+                return struct.pack('<I', int_or_hex).decode('utf-32le')
+            if type(int_or_hex) == str:
+                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
+        except:
+            return None
 
     def _to_dict(self):
         return {

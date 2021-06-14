@@ -3,6 +3,7 @@ import struct
 from typing import List
 import uuid
 import asyncio
+import operator
 
 import discord
 
@@ -13,7 +14,7 @@ from .queue import SixMansQueue
 SELECTION_MODES  = {
     0x1F3B2: Strings.RANDOM_TS,     # game_die
     0x1F1E8: Strings.CAPTAINS_TS,   # C
-    0x0262F: Strings.BALANCED_TS    # Ying&Yang
+    0x0262F: Strings.BALANCED_TS,   # Ying&Yang
 }
 
 class Game:
@@ -136,15 +137,24 @@ class Game:
         await self._add_reactions(reacts, self.info_message)
 
     async def pick_balanced_teams(self):
-        team_options = self.get_balanced_teams()
-        blue_players = random.choice(team_options)
-        orange_players = []
+        balanced_teams, balance_score = self.get_balanced_teams()
+        self.balance_score = balance_score
+        # Pick random balanced team
+        blue = random.choice(balanced_teams)
+        orange = []
         for player in self.players:
-            if player not in blue_players:
-                orange_players.append(player)
+            if player not in blue:
+                orange.append(player)
+        for player in blue:
+            await self.add_to_blue(player)
+        for player in orange:
+            await self.add_to_orange(player)
         
-        # Create team embed, set state to started
+        self.reset_players()
+        self.get_new_captains_from_teams()
 
+        await self.update_game_info()
+        
     async def pick_random_teams(self):
         self.blue = set()
         self.orange = set()
@@ -322,7 +332,40 @@ class Game:
             # Next Step: Select Teams
             return voted_mode
 
-    def get_balanced_teams():
+    def get_balanced_teams(self):
+        # Get relevent info from helpers
+        player_scores = self.get_player_scores()
+        team_combos = self.get_team_combos()
+
+        # Calc perfectly balanced team based on scores
+        score_total = 0
+        for player, p_data in player_scores.items():
+            score_total += p_data['Score']
+        avg_team_score = score_total/(len(self.players)/2)
+
+        # Determine balanced teams
+        balanced_teams = []
+        balance_diff = None
+        for a_team in team_combos:
+            team_score = 0
+            for player in a_team:
+                team_score += player_scores[player]['Score']
+            
+            team_diff = abs(avg_team_score - team_score)
+            if balance_diff:
+                if team_diff < balance_diff:
+                    balance_diff == team_diff
+                    balanced_teams = [a_team]
+                elif team_diff == balance_diff:
+                    balanced_teams.append(a_team)
+            else:
+                balance_diff == team_diff
+                balanced_teams = [a_team]
+        
+        # return balanced team
+        return balanced_teams, team_diff
+
+    def get_player_scores(self):
         # Get Player Stats
         scores = {}
         ranked_players = 0
@@ -334,9 +377,9 @@ class Game:
 
             rank = 1  # get_player_rank
             if player_stats:
-                p_wins = player_stats['wins']
-                p_losses = player_status['gamesPlayed'] - wins
-                qwp = self._get_wp(p_wins, p_losses)
+                p_wins = player_stats['Wins']
+                p_losses = player_stats['GamesPlayed'] - p_wins
+                qwp = round(self._get_wp(p_wins, p_losses), 2)
             else:
                 qwp = None
 
@@ -344,7 +387,7 @@ class Game:
             if rank: 
                 ranked_players += 1
                 rank_total += rank 
-            if wp:
+            if qwp:
                 wp_players += 1
                 wp_total += qwp
         
@@ -353,35 +396,27 @@ class Game:
         # Score Players, Avg
         score_total = 0
         for player, p_data in scores.items():
-            p_rank = p_data['Rank'] if 'Rank' in p_data else rank_avg
+            p_rank = p_data['Rank'] if ('Rank' in p_data and p_data['Rank']) else rank_avg
             p_wp = p_data['QWP'] if ('QWP' in p_data and p_data['QWP']) else 0.5
             score_adj = (p_wp * 2) - 1  # +/- 1
             
             score = p_rank + score_adj 
             p_data['Score'] = score
             score_total += score
-        
-        avg_team_score = score_total/(len(self.players)/2)
+        return scores 
 
-
-    def get_team_combos(players):
-        team_combos = []
+    def get_team_combos(self):
+        team_lineups = []
+        players = self.players
         for a_player in players:
             for b_player in players:
                 for c_player in players:
-                    if a_player != b_player and b_player != c_player and a_player != c_player:
-                        lineup = [a_player, b_player, c_player]
-                        if not in_team_options(lineup, team_combos):
-                            team_combos.append(lineup)
-        return team_combos
-
-    # TODO: perform sort    
-    def in_team_options(lineup, team_lineups):
-        order_combos = (factorial_equation)
-        for team_order in order_combos:
-            if team_order in team_lineups:
-                return True
-        False
+                    lineup = list(set([a_player, b_player, c_player]))
+                    # lineup.sort()
+                    lineup = sorted(lineup, key=operator.attrgetter('id'))
+                    if (len(lineup) == len(players)/2) and lineup not in team_lineups:
+                        team_lineups.append(lineup)
+        return team_lineups
 
     def _get_vote_embed(self, vote=None, winning_vote=None):
         if not vote:
@@ -533,7 +568,14 @@ class Game:
 
         if self.queue.teamSelection == Strings.VOTE_TS:
             ts_emoji = self._get_ts_emoji()
-            embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, self.teamSelection), inline=False)
+            team_selection = self.teamSelection
+            if team_selection == Strings.BALANCED_TS:
+                try:
+                    team_selection += "\nBalance Score: {}".format(round(self.balance_score/2, 2))
+                    team_selection += "\n_Lower Balance Scores = More Balanced_"
+                except:
+                    pass 
+            embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, team_selection), inline=False)
         embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.blue])), inline=False)
         embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.orange])), inline=False)
         if not invalid:

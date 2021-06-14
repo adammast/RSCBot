@@ -20,10 +20,11 @@ LOOP_TIME = 5                               # How often to check the queues in s
 VERIFY_TIMEOUT = 15                         # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30     # How long channels will persist after a game's score has been reported (seconds)
 
-TS_METHODS = [
+QTS_METHODS = [
     Strings.VOTE_TS,
     Strings.CAPTAINS_TS,
-    Strings.RANDOM_TS
+    Strings.RANDOM_TS,
+    Strings.BALANCED_TS,
 ]  # , Strings.SHUFFLE_TS, Strings.BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
@@ -162,8 +163,11 @@ class SixMans(commands.Cog):
         if six_mans_queue is None:
             await ctx.send(":x: No queue found with name: {0}".format(current_name))
             return
-        if team_selection in TS_METHODS:
-            six_mans_queue.set_team_selection(team_selection)
+        
+        valid_ts = self.is_valid_ts(team_selection)
+
+        if valid_ts:
+            await six_mans_queue.set_team_selection(valid_ts)
             await self._save_queues(ctx.guild, self.queues)
             await ctx.send("Done")
         else:
@@ -793,7 +797,7 @@ class SixMans(commands.Cog):
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
         team_selection_method = team_selection_method.lower()
-        if team_selection_method not in TS_METHODS:
+        if team_selection_method not in QTS_METHODS:
             return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
 
         if team_selection_method in ['vote', 'balanced']:
@@ -1127,6 +1131,12 @@ class SixMans(commands.Cog):
                 return game, queue
 
         await ctx.send(":x: Queue not found for this channel, please message an Admin if you think this is a mistake.")
+        return None
+
+    def is_valid_ts(self, team_selection):
+        for ts in QTS_METHODS:
+            if team_selection.lower() == ts.lower():
+                return ts
         return None
 
     # adds observer
