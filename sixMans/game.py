@@ -315,7 +315,8 @@ class Game:
         voted_mode = None
         # Vote Complete if...
         # here
-        if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
+        # if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
+        if added and (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
             # action and update first - help with race conditions
             voted_mode = SELECTION_MODES[self.vote[0]]
             if self.teamSelection.lower() == Strings.VOTE_TS.lower():
