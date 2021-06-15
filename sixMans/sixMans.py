@@ -343,8 +343,6 @@ class SixMans(commands.Cog):
                 color=discord.Colour.green()
             )
             embed.set_thumbnail(url=ctx.guild.icon_url)
-            print(game.blue)
-            print(game.orange)
             embed.add_field(name="Blue", value="{}\n".format("\n".join([player.mention for player in game.blue])), inline=True)
             embed.add_field(name="Orange", value="{}\n".format("\n".join([player.mention for player in game.orange])), inline=True)
 
