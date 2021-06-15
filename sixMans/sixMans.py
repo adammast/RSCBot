@@ -58,6 +58,7 @@ class SixMans(commands.Cog):
 
 #region commmands
 
+    # region admin commands
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -187,30 +188,6 @@ class SixMans(commands.Cog):
         await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
 
     @commands.guild_only()
-    @commands.command(aliases=["smMove", "moveme"])
-    async def moveMe(self, ctx: Context):
-        if ctx.message.channel.category != await self._category(ctx.guild):
-            return False
-
-        game = self._get_game_by_text_channel(ctx.channel)
-        player = ctx.message.author
-        if game:
-            try:
-                if player in game.blue:
-                    await player.move_to(game.voiceChannels[0])
-                if player in game.orange:
-                    await player.move_to(game.voiceChannels[1])
-                await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
-            except:
-                await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
-                if not player.voice:
-                    await ctx.send("{}, you must be connected to a voice channel to be moved to your Six Man's team channel.".format(player.mention))
-        else:
-            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
-            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
-            # TODO: determine a workaround from filtering through all active games
-
-    @commands.guild_only()
     @commands.command(aliases=["qm", "queueAll", "qa", "forceQueue", "fq"])
     @checks.admin_or_permissions(manage_guild=True)
     async def queueMultiple(self, ctx: Context, *members: discord.Member):
@@ -227,40 +204,6 @@ class SixMans(commands.Cog):
             await self._pop_queue(ctx, six_mans_queue)
 
     @commands.guild_only()
-    @commands.command(aliases=["q"])
-    async def queue(self, ctx: Context):
-        """Add yourself to the queue"""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
-        six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
-        player = ctx.message.author
-
-        if player in six_mans_queue.queue.queue:
-            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
-            return
-        for game in self.games:
-            if player in game:
-                await ctx.send(":x: You are already in a game")
-                return
-
-        await self._add_to_queue(player, six_mans_queue)
-        if six_mans_queue._queue_full():
-            await self._pop_queue(ctx, six_mans_queue)
-
-    @commands.guild_only()
-    @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
-    async def dequeue(self, ctx: Context):
-        """Remove yourself from the queue"""
-        await self._pre_load_queues(ctx.guild)
-        six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
-        player = ctx.message.author
-
-        if player in six_mans_queue.queue:
-            await self._remove_from_queue(player, six_mans_queue)
-        else:
-            await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
-
-    @commands.guild_only()
     @commands.command(aliases=["kq"])
     async def kickQueue(self, ctx: Context, player: discord.Member):
         """Remove someone else from the queue"""
@@ -273,39 +216,6 @@ class SixMans(commands.Cog):
             await self._remove_from_queue(player, six_mans_queue)
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
-
-    @commands.guild_only()
-    @commands.command(aliases=["cg"])
-    async def cancelGame(self, ctx: Context):
-        """Cancel the current game. Can only be used in a game channel.
-        The game will end with no points given to any of the players. The players with then be allowed to queue again."""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
-        game = self._get_game_by_text_channel(ctx.channel)
-        if game is None:
-            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
-            return
-
-        opposing_captain = self._get_opposing_captain(ctx.author, game)
-        if opposing_captain is None:
-            await ctx.send(":x: Only players on one of the two teams can cancel the game.")
-            return
-
-        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, VERIFY_TIMEOUT))
-        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
-
-        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
-        try:
-            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
-            if pred.result is True:
-                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
-                await self._remove_game(ctx.guild, game)
-            else:
-                await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
-        except asyncio.TimeoutError:
-            self._swap_opposing_captain(game, opposing_captain)
-            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again."
-                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
 
     @commands.guild_only()
     @commands.command(aliases=["fcg"])
@@ -385,6 +295,138 @@ class SixMans(commands.Cog):
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
         await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
 
+    #endregion
+
+    #region player commands
+    @commands.guild_only()
+    @commands.command(aliases=["smMove", "moveme"])
+    async def moveMe(self, ctx: Context):
+        await self._pre_load_queues(ctx.guild)
+        await self._pre_load_games(ctx.guild)
+        if ctx.message.channel.category != await self._category(ctx.guild):
+            return False
+
+        game = self._get_game_by_text_channel(ctx.channel)
+        player = ctx.message.author
+        if game:
+            try:
+                if player in game.blue:
+                    await player.move_to(game.voiceChannels[0])
+                if player in game.orange:
+                    await player.move_to(game.voiceChannels[1])
+                await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
+            except:
+                await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
+                if not player.voice:
+                    await ctx.send("{}, you must be connected to a voice channel to be moved to your Six Man's team channel.".format(player.mention))
+        else:
+            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
+            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
+            # TODO: determine a workaround from filtering through all active games
+
+    @commands.guild_only()
+    @commands.command(aliases=["li", "gameInfo", "gi"])
+    async def lobbyInfo(self, ctx: Context):
+        """Gets lobby info for the series that you are involved in"""
+        # TODO: fails after cog is reloaded
+        await self._pre_load_queues(ctx.guild)
+        await self._pre_load_games(ctx.guild)
+        if ctx.message.channel.category != await self._category(ctx.guild):
+            return False
+
+        game = self._get_game_by_text_channel(ctx.channel)
+        player = ctx.message.author
+        if game:
+            # try:
+            embed = discord.Embed(
+                title="{0} {1} Mans Game Info".format(game.queue.name, game.queue.queueMaxSize),
+                color=discord.Colour.green()
+            )
+            embed.set_thumbnail(url=ctx.guild.icon_url)
+            print(game.blue)
+            print(game.orange)
+            embed.add_field(name="Blue", value="{}\n".format("\n".join([player.mention for player in game.blue])), inline=True)
+            embed.add_field(name="Orange", value="{}\n".format("\n".join([player.mention for player in game.orange])), inline=True)
+
+            embed.add_field(name="Lobby Info", value="```{} // {}```".format(game.roomName, game.roomPass), inline=False)
+            embed.set_footer(text="Game ID: {}".format(game.id))
+            await ctx.send(embed=embed)
+            await ctx.send(':)')
+            await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
+            # except:
+            #     await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
+        else:
+            await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
+            await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
+            # TODO: determine a workaround from filtering through all active games
+    
+    @commands.guild_only()
+    @commands.command(aliases=["q"])
+    async def queue(self, ctx: Context):
+        """Add yourself to the queue"""
+        await self._pre_load_queues(ctx.guild)
+        await self._pre_load_games(ctx.guild)
+        six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
+        player = ctx.message.author
+
+        if player in six_mans_queue.queue.queue:
+            await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
+            return
+        for game in self.games:
+            if player in game:
+                await ctx.send(":x: You are already in a game")
+                return
+
+        await self._add_to_queue(player, six_mans_queue)
+        if six_mans_queue._queue_full():
+            await self._pop_queue(ctx, six_mans_queue)
+
+    @commands.guild_only()
+    @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
+    async def dequeue(self, ctx: Context):
+        """Remove yourself from the queue"""
+        await self._pre_load_queues(ctx.guild)
+        six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
+        player = ctx.message.author
+
+        if player in six_mans_queue.queue:
+            await self._remove_from_queue(player, six_mans_queue)
+        else:
+            await ctx.send(":x: You're not in the {0} queue".format(six_mans_queue.name))
+
+    @commands.guild_only()
+    @commands.command(aliases=["cg"])
+    async def cancelGame(self, ctx: Context):
+        """Cancel the current game. Can only be used in a game channel.
+        The game will end with no points given to any of the players. The players with then be allowed to queue again."""
+        await self._pre_load_queues(ctx.guild)
+        await self._pre_load_games(ctx.guild)
+        game = self._get_game_by_text_channel(ctx.channel)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
+            return
+
+        opposing_captain = self._get_opposing_captain(ctx.author, game)
+        if opposing_captain is None:
+            await ctx.send(":x: Only players on one of the two teams can cancel the game.")
+            return
+
+        msg = await ctx.send("{0} Please verify that both teams want to cancel the game. You have {1} seconds to verify".format(opposing_captain.mention, VERIFY_TIMEOUT))
+        start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
+
+        pred = ReactionPredicate.yes_or_no(msg, opposing_captain)
+        try:
+            await ctx.bot.wait_for("reaction_add", check=pred, timeout=VERIFY_TIMEOUT)
+            if pred.result is True:
+                await ctx.send("Done. Feel free to queue again in an appropriate channel.\n**This channel will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
+                await self._remove_game(ctx.guild, game)
+            else:
+                await ctx.send(":x: Cancel not verified. To cancel the game you will need to use the `{0}cg` command again.".format(ctx.prefix))
+        except asyncio.TimeoutError:
+            self._swap_opposing_captain(game, opposing_captain)
+            await ctx.send(":x: Cancel not verified in time. To cancel the game you will need to use the `{0}cg` command again."
+                "\n**If one of the captains is afk, have someone from that team use the command.**".format(ctx.prefix))
+
     @commands.guild_only()
     @commands.command(aliases=["sr"])
     async def scoreReport(self, ctx: Context, winning_team):
@@ -441,6 +483,8 @@ class SixMans(commands.Cog):
         await game.report_winner(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
         await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
+
+    #regionend player commands
 
     #region listeners
 

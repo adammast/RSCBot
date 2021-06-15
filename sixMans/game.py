@@ -571,7 +571,7 @@ class Game:
             team_selection = self.teamSelection
             if team_selection == Strings.BALANCED_TS:
                 try:
-                    team_selection += "\nBalance Score: {}".format(round(self.balance_score/2, 2))
+                    team_selection += "\n\nBalance Score: {}".format(round(self.balance_score/2, 2))
                     team_selection += "\n_Lower Balance Scores = More Balanced_"
                 except:
                     pass 
@@ -596,7 +596,7 @@ class Game:
         embed.set_footer(text="Game ID: {}".format(self.id))
         
         self.info_message = await self.textChannel.send(embed=embed)
-        await self._notify(new_state=Strings.ONGOING_GS)
+        # await self._notify(new_state=Strings.ONGOING_GS)
 
 # General Helper Commands
     def _get_ts_emoji(self):
