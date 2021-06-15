@@ -1,6 +1,7 @@
 import collections
 import datetime
 import uuid
+import struct
 from queue import Queue
 from typing import List
 from .strings import Strings
@@ -63,13 +64,13 @@ class SixMansQueue:
 
     async def set_team_selection(self, team_selection):
         self.teamSelection = team_selection
-        emoji = self._get_ts_emoji()
+        emoji = self.get_ts_emoji()
         if emoji:
             await self.send_message("Queue Team Selection has been set to {} **{}**.".format(emoji, team_selection))
         else:
             await self.send_message("Queue Team Selection has been set to **{}**.".format(team_selection))
 
-    def _get_ts_emoji(self):
+    def get_ts_emoji(self):
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)

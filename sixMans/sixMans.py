@@ -152,7 +152,7 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=['setQTS', 'setQueueTeamSelection', 'sqts'])
     @checks.admin_or_permissions(manage_guild=True)
-    async def setQueueTS(self, ctx: Context, queue_name, team_selection):
+    async def setQueueTS(self, ctx: Context, queue_name, *, team_selection):
         """Sets the team selection mode for a specific queue"""
         await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
@@ -1248,7 +1248,11 @@ class SixMans(commands.Cog):
 
     def embed_queue_info(self, queue: SixMansQueue):
         embed = discord.Embed(title="{0} {1} Mans Info".format(queue.name, self.queueMaxSize), color=discord.Colour.blue())
-        embed.add_field(name="Team Selection", value=queue.teamSelection, inline=False)
+        emoji = queue.get_ts_emoji()
+        if emoji:
+            embed.add_field(name="Team Selection", value="{} {}".format(emoji, queue.teamSelection), inline=False)
+        else:
+            embed.add_field(name="Team Selection", value=queue.teamSelection, inline=False)
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
