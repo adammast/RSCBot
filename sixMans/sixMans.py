@@ -482,10 +482,9 @@ class SixMans(commands.Cog):
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
         await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
 
-    #regionend player commands
+    #endregion player commands
 
     #region listeners
-
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def process_six_mans_reaction(self, reaction, user):
