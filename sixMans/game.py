@@ -51,15 +51,10 @@ class Game:
             observer._subject = self
     
         asyncio.create_task(self._notify())
-        # asyncio.create_task(self.create_game_channels())
-        # asyncio.create_task(self.process_team_selection_method())
         
         if self.teamSelection.lower() == Strings.VOTE_TS.lower():
             self.vote = None
         
-    # @property
-    # def subject_state(self):
-    #     return self.game_state
 
     async def _notify(self, new_state=None):
         if new_state:
