@@ -406,7 +406,6 @@ class Game:
         return scores 
 
     def get_team_combos(self):
-        # team_lineups = []
         players = self.players
         combos = list(combinations(list(self.players), len(self.players)//2))
         for combo in combos:
