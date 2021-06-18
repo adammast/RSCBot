@@ -531,7 +531,7 @@ class PlayerRatings(commands.Cog):
     async def _players(self, ctx):
         return await self.config.guild(ctx.guild).Players()
 
-    async  def _save_players(self, ctx, players):
+    async def _save_players(self, ctx, players):
         player_dict = {}
         for player in players:
             player_dict[player.member.id] = player._to_dict()

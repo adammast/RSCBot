@@ -4,8 +4,8 @@ from typing import List
 import uuid
 import asyncio
 import operator
-
 import discord
+from itertools import combinations
 
 from .strings import Strings
 from .queue import SixMansQueue
@@ -158,7 +158,7 @@ class Game:
     async def pick_random_teams(self):
         self.blue = set()
         self.orange = set()
-        for player in random.sample(self.players, int(len(self.players)/2)):
+        for player in random.sample(self.players, int(len(self.players)//2)):
             await self.add_to_orange(player)
         blue = [player for player in self.players]
         for player in blue:
@@ -314,7 +314,6 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        # here
         # if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
         if added and (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
             # action and update first - help with race conditions
@@ -342,7 +341,7 @@ class Game:
         score_total = 0
         for player, p_data in player_scores.items():
             score_total += p_data['Score']
-        avg_team_score = score_total/(len(self.players)/2)
+        avg_team_score = score_total/(len(self.players)//2)
 
         # Determine balanced teams
         balanced_teams = []
@@ -407,17 +406,12 @@ class Game:
         return scores 
 
     def get_team_combos(self):
-        team_lineups = []
+        # team_lineups = []
         players = self.players
-        for a_player in players:
-            for b_player in players:
-                for c_player in players:
-                    lineup = list(set([a_player, b_player, c_player]))
-                    # lineup.sort()
-                    lineup = sorted(lineup, key=operator.attrgetter('id'))
-                    if (len(lineup) == len(players)/2) and lineup not in team_lineups:
-                        team_lineups.append(lineup)
-        return team_lineups
+        combos = list(combinations(list(self.players), len(self.players)//2))
+        for combo in combos:
+            combo = list(combos)
+        return combos
 
     def _get_vote_embed(self, vote=None, winning_vote=None):
         if not vote:
