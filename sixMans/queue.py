@@ -1,14 +1,23 @@
 import collections
 import datetime
 import uuid
+import struct
 from queue import Queue
 from typing import List
+from .strings import Strings
 
 import discord
 
+SELECTION_MODES  = {
+    0x1F3B2: Strings.RANDOM_TS,     # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,   # C
+    0x0262F: Strings.BALANCED_TS,   # Ying&Yang
+    0x1F64C: Strings.VOTE_TS        # Raised Hands
+}
 
 class SixMansQueue:
-    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel], points, players, gamesPlayed, queueMaxSize):
+    def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
+        points, players, gamesPlayed, queueMaxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None,):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -18,6 +27,7 @@ class SixMansQueue:
         self.players = players
         self.gamesPlayed = gamesPlayed
         self.queueMaxSize = queueMaxSize
+        self.teamSelection = teamSelection
         self.activeJoinLog = {}
 
     def _put(self, player):
@@ -31,6 +41,12 @@ class SixMansQueue:
         except:
             pass
         return player
+
+    def get_player_summary(self, player: discord.User):
+        try:
+            return self.players[str(player.id)]
+        except:
+            return None
 
     def _remove(self, player):
         self.queue._remove(player)
@@ -46,13 +62,36 @@ class SixMansQueue:
         for channel in self.channels:
             await channel.send(message, embed=embed)
 
+    async def set_team_selection(self, team_selection):
+        self.teamSelection = team_selection
+        emoji = self.get_ts_emoji()
+        if emoji:
+            await self.send_message("Queue Team Selection has been set to {} **{}**.".format(emoji, team_selection))
+        else:
+            await self.send_message("Queue Team Selection has been set to **{}**.".format(team_selection))
+
+    def get_ts_emoji(self):
+        for key, value in SELECTION_MODES.items():
+            if value == self.teamSelection:
+                return self._get_pick_reaction(key)
+    
+    def _get_pick_reaction(self, int_or_hex):
+        try:
+            if type(int_or_hex) == int:
+                return struct.pack('<I', int_or_hex).decode('utf-32le')
+            if type(int_or_hex) == str:
+                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
+        except:
+            return None
+
     def _to_dict(self):
         return {
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
             "Points": self.points,
             "Players": self.players,
-            "GamesPlayed": self.gamesPlayed
+            "GamesPlayed": self.gamesPlayed,
+            "TeamSelection": self.teamSelection
         }
 
 
