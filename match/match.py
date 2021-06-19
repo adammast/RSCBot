@@ -136,7 +136,7 @@ class Match(commands.Cog):
     async def lobbyready(self, ctx):
         """Informs players of the opposing team that the private match lobby is ready and joinable."""
         match_day = await self._match_day(ctx)
-        teams = await self.team_manager.teams_for_user(ctx, user)
+        teams = await self.team_manager.teams_for_user(ctx, ctx.author)
         
         if not (match_day and teams):
             return
@@ -360,7 +360,7 @@ class Match(commands.Cog):
     async def _set_match_on_stream(self, ctx, match_day, team, stream_details):
         matches = await self._matches(ctx)
         for match in matches:
-            if match['matchDay'] == match_day and (one_team == match['home'] or one_team == match['away']):
+            if match['matchDay'] == match_day and (team == match['home'] or team == match['away']):
                 match['streamDetails'] = stream_details
                 #match['time'] = time  # ((could add time param to match))
                 await self._save_matches(ctx, matches)
@@ -647,7 +647,7 @@ class Match(commands.Cog):
         return config.solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)
 
     def _generate_name_pass(self):
-        return config.room_pass[random.randrange(len(room_pass))]
+        return config.room_pass[random.randrange(len(config.room_pass))]
 
     async def _is_in_game(self, member):
         if not member.activities:
