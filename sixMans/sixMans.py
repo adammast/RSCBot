@@ -162,7 +162,7 @@ class SixMans(commands.Cog):
                 break
 
         if six_mans_queue is None:
-            await ctx.send(":x: No queue found with name: {0}".format(current_name))
+            await ctx.send(":x: No queue found with name: {0}".format(queue_name))
             return
         
         valid_ts = self.is_valid_ts(team_selection)
