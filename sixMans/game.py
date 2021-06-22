@@ -264,18 +264,16 @@ class Game:
             return
 
         # RECORD VOTES
-        self.info_message = await self.textChannel.fetch_message(self.info_message.id)
         votes = {}
         for this_react in self.info_message.reactions:
-            # here maybe
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
                 reacted_members = await this_react.users().flatten()
-                count = this_react.count - 1
-                if added and this_react.emoji != reaction.emoji and member in reacted_members:
+                reacted_players = [player for player in reacted_members if player in self.players]  # Intersection of reacted_members and self.players
+                if added and this_react.emoji != reaction.emoji and member in reacted_players:
                     await this_react.remove(member)
-                    count -= 1
-                votes[react_hex_i] = {'count': count, 'emoji': this_react.emoji}
+                    reacted_players.remove(member)
+                votes[react_hex_i] = reacted_players.count
 
         await channel.send("Votes: {}".format(votes)) # deugging
 
@@ -288,8 +286,7 @@ class Game:
         runner_up = 0
         running_vote = [None, 0]
 
-        for react_hex, data in votes.items():
-            num_votes = data['count']
+        for react_hex, num_votes in votes.items():
             if num_votes > running_vote[1]:
                 runner_up = running_vote[1]
                 running_vote = [react_hex, num_votes]
@@ -301,23 +298,14 @@ class Game:
         
         pending_votes = len(self.players) - total_votes
 
-        voted_mode = None
         # Vote Complete if...
         if added: # and (pending_votes + runner_up) <= running_vote[1]:
             # action and update first - help with race conditions
-            voted_mode = SELECTION_MODES[running_vote[0]]
             if self.teamSelection.lower() == Strings.VOTE_TS.lower():
-                self.teamSelection = voted_mode
-                # await self.textChannel.send(self.teamSelection)
+                self.teamSelection = SELECTION_MODES[running_vote[0]]
                 embed = self._get_vote_embed(vote=votes, winning_vote=running_vote[0])
                 await self.info_message.edit(embed=embed)
                 await self.process_team_selection_method()
-            else:
-                # in case of weird stuff? This should never be hit.
-                await channel.send("Weird stuff happened") # deugging
-
-            # Next Step: Select Teams
-            return voted_mode
 
     def get_balanced_teams(self):
         # Get relevent info from helpers
@@ -399,14 +387,7 @@ class Game:
             combo = list(combos)
         return combos
 
-    def _get_vote_embed(self, vote=None, winning_vote=None):
-        if not vote:
-            vote = {}
-            # Skeleton Vote if no votes
-            for react_hex, mode in SELECTION_MODES.items():
-                react_emoji = self._get_pick_reaction(react_hex)
-                vote[react_hex] = {'count': 0, 'emoji': react_emoji}
-            
+    def _get_vote_embed(self, vote: dict=None, winning_vote=None):
         # Count Votes, prep embed fields
         vote_options = []
         votes_casted = []
@@ -414,10 +395,7 @@ class Game:
         for react_hex, mode in SELECTION_MODES.items():
             react_emoji = self._get_pick_reaction(react_hex)
             vote_options.append("{} {}".format(react_emoji, mode))
-            try:
-                num_votes = vote[react_hex]['count']
-            except:
-                num_votes = 0
+            num_votes = vote.setdefault(react_hex, 0)
             votes_casted.append(str(num_votes))
             total_votes += num_votes
 
@@ -429,7 +407,6 @@ class Game:
             description=description
         )
 
-        # embed.add_field()
         embed.add_field(name="Options", value='\n'.join(vote_options), inline=True)
         embed.add_field(name="Votes", value='\n'.join(votes_casted), inline=True)
         
