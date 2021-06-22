@@ -151,9 +151,12 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=['setQTS', 'setQueueTeamSelection', 'sqts'])
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions()
     async def setQueueTS(self, ctx: Context, queue_name, *, team_selection):
         """Sets the team selection mode for a specific queue"""
+        if not await self.has_perms(ctx.author):
+            return
+
         await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
         for queue in self.queues:
@@ -487,65 +490,34 @@ class SixMans(commands.Cog):
     #region listeners
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
-    async def process_six_mans_reaction(self, reaction, user):
-        if user.bot:
-            return
+    async def on_reaction_add(self, reaction, user):
         # await self._pre_load_games(user.guild)
-        message = reaction.message
         channel = reaction.message.channel
-        
-        # Find Game and Queue
-        game, queue = self._get_game_and_queue(channel)
-        
-        if not game:
-            return False
-        if message != game.info_message:
-            return False
+        await self.process_six_mans_reaction_add(reaction.message, channel, user, reaction.emoji) 
 
-        # team_selection_mode = await self._team_selection(user.guild)
-        team_selection_mode = game.teamSelection.lower()
+    @commands.guild_only()
+    @commands.Cog.listener("on_raw_reaction_add")
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        channel = self.bot.get_channel(payload.channel_id)
+        message = await channel.fetch_message(payload.message_id)
+        user = self.bot.get_user(payload.user_id)
+        if not user:
+            user = await self.bot.fetch_user(payload.user_id)
 
-        if team_selection_mode == Strings.VOTE_TS.lower():
-            await game.process_team_select_vote(reaction, user)
-
-        elif team_selection_mode == Strings.CAPTAINS_TS.lower():
-            teams_complete = await game.process_captains_pick(reaction, user)
-
-        elif team_selection_mode == Strings.SHUFFLE_TS.lower():
-            if reaction.emoji is not Strings.SHUFFLE_REACT:
-                return
-
-            guild = reaction.message.channel.guild
-            
-            # Check if Shuffle is enabled
-            message = self.info_message
-            now = datetime.datetime.utcnow()
-            time_since_last_team = (now - message.created_at).seconds
-            time_since_q_pop = (now - message.channel.created_at).seconds
-            if time_since_q_pop > 300:
-                await reaction.clear()
-                return await reaction.message.channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
-            if time_since_last_team > 180:
-                await reaction.clear()
-                return await reaction.message.channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
-
-            shuffle_players = reaction.count >= int(len(game.players)/2)+1
-            if shuffle_players:
-                await channel.send("{} _Generating New teams..._".format(Strings.SHUFFLE_REACT))
-                await game.shuffle_players()
+        await self.process_six_mans_reaction_add(message, channel, user, payload.emoji)
 
     @commands.Cog.listener("on_reaction_remove")
-    async def process_six_mans_vote_rm(self, reaction, user):
-        if user.bot:
-            return
-        # await self._pre_load_games(user.guild)
-        # Un-vote if reaction pertains to a Six Mans TS Vote
-        try:
-            game, queue = self._get_game_and_queue(reaction.message.channel)
-            if game.teamSelection.lower() == Strings.VOTE_TS.lower():
-                await game.process_team_select_vote(reaction, user, added=False)
-        except:
-            pass
+    async def on_reaction_remove(self, reaction, user):
+        await self.process_six_mans_reaction_removed(reaction.message.channel, user, reaction.emoji)
+
+    @commands.Cog.listener("on_raw_reaction_remove")
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
+        channel = self.bot.get_channel(payload.channel_id)
+        user = self.bot.get_user(payload.user_id)
+        if not user:
+            user = await self.bot.fetch_user(payload.user_id)
+
+        await self.process_six_mans_reaction_removed(channel, user, payload.emoji)
 
     @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
@@ -755,7 +727,7 @@ class SixMans(commands.Cog):
 
     #endregion
 
-#region get and set commands
+    #region get and set commands
 
     @commands.guild_only()
     @commands.command(aliases=["cq", "status"])
@@ -1222,6 +1194,62 @@ class SixMans(commands.Cog):
             for queue in self.queues:
                 if queue.name.lower() == queue_name.lower():
                     return queue.id
+
+    async def process_six_mans_reaction_add(self, message: discord.Message, channel: discord.TextChannel, user: discord.User, emoji):
+        if user.bot:
+            return
+        
+        # Find Game
+        game = self._get_game_by_text_channel(channel)
+        
+        if not game:
+            return False
+        if message != game.info_message:
+            return False
+
+        team_selection_mode = game.teamSelection.lower()
+
+        if team_selection_mode == Strings.VOTE_TS.lower():
+            await game.process_team_select_vote(emoji, user)
+
+        elif team_selection_mode == Strings.CAPTAINS_TS.lower():
+            await game.process_captains_pick(emoji, user)
+
+        elif team_selection_mode == Strings.SHUFFLE_TS.lower():
+            if emoji is not Strings.SHUFFLE_REACT:
+                return
+            
+            # Check if Shuffle is enabled
+            message = self.info_message
+            now = datetime.datetime.utcnow()
+            time_since_last_team = (now - message.created_at).seconds
+            time_since_q_pop = (now - message.channel.created_at).seconds
+            if time_since_q_pop > 300:
+                return await channel.send(":x: Reshuffling teams is no longer permitted after 5 minutes of the initial team selection.")
+            if time_since_last_team > 180:
+                return await channel.send(":x: Reshuffling teams is only permitted for 3 minutes since the previous team selection.")
+
+            count = len([reaction for reaction in message.reactions if reaction.emoji == emoji])
+            shuffle_players = count >= int(len(game.players)/2)+1
+            if shuffle_players:
+                await channel.send("{} _Generating New teams..._".format(Strings.SHUFFLE_REACT))
+                await game.shuffle_players()
+
+    async def process_six_mans_reaction_removed(self, channel: discord.TextChannel, user: discord.User, emoji):
+        if user.bot:
+            return
+        # await self._pre_load_games(user.guild)
+        # Un-vote if reaction pertains to a Six Mans TS Vote
+        try:
+            game = self._get_game_by_text_channel(channel)
+
+            if not game:
+                return False
+
+            if game.teamSelection.lower() == Strings.VOTE_TS.lower():
+                await game.process_team_select_vote(emoji, user, added=False)
+        except:
+            pass
 
 #endregion
 
