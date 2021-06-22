@@ -215,8 +215,8 @@ class Game:
         pick = pick_order[pick_i%len(pick_order)]
         captain_picking = self.captains[0] if pick == 'blue' else self.captains[1]
         
-        # if user != captain_picking:   # debugging
-        #     return False
+        if user != captain_picking:
+            return False
         
         # get player from reaction
         player_picked = self._get_player_from_reaction_emoji(ord(emoji))
@@ -290,7 +290,7 @@ class Game:
         pending_votes = len(self.players) - total_votes
 
         # Vote Complete if...
-        if added: # and (pending_votes + runner_up) <= running_vote[1]: # debugging
+        if added and (pending_votes + runner_up) <= running_vote[1]:
             # action and update first - help with race conditions
             if self.teamSelection.lower() == Strings.VOTE_TS.lower():
                 self.teamSelection = SELECTION_MODES[running_vote[0]]

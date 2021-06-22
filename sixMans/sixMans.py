@@ -1245,8 +1245,7 @@ class SixMans(commands.Cog):
 
             if game.teamSelection.lower() == Strings.VOTE_TS.lower():
                 await game.process_team_select_vote(emoji, user, added=False)
-        except Exception as e:
-            await channel.send("{}".format(e)) # debugging
+        except:
             pass
 
 #endregion
