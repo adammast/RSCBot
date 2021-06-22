@@ -494,28 +494,28 @@ class SixMans(commands.Cog):
         message = reaction.message
         channel = reaction.message.channel
         
-        # Find Game and Queue
-        game, queue = self._get_game_and_queue(channel)
+        # Find Game
+        game = self._get_game_by_text_channel(channel)
         
         if not game:
+            await channel.send("No game found") # deugging
             return False
         if message != game.info_message:
+            await channel.send("No message found") # deugging
             return False
 
-        # team_selection_mode = await self._team_selection(user.guild)
         team_selection_mode = game.teamSelection.lower()
+        await channel.send("Selection mode = {}".format(team_selection_mode)) # deugging
 
         if team_selection_mode == Strings.VOTE_TS.lower():
             await game.process_team_select_vote(reaction, user)
 
         elif team_selection_mode == Strings.CAPTAINS_TS.lower():
-            teams_complete = await game.process_captains_pick(reaction, user)
+            await game.process_captains_pick(reaction, user)
 
         elif team_selection_mode == Strings.SHUFFLE_TS.lower():
             if reaction.emoji is not Strings.SHUFFLE_REACT:
                 return
-
-            guild = reaction.message.channel.guild
             
             # Check if Shuffle is enabled
             message = self.info_message
@@ -541,10 +541,11 @@ class SixMans(commands.Cog):
         # await self._pre_load_games(user.guild)
         # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
-            game, queue = self._get_game_and_queue(reaction.message.channel)
+            game = self._get_game_by_text_channel(reaction.message.channel)
             if game.teamSelection.lower() == Strings.VOTE_TS.lower():
                 await game.process_team_select_vote(reaction, user, added=False)
-        except:
+        except Exception as e:
+            await reaction.message.channel.send("{}".format(e)) # deugging
             pass
 
     @commands.guild_only()
@@ -755,7 +756,7 @@ class SixMans(commands.Cog):
 
     #endregion
 
-#region get and set commands
+    #region get and set commands
 
     @commands.guild_only()
     @commands.command(aliases=["cq", "status"])

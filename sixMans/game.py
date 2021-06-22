@@ -257,10 +257,14 @@ class Game:
         return teams_complete
     
     async def process_team_select_vote(self, reaction, member, added=True):
+        channel = reaction.message.channel # deugging
+
         if member not in self.players:
+            await channel.send("Member is not a player") # deugging
             return
 
         if self._hex_i_from_emoji(reaction.emoji) not in SELECTION_MODES:
+            await channel.send("Reaction not in Selection Modes") # deugging
             return 
         
         # COUNT UP VOTE TOTALS
@@ -280,6 +284,8 @@ class Game:
                     await this_react.remove(member)
                     count -= 1
                 votes[react_hex_i] = {'count': count, 'emoji': this_react.emoji}
+
+        await channel.send("Votes: {}".format(votes)) # deugging
 
         # Update embed
         embed = self._get_vote_embed(votes)
@@ -309,7 +315,6 @@ class Game:
 
         voted_mode = None
         # Vote Complete if...
-        # if added and member.name == 'nullidea' or (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
         if added and (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
             # action and update first - help with race conditions
             voted_mode = SELECTION_MODES[self.vote[0]]
@@ -323,6 +328,7 @@ class Game:
                 # in case of weird stuff? This should never be hit.
                 embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
                 await self.info_message.edit(embed=embed)
+                await channel.send("Weird stuff happened") # deugging
 
             # Next Step: Select Teams
             return voted_mode
