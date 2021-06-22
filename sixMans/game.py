@@ -270,14 +270,11 @@ class Game:
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
                 reacted_members = await this_react.users().flatten()
-                await channel.send("Members: {}".format(reacted_members)) # deugging
                 reacted_players = [player for player in reacted_members if player in self.players]  # Intersection of reacted_members and self.players
-                await channel.send("Players: {}".format(reacted_players)) # deugging
                 if added and this_react.emoji != reaction.emoji and member in reacted_players:
-                    await channel.send("Removing reaction of: {0} by: {1}".format(this_react.emoji, member)) # deugging
                     await this_react.remove(member)
                     reacted_players.remove(member)
-                votes[react_hex_i] = reacted_players.count
+                votes[react_hex_i] = len(reacted_players)
 
         await channel.send("Votes: {}".format(votes)) # deugging
 
