@@ -151,9 +151,12 @@ class SixMans(commands.Cog):
 
     @commands.guild_only()
     @commands.command(aliases=['setQTS', 'setQueueTeamSelection', 'sqts'])
-    @checks.admin_or_permissions(manage_guild=True)
+    @checks.admin_or_permissions()
     async def setQueueTS(self, ctx: Context, queue_name, *, team_selection):
         """Sets the team selection mode for a specific queue"""
+        if not await self.has_perms(ctx.author):
+            return
+
         await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
         for queue in self.queues:
