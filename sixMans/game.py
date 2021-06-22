@@ -261,7 +261,7 @@ class Game:
 
         # RECORD VOTES
         votes = {}
-        self.info_message = await self.textChannel.fetch_message(self.info_message.id)
+        self.info_message = await self.textChannel.fetch_message(self.info_message.id) # this is needed to get the up to date reactions for a message
         for this_react in self.info_message.reactions:
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
@@ -611,6 +611,7 @@ class Game:
     def _to_dict(self):
         info_msg = self.info_message.id if self.info_message else None
         txt_channel = self.textChannel.id if self.textChannel else None
+        helper_role = self.helper_role.id if self.helper_role else None
         try:
             vc_channels = [x.id for x in self.voiceChannels]
         except:
@@ -627,7 +628,7 @@ class Game:
             "VoiceChannels": vc_channels,
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
-            "HelperRole": self.helper_role.id,
+            "HelperRole": helper_role,
             "TeamSelection": self.teamSelection,
             "InfoMessage": info_msg,
             "State": self.game_state
