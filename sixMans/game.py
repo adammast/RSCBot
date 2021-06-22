@@ -265,6 +265,7 @@ class Game:
 
         # RECORD VOTES
         votes = {}
+        self.info_message = await self.textChannel.fetch_message(self.info_message.id)
         for this_react in self.info_message.reactions:
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
