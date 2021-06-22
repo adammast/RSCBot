@@ -208,19 +208,19 @@ class Game:
         else:
             return print("you messed up fool: {}".format(self.teamSelection))
 
-    async def process_captains_pick(self, reaction, user):
+    async def process_captains_pick(self, emoji, user):
         teams_complete = False
         pick_i = len(self.blue)+len(self.orange)-2
         pick_order = ['blue', 'orange', 'orange', 'blue']
         pick = pick_order[pick_i%len(pick_order)]
         captain_picking = self.captains[0] if pick == 'blue' else self.captains[1]
         
-        # if user != captain_picking:   # deugging
+        # if user != captain_picking:   # debugging
         #     return False
         
         # get player from reaction
-        player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
-        await self.info_message.clear_reaction(reaction.emoji)
+        player_picked = self._get_player_from_reaction_emoji(ord(emoji))
+        await self.info_message.clear_reaction(emoji)
         
         # add to correct team, update teams embed
         self.blue.add(player_picked) if pick == 'blue' else self.orange.add(player_picked)
@@ -252,15 +252,11 @@ class Game:
         
         return teams_complete
     
-    async def process_team_select_vote(self, reaction, member, added=True):
-        channel = reaction.message.channel # deugging
-
+    async def process_team_select_vote(self, emoji, member, added=True):
         if member not in self.players:
-            await channel.send("Member is not a player") # deugging
             return
 
-        if self._hex_i_from_emoji(reaction.emoji) not in SELECTION_MODES:
-            await channel.send("Reaction not in Selection Modes") # deugging
+        if self._hex_i_from_emoji(emoji) not in SELECTION_MODES:
             return
 
         # RECORD VOTES
@@ -271,12 +267,10 @@ class Game:
             if react_hex_i in SELECTION_MODES:
                 reacted_members = await this_react.users().flatten()
                 reacted_players = [player for player in reacted_members if player in self.players]  # Intersection of reacted_members and self.players
-                if added and this_react.emoji != reaction.emoji and member in reacted_players:
+                if added and this_react.emoji != emoji and member in reacted_players:
                     await this_react.remove(member)
                     reacted_players.remove(member)
                 votes[react_hex_i] = len(reacted_players)
-
-        await channel.send("Votes: {}".format(votes)) # deugging
 
         # COUNT VOTES - Check if complete
         total_votes = 0
@@ -296,7 +290,7 @@ class Game:
         pending_votes = len(self.players) - total_votes
 
         # Vote Complete if...
-        if added: # and (pending_votes + runner_up) <= running_vote[1]:
+        if added: # and (pending_votes + runner_up) <= running_vote[1]: # debugging
             # action and update first - help with race conditions
             if self.teamSelection.lower() == Strings.VOTE_TS.lower():
                 self.teamSelection = SELECTION_MODES[running_vote[0]]
@@ -311,7 +305,7 @@ class Game:
     def get_balanced_teams(self):
         # Get relevent info from helpers
         player_scores = self.get_player_scores()
-        team_combos = self.get_team_combos()
+        team_combos = list(combinations(list(self.players), len(self.players)//2))
 
         # Calc perfectly balanced team based on scores
         score_total = 0
@@ -376,17 +370,10 @@ class Game:
             p_wp = p_data['QWP'] if ('QWP' in p_data and p_data['QWP']) else 0.5
             score_adj = (p_wp * 2) - 1  # +/- 1
             
-            score = p_rank + score_adj 
+            score = p_rank + score_adj
             p_data['Score'] = score
             score_total += score
         return scores 
-
-    def get_team_combos(self):
-        players = self.players
-        combos = list(combinations(list(self.players), len(self.players)//2))
-        for combo in combos:
-            combo = list(combos)
-        return combos
 
     def _get_vote_embed(self, vote: dict={}, winning_vote=None):
         # Count Votes, prep embed fields
