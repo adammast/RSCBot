@@ -387,7 +387,7 @@ class Game:
             combo = list(combos)
         return combos
 
-    def _get_vote_embed(self, vote: dict=None, winning_vote=None):
+    def _get_vote_embed(self, vote: dict={}, winning_vote=None):
         # Count Votes, prep embed fields
         vote_options = []
         votes_casted = []
