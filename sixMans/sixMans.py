@@ -493,6 +493,9 @@ class SixMans(commands.Cog):
         # await self._pre_load_games(user.guild)
         message = reaction.message
         channel = reaction.message.channel
+
+        async for user in reaction.users():
+            await channel.send('{0} has reacted with {1.emoji}!'.format(user, reaction))
         
         # Find Game
         game = self._get_game_by_text_channel(channel)
