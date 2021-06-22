@@ -215,8 +215,8 @@ class Game:
         pick = pick_order[pick_i%len(pick_order)]
         captain_picking = self.captains[0] if pick == 'blue' else self.captains[1]
         
-        if user != captain_picking:
-            return False
+        # if user != captain_picking:   # deugging
+        #     return False
         
         # get player from reaction
         player_picked = self._get_player_from_reaction_emoji(ord(reaction.emoji))
