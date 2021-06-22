@@ -269,17 +269,16 @@ class Game:
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
                 reacted_members = await this_react.users().flatten()
+                await channel.send("Members: {}".format(reacted_members)) # deugging
                 reacted_players = [player for player in reacted_members if player in self.players]  # Intersection of reacted_members and self.players
+                await channel.send("Players: {}".format(reacted_players)) # deugging
                 if added and this_react.emoji != reaction.emoji and member in reacted_players:
+                    await channel.send("Removing reaction of: {0} by: {1}".format(this_react.emoji, member)) # deugging
                     await this_react.remove(member)
                     reacted_players.remove(member)
                 votes[react_hex_i] = reacted_players.count
 
         await channel.send("Votes: {}".format(votes)) # deugging
-
-        # Update embed
-        embed = self._get_vote_embed(votes)
-        await self.info_message.edit(embed=embed)
 
         # COUNT VOTES - Check if complete
         total_votes = 0
@@ -306,6 +305,10 @@ class Game:
                 embed = self._get_vote_embed(vote=votes, winning_vote=running_vote[0])
                 await self.info_message.edit(embed=embed)
                 await self.process_team_selection_method()
+        else:
+            # Update embed
+            embed = self._get_vote_embed(votes)
+            await self.info_message.edit(embed=embed)
 
     def get_balanced_teams(self):
         # Get relevent info from helpers
