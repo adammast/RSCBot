@@ -51,10 +51,6 @@ class Game:
             observer._subject = self
     
         asyncio.create_task(self._notify())
-        
-        if self.teamSelection.lower() == Strings.VOTE_TS.lower():
-            self.vote = None
-        
 
     async def _notify(self, new_state=None):
         if new_state:
@@ -265,11 +261,7 @@ class Game:
 
         if self._hex_i_from_emoji(reaction.emoji) not in SELECTION_MODES:
             await channel.send("Reaction not in Selection Modes") # deugging
-            return 
-        
-        # COUNT UP VOTE TOTALS
-        if not self.vote:
-            self.vote = [None, 0]
+            return
 
         # RECORD VOTES
         self.info_message = await self.textChannel.fetch_message(self.info_message.id)
@@ -307,27 +299,21 @@ class Game:
 
             total_votes += num_votes
         
-        # track top vote
-        if running_vote[1] > self.vote[1]:
-            self.vote = running_vote
-        
         pending_votes = len(self.players) - total_votes
 
         voted_mode = None
         # Vote Complete if...
-        if added and (pending_votes == 0 or (pending_votes + runner_up) <= self.vote[1]):
+        if added: # and (pending_votes + runner_up) <= running_vote[1]:
             # action and update first - help with race conditions
-            voted_mode = SELECTION_MODES[self.vote[0]]
+            voted_mode = SELECTION_MODES[running_vote[0]]
             if self.teamSelection.lower() == Strings.VOTE_TS.lower():
                 self.teamSelection = voted_mode
                 # await self.textChannel.send(self.teamSelection)
-                embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
+                embed = self._get_vote_embed(vote=votes, winning_vote=running_vote[0])
                 await self.info_message.edit(embed=embed)
                 await self.process_team_selection_method()
             else:
                 # in case of weird stuff? This should never be hit.
-                embed = self._get_vote_embed(vote=votes, winning_vote=self.vote[0])
-                await self.info_message.edit(embed=embed)
                 await channel.send("Weird stuff happened") # deugging
 
             # Next Step: Select Teams
