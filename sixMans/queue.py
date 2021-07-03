@@ -59,8 +59,10 @@ class SixMansQueue:
         return self.queue.qsize() >= self.queueMaxSize
 
     async def send_message(self, message='', embed=None):
+        messages = []
         for channel in self.channels:
-            await channel.send(message, embed=embed)
+            messages.append(await channel.send(message, embed=embed))
+        return messages
 
     async def set_team_selection(self, team_selection):
         self.teamSelection = team_selection
