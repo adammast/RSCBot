@@ -194,7 +194,7 @@ class TeamManager(commands.Cog):
 
     @commands.command()
     @commands.guild_only()
-    async def teams(self, ctx, *, franchise_tier_prefix: str):
+    async def teams(self, ctx, *, franchise_tier_identifier: str):
         """Returns a list of teams based on the input. 
         You can either give it the name of a franchise, a tier, or the prefix for a franchise.
         
@@ -202,29 +202,22 @@ class TeamManager(commands.Cog):
         \t[p]teams The Ocean
         \t[p]teams Challenger
         \t[p]teams OCE"""
-        # Prefix
-        prefixes = await self.prefix_cog._prefixes(ctx)
-        if(len(prefixes.items()) > 0):
-            for key, value in prefixes.items():
-                if franchise_tier_prefix.lower() == value.lower():
-                    gm_name = key
-                    franchise_role = self._get_franchise_role(ctx, gm_name)
-                    await ctx.send(embed=await self._format_teams_for_franchise(ctx, franchise_role))
-                    return
+
+        # Franchise Identifier
+        franchise_data = await self._get_franchise_data(ctx, franchise_tier_identifier)
+        if franchise_data:
+            franchise_role, gm_name, franchise_prefix, franchise_name = franchise_data
+            await ctx.send(embed=await self._format_teams_for_franchise(ctx, franchise_role))
+            return
 
         # Tier
         tiers = await self.tiers(ctx)
         for tier in tiers:
-            if tier.lower() == franchise_tier_prefix.lower():
+            if tier.lower() == franchise_tier_identifier.lower():
                 await ctx.send(embed=await self._format_teams_for_tier(ctx, tier))
                 return
 
-        # Franchise name
-        franchise_role = self.get_franchise_role_from_name(ctx, franchise_tier_prefix)
-        if franchise_role is not None:
-            await ctx.send(embed=await self._format_teams_for_franchise(ctx, franchise_role))
-        else:
-            await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
+        await ctx.send("No tier, franchise, prefix, or GM with name: {0}".format(franchise_tier_identifier))
 
     @commands.command()
     @commands.guild_only()
@@ -930,6 +923,14 @@ class TeamManager(commands.Cog):
         if teams and team_name in teams:
             team_roles = await self._team_roles(ctx)
             team_data = team_roles.setdefault(team_name, {})
+            # if not team_data:
+            #     team_data = team_roles.setdefault(team_name.title(), {})
+            # if not team_data:
+            #     team_data = team_roles.setdefault(team_name.capitalize(), {})
+            # if not team_data:
+            #     team_data = team_roles.setdefault(team_name.upper(), {})
+            # if not team_data:
+            #     team_data = team_roles.setdefault(team_name.lower(), {})
             franchise_role_id = team_data["Franchise Role"]
             tier_role_id = team_data["Tier Role"]
             franchise_role = self._find_role(ctx, franchise_role_id)
