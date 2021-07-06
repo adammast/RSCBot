@@ -923,14 +923,6 @@ class TeamManager(commands.Cog):
         if teams and team_name in teams:
             team_roles = await self._team_roles(ctx)
             team_data = team_roles.setdefault(team_name, {})
-            # if not team_data:
-            #     team_data = team_roles.setdefault(team_name.title(), {})
-            # if not team_data:
-            #     team_data = team_roles.setdefault(team_name.capitalize(), {})
-            # if not team_data:
-            #     team_data = team_roles.setdefault(team_name.upper(), {})
-            # if not team_data:
-            #     team_data = team_roles.setdefault(team_name.lower(), {})
             franchise_role_id = team_data["Franchise Role"]
             tier_role_id = team_data["Tier Role"]
             franchise_role = self._find_role(ctx, franchise_role_id)
