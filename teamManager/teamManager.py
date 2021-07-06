@@ -1,3 +1,4 @@
+from sys import prefix
 import discord
 import re
 import ast
@@ -173,8 +174,22 @@ class TeamManager(commands.Cog):
         """Provides a list of all the franchises set up in the server 
         including the name of the GM for each franchise"""
         franchise_roles = self._get_all_franchise_roles(ctx)
-        embed = discord.Embed(title="Franchises:", color=discord.Colour.blue(), 
-            description="{}".format("\n".join([role.name for role in franchise_roles])), thumbnail=ctx.guild.icon_url)
+        franchise_roles.sort(key=lambda role: role.name.lower())
+        
+        prefixes = []
+        franchises = []
+        gms = []
+
+        for role in franchise_roles:
+            franchise_role, gm_name, franchise_prefix, franchise_name = await self._get_franchise_data(ctx, role)
+            prefixes.append(franchise_prefix)
+            franchises.append(franchise_name)
+            gms.append(gm_name)
+
+        embed = discord.Embed(title="Franchises", color=discord.Colour.blue(), thumbnail=ctx.guild.icon_url)
+        embed.add_field(name="Pfx.", value="{}\n".format("\n".join(prefixes)), inline=True)
+        embed.add_field(name="Franchise", value="{}\n".format("\n".join(franchises)), inline=True)
+        embed.add_field(name="General Manager", value="{}\n".format("\n".join(gms)), inline=True)
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -277,9 +292,11 @@ class TeamManager(commands.Cog):
     async def listTiers(self, ctx):
         """Provides a list of all the tiers set up in the server"""
         tiers = await self.tiers(ctx)
+        tier_roles = [self._get_tier_role(ctx, tier) for tier in tiers]
+        tier_roles.sort(key=lambda role: role.position, reverse=True)
         if tiers:
             await ctx.send(
-                "Tiers set up in this server: {0}".format(", ".join(tiers)))
+                "Tiers set up in this server: {0}".format(", ".join(role.mention for role in tier_roles)))
         else:
             await ctx.send("No tiers set up in this server.")
 
@@ -502,10 +519,20 @@ class TeamManager(commands.Cog):
             return False
 
     async def _get_franchise_data(self, ctx, franchise_identifier):
+        """Returns franchise data as 4-set-tuple from a franchise identifier (Franchise name, prefix, role, GM name)."""
         franchise_found = False
+
+        # Role Identifier
+        if franchise_identifier in self._get_all_franchise_roles(ctx):
+            franchise_found = True
+            franchise_role = franchise_identifier
+            gm_name = self._get_gm_name(franchise_role)
+            franchise_prefix = await self.prefix_cog._get_gm_prefix(ctx, gm_name)
+            franchise_name = self.get_franchise_name_from_role(franchise_role)
+
         # GM/Prefix Identifier
         prefixes = await self.prefix_cog._prefixes(ctx)
-        if(len(prefixes.items()) > 0):
+        if not franchise_found and prefixes:
             for key, value in prefixes.items():
                 if franchise_identifier.lower() == key.lower() or franchise_identifier.lower() == value.lower():
                     franchise_found = True
