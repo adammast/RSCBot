@@ -10,7 +10,7 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"MatchDay": 0, "Schedule": {}, "Game": "Rocket League"}
+defaults = {"MatchDay": 0, "Schedules": {}, "Segment": "Regular Season", "Game": "Rocket League"}
 
 class Match(commands.Cog):
     """Used to get the match information"""
@@ -114,21 +114,22 @@ class Match(commands.Cog):
                                "roles corresponding to a team.")
             return
 
+        on_mobile = ctx.message.author.is_on_mobile()
         for team_name in team_names:
-            match_index = await self._team_day_match_index(ctx, team_name,
-                                                     match_day)
-            if match_index is not None:
-                if ctx.message.author.is_on_mobile():
-                    message = await self._format_match_message(ctx, match_index, team_name)
+            team_matches = await self.get_team_matches(ctx, team_name, str(match_day))
+            for match in team_matches:
+                if on_mobile:
+                    message = await self._format_match_message(ctx, match, team_name)
                     await ctx.message.author.send(message)
                 else:
-                    embed = await self._format_match_embed(ctx, match_index, team_name)
+                    embed = await self._format_match_embed(ctx, match, team_name)
                     await ctx.message.author.send(embed=embed)
-            else:
+
+            if not team_matches:
                 await ctx.message.author.send(
-                    "No match on day {0} for {1}".format(match_day,
-                                                         team_name)
+                    "No matches on day {0} for {1}".format(match_day, team_name)
                 )
+
         await ctx.message.delete()
 
     @commands.command(aliases=['lobbyup', 'up'])
@@ -142,7 +143,8 @@ class Match(commands.Cog):
             return
 
         team_name = teams[0]
-        match_data = await self.get_match_from_day_team(ctx, match_day, team_name)
+        # TODO: handle more gracefully for 2s league, simplify logic
+        match_data = await self.get_team_matches(ctx, team_name, match_day)[0]
 
         if not match_data:
             return await ctx.send(":x: Match could not be found")
@@ -292,41 +294,17 @@ class Match(commands.Cog):
             errors.append("Date provided is not valid. "
                           "(Make sure to use the right format.)")
         if not homeRoles:
-            errors.append("Home team roles not found.")
+            errors.append("Home team roles not found ({}).".format(home))
         if not awayRoles:
-            errors.append("Away team roles not found.")
+            errors.append("Away team roles not found ({}).".format(away))
+        if homeRoles[1] != awayRoles[1]:
+            errors.append("Home and Away teams are in different tiers ({}, {})".format(home, away))
         if errors:
             await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
             return
 
-        # Schedule "schema" in pseudo-JSON style:
-        # "schedule": {
-        #   "matches": [ <list of all matches> ],
-        #   "teamDays": { <dict where keys are tuples of team role names and
-        #                 match days with list of indexes of all matches> }
-        # }
-
-        # Load the data we will use. Race conditions are possible, but
-        # our change will be consistent, it might just override what someone
-        # else does if they do it at roughly the same time.
         schedule = await self._schedule(ctx)
-        # Check for pre-existing matches
-        home_match_index = await self._team_day_match_index(
-            ctx, home, match_day)
-        away_match_index = await self._team_day_match_index(
-            ctx, away, match_day)
-        errors = []
-        if home_match_index is not None:
-            errors.append("Home team already has a match for "
-                          "match day {0}".format(match_day))
-        if away_match_index is not None:
-            errors.append("Away team already has a match for "
-                          "match day {0}".format(match_day))
-        if errors:
-            await ctx.send(":x: Could not create match:\n"
-                               "\n  * {0}\n".format("\n  * ".join(errors)))
-            return
 
         match_data = {
             'matchDay': match_day,
@@ -338,17 +316,14 @@ class Match(commands.Cog):
             'streamDetails': None
         }
 
-        # Append new match and create an index in "teamDays" for both teams.
-        matches = schedule.setdefault(self.MATCHES_KEY, [])
-        team_days = schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
+        # Adds match to correct location within Schedules hierarchy
+        franchise_role, tier_role = homeRoles
+        tier_schedule = schedule.setdefault(tier_role.name, {})
+        tier_matches = tier_schedule.setdefault(str(match_day), [])
+        tier_matches.append(match_data)
 
-        home_key = self._team_day_key(home, match_day)
-        team_days[home_key] = len(matches)
-
-        away_key = self._team_day_key(away, match_day)
-        team_days[away_key] = len(matches)
-
-        matches.append(match_data)
+        tier_schedule[str(match_day)] = tier_matches
+        schedule[tier_role.name] = tier_schedule
 
         await self._save_schedule(ctx, schedule)
 
@@ -357,6 +332,7 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
+    # outdated
     async def _set_match_on_stream(self, ctx, match_day, team, stream_details):
         matches = await self._matches(ctx)
         for match in matches:
@@ -368,10 +344,10 @@ class Match(commands.Cog):
         return False
 
     async def _schedule(self, ctx):
-        return await self.config.guild(ctx.guild).Schedule()
+        return await self.config.guild(ctx.guild).Schedules()
 
-    async def _save_schedule(self, ctx, schedule):
-        await self.config.guild(ctx.guild).Schedule.set(schedule)
+    async def _save_schedule(self, ctx, schedules):
+        await self.config.guild(ctx.guild).Schedules.set(schedules)
 
     async def _matches(self, ctx):
         schedule = await self._schedule(ctx)
@@ -382,37 +358,15 @@ class Match(commands.Cog):
         schedule[self.MATCHES_KEY] = matches
         await self._save_schedule(ctx, schedule)
 
-    async def _team_days_index(self, ctx):
-        schedule = await self._schedule(ctx)
-        return schedule.setdefault(self.TEAM_DAY_INDEX_KEY, {})
-
-    async def _save_team_days_index(self, ctx, team_days_index):
-        schedule = await self._schedule(ctx)
-        schedule[self.TEAM_DAY_INDEX_KEY] = team_days_index
-        await self._save_schedule(ctx, schedule)
-
     async def _match_day(self, ctx):
         return await self.config.guild(ctx.guild).MatchDay()
 
     async def _save_match_day(self, ctx, match_day):
         await self.config.guild(ctx.guild).MatchDay.set(match_day)
 
-    async def _team_day_match_index(self, ctx, team, match_day):
-        team_days_index = await self._team_days_index(ctx)
-        team_days_index =  {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in team_days_index.items()}
-        if isinstance(match_day, str):
-            match_day = match_day.lower()
-        return team_days_index.get(
-            self._team_day_key(team.lower(), match_day))
-
-    def _team_day_key(self, team, match_day):
-        return "{0}|{1}".format(team, match_day)
-
-    async def _format_match_embed(self, ctx, match_index, user_team_name):
-        matches = await self._matches(ctx)
-        match = matches[match_index]
+    async def _format_match_embed(self, ctx, match, user_team_name):
         # Match format:
-        # match_data = {
+        # match = {
         #     'matchDay': match_day,
         #     'matchDate': match_date,
         #     'home': home,
@@ -437,9 +391,7 @@ class Match(commands.Cog):
             
         return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
 
-    async def _format_match_message(self, ctx, match_index, user_team_name):
-        matches = await self._matches(ctx)
-        match = matches[match_index]
+    async def _format_match_message(self, ctx, match, user_team_name):
         # Match format:
         # match_data = {
         #     'matchDay': match_day,
@@ -469,23 +421,28 @@ class Match(commands.Cog):
         message += await self._create_normal_match_message(ctx, match, user_team_name, home, away)
         return message
 
-    async def get_match_from_day_team(self, ctx, match_day, team_name):
-        matches = await self._matches(ctx)
-        # Match format:
-        # match_data = {
-        #     'matchDay': match_day,
-        #     'matchDate': match_date,
-        #     'home': home,
-        #     'away': away,
-        #     'roomName': roomName,
-        #     'roomPass': roomPass
-        # }
-        for match in matches:
-            if match['matchDay'] == match_day:
-                if match['home'].casefold() == team_name.casefold() or match['away'].casefold() == team_name.casefold():
-                    return match
-        return None
+    # new!
+    async def get_team_matches(self, ctx, team_name, match_day=None):
+        franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
+        schedule = await self._schedule(ctx)
 
+        tier_schedule = schedule.setdefault(tier_role.name, {})
+
+        if match_day:
+            tier_matches = tier_schedule.setdefault(str(match_day), [])
+        else:
+            tier_matches = []
+            for match_day, matches in tier_schedule.items():
+                tier_matches += matches
+        
+        team_matches = []
+        for match in tier_matches:
+            if team_name.lower() in [match['home'].lower(), match['away'].lower()]:
+                team_matches.append(match)
+        
+        return team_matches
+
+    # outdated
     async def set_match_on_stream(self, ctx, match_day, team_name, stream_data):
         matches = await self._matches(ctx)
         for match in matches:
