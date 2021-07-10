@@ -46,11 +46,12 @@ class SixMans(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567896, force_registration=True)
         self.config.register_guild(**defaults)
         self.queueMaxSize = 6
-        self.queues: list[SixMansQueue] = []
-        self.games: list[Game] = []
+        self.queues: dict[list[SixMansQueue]] = {}
+        self.games: dict[list[Game]] = {}
         self.task = self.bot.loop.create_task(self.timeout_queues())
+        self.task = asyncio.create_task(self._pre_load_data())
         self.observers = set()
-
+        
     def cog_unload(self):
         """Clean up when cog shuts down."""
         if self.task:
@@ -63,14 +64,13 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def loadGames(self, ctx: Context):
-        await self._pre_load_queues(ctx.guild)
+        return
         msg = await ctx.send("{0} Please verify that you wish to reload the games.".format(ctx.author.mention))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         pred = ReactionPredicate.yes_or_no(msg, ctx.author)
         await ctx.bot.wait_for("reaction_add", check=pred)
         if pred.result is True:
-            await self._pre_load_games(ctx.guild)
             await ctx.send("Done")
         else:
             await ctx.send(":x: Games **not** reloaded.")
@@ -94,11 +94,10 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def addNewQueue(self, ctx: Context, name, points_per_play: int, points_per_win: int, *channels):
-        await self._pre_load_queues(ctx.guild)
         queue_channels = []
         for channel in channels:
             queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.name == name:
                 await ctx.send(":x: There is already a queue set up with the name: {0}".format(name))
                 return
@@ -110,17 +109,16 @@ class SixMans(commands.Cog):
         points = {Strings.PP_PLAY_KEY: points_per_play, Strings.PP_WIN_KEY: points_per_win}
         team_selection = await self._team_selection(ctx.guild)
         six_mans_queue = SixMansQueue(name, ctx.guild, queue_channels, points, {}, 0, self.queueMaxSize, team_selection)
-        self.queues.append(six_mans_queue)
-        await self._save_queues(ctx.guild, self.queues)
+        self.queues[ctx.guild].append(six_mans_queue)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
 
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def editQueue(self, ctx: Context, current_name, new_name, points_per_play: int, points_per_win: int, *channels):
-        await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.name == current_name:
                 six_mans_queue = queue
                 break
@@ -132,7 +130,7 @@ class SixMans(commands.Cog):
         queue_channels = []
         for channel in channels:
             queue_channels.append(await commands.TextChannelConverter().convert(ctx, channel))
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.name != current_name:
                 if queue.name == new_name:
                     await ctx.send(":x: There is already a queue set up with the name: {0}".format(new_name))
@@ -146,7 +144,7 @@ class SixMans(commands.Cog):
         six_mans_queue.name = new_name
         six_mans_queue.points = {Strings.PP_PLAY_KEY: points_per_play, Strings.PP_WIN_KEY: points_per_win}
         six_mans_queue.channels = queue_channels
-        await self._save_queues(ctx.guild, self.queues)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -157,9 +155,8 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        await self._pre_load_queues(ctx.guild)
         six_mans_queue = None
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.name == queue_name:
                 six_mans_queue = queue
                 break
@@ -172,7 +169,7 @@ class SixMans(commands.Cog):
 
         if valid_ts:
             await six_mans_queue.set_team_selection(valid_ts)
-            await self._save_queues(ctx.guild, self.queues)
+            await self._save_queues(ctx.guild, self.queues[ctx.guild])
             await ctx.send("Done")
         else:
             await ctx.send(":x: **{}** is not a valid team selection method.".format(team_selection))
@@ -181,11 +178,10 @@ class SixMans(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def removeQueue(self, ctx: Context, *, queue_name):
-        await self._pre_load_queues(ctx.guild)
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.name == queue_name:
-                self.queues.remove(queue)
-                await self._save_queues(ctx.guild, self.queues)
+                self.queues[ctx.guild].remove(queue)
+                await self._save_queues(ctx.guild, self.queues[ctx.guild])
                 await ctx.send("Done")
                 return
         await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
@@ -195,8 +191,6 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def queueMultiple(self, ctx: Context, *members: discord.Member):
         """Mass queueing for testing purposes"""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         for member in members:
             if member in six_mans_queue.queue.queue:
@@ -213,7 +207,6 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        await self._pre_load_queues(ctx.guild)
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         if player in six_mans_queue.queue:
             await self._remove_from_queue(player, six_mans_queue)
@@ -228,8 +221,6 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
         
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         game = None
         if gameId is None:
             game = self._get_game_by_text_channel(ctx.channel)
@@ -237,7 +228,7 @@ class SixMans(commands.Cog):
                 await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
                 return
         else:
-            for active_game in self.games:
+            for active_game in self.games[ctx.guild]:
                 if active_game.id == gameId:
                     game = active_game
 
@@ -271,8 +262,6 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         if winning_team.lower() != "blue" and winning_team.lower() != "orange":
             await ctx.send(":x: {0} is an invalid input for `winning_team`. Must be either `Blue` or `Orange`".format(winning_team))
             return
@@ -304,8 +293,6 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["smMove", "moveme"])
     async def moveMe(self, ctx: Context):
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         if ctx.message.channel.category != await self._category(ctx.guild):
             return False
 
@@ -332,8 +319,6 @@ class SixMans(commands.Cog):
     async def lobbyInfo(self, ctx: Context):
         """Gets lobby info for the series that you are involved in"""
         # TODO: fails after cog is reloaded
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         if ctx.message.channel.category != await self._category(ctx.guild):
             return False
 
@@ -365,15 +350,13 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["q"])
     async def queue(self, ctx: Context):
         """Add yourself to the queue"""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         player = ctx.message.author
 
         if player in six_mans_queue.queue.queue:
             await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
             return
-        for game in self.games:
+        for game in self.games[ctx.guild]:
             if player in game:
                 await ctx.send(":x: You are already in a game")
                 return
@@ -386,7 +369,6 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["dq", "lq", "leaveq", "leaveQ", "unqueue", "unq", "uq"])
     async def dequeue(self, ctx: Context):
         """Remove yourself from the queue"""
-        await self._pre_load_queues(ctx.guild)
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         player = ctx.message.author
 
@@ -400,8 +382,6 @@ class SixMans(commands.Cog):
     async def cancelGame(self, ctx: Context):
         """Cancel the current game. Can only be used in a game channel.
         The game will end with no points given to any of the players. The players with then be allowed to queue again."""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         game = self._get_game_by_text_channel(ctx.channel)
         if game is None:
             await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
@@ -435,8 +415,6 @@ class SixMans(commands.Cog):
         Only valid after 10 minutes have passed since the game started. Both teams will need to verify the results.
 
         `winning_team` must be either `Blue` or `Orange`"""
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         game_time = ctx.message.created_at - ctx.channel.created_at
         if game_time.seconds < MINIMUM_GAME_TIME:
             await ctx.send(":x: You can't report a game outcome until at least **10 minutes** have passed since the game was created."
@@ -491,7 +469,6 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def on_reaction_add(self, reaction, user):
-        # await self._pre_load_games(user.guild)
         channel = reaction.message.channel
         await self.process_six_mans_reaction_add(reaction.message, channel, user, reaction.emoji) 
 
@@ -526,9 +503,8 @@ class SixMans(commands.Cog):
         #TODO: Error catch if Q Lobby VC is deleted
         if type(channel) != discord.TextChannel:
             return
-        await self._pre_load_queues(channel.guild)
         queue = None
-        for queue in self.queues:
+        for queue in self.queues[channel.guild]:
             if channel in queue.channels:
                 queue.channels.remove(channel)
                 break
@@ -540,7 +516,7 @@ class SixMans(commands.Cog):
         helper_ping = " {}".format(helper_role.mention) if helper_role else ""
         await clone.send(":grey_exclamation:{0} This channel has been created because the last textChannel for the **{1}** queue has been deleted.".format(helper_ping, queue.name))
         queue.channels.append(clone)
-        await self._save_queues(channel.guild, self.queues)
+        await self._save_queues(channel.guild, self.queues[ctx.guild])
 
     #endregion
 
@@ -556,10 +532,9 @@ class SixMans(commands.Cog):
     @queueLeaderBoard.command(aliases=["all-time", "alltime"])
     async def overall(self, ctx: Context, *, queue_name: str = None):
         """All-time leader board"""
-        await self._pre_load_queues(ctx.guild)
         players = None
         if queue_name is not None:
-            for queue in self.queues:
+            for queue in self.queues[ctx.guild]:
                 if queue.name.lower() == queue_name.lower():
                     queue_name = queue.name
                     players = queue.players
@@ -580,10 +555,9 @@ class SixMans(commands.Cog):
     @queueLeaderBoard.command(aliases=["daily"])
     async def day(self, ctx: Context, *, queue_name: str = None):
         """Daily leader board. All games from the last 24 hours will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
         players, games_played = self._filter_scores(scores, day_ago, queue_id)
 
@@ -599,10 +573,9 @@ class SixMans(commands.Cog):
     @queueLeaderBoard.command(aliases=["weekly", "wk"])
     async def week(self, ctx: Context, *, queue_name: str = None):
         """Weekly leader board. All games from the last week will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
         players, games_played = self._filter_scores(scores, week_ago, queue_id)
 
@@ -618,10 +591,9 @@ class SixMans(commands.Cog):
     @queueLeaderBoard.command(aliases=["monthly", "mnth"])
     async def month(self, ctx: Context, *, queue_name: str = None):
         """Monthly leader board. All games from the last 30 days will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
         players, games_played = self._filter_scores(scores, month_ago, queue_id)
 
@@ -646,10 +618,9 @@ class SixMans(commands.Cog):
     @rank.command(aliases=["all-time", "overall"])
     async def alltime(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
         """All-time ranks"""
-        await self._pre_load_queues(ctx.guild)
         players = None
         if queue_name is not None:
-            for queue in self.queues:
+            for queue in self.queues[ctx.guild]:
                 if queue.name.lower() == queue_name.lower():
                     queue_name = queue.name
                     players = queue.players
@@ -669,10 +640,9 @@ class SixMans(commands.Cog):
     @rank.command(aliases=["day"])
     async def daily(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
         """Daily ranks. All games from the last 24 hours will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
         players = self._filter_scores(scores, day_ago, queue_id)[0]
 
@@ -689,10 +659,9 @@ class SixMans(commands.Cog):
     @rank.command(aliases=["week", "wk"])
     async def weekly(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
         """Weekly ranks. All games from the last week will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         week_ago = datetime.datetime.now() - datetime.timedelta(weeks=1)
         players = self._filter_scores(scores, week_ago, queue_id)[0]
 
@@ -709,10 +678,9 @@ class SixMans(commands.Cog):
     @rank.command(aliases=["month", "mnth"])
     async def monthly(self, ctx: Context, player: discord.Member = None, *, queue_name: str = None):
         """Monthly ranks. All games from the last 30 days will count"""
-        await self._pre_load_queues(ctx.guild)
         scores = await self._scores(ctx.guild)
 
-        queue_id = self._get_queue_id_by_name(queue_name)
+        queue_id = self._get_queue_id_by_name(ctx.guild, queue_name)
         month_ago = datetime.datetime.now() - datetime.timedelta(days=30)
         players = self._filter_scores(scores, month_ago, queue_id)[0]
 
@@ -732,7 +700,6 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["cq", "status"])
     async def checkQueue(self, ctx: Context):
-        await self._pre_load_queues(ctx.guild)
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         if six_mans_queue is None:
             await ctx.send(":x: No queue set up in this channel")
@@ -757,9 +724,8 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["qn"])
     async def getQueueNames(self, ctx: Context):
-        await self._pre_load_queues(ctx.guild)
         queue_names = ""
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.guild == ctx.guild:
                 queue_names += "{0}\n".format(queue.name)
         await ctx.send("```Queues set up in server:\n{0}```".format(queue_names))
@@ -767,9 +733,8 @@ class SixMans(commands.Cog):
     @commands.guild_only()
     @commands.command(aliases=["qi"])
     async def getQueueInfo(self, ctx: Context, *, queue_name=None):
-        await self._pre_load_queues(ctx.guild)
         if queue_name is not None:
-            for queue in self.queues:
+            for queue in self.queues[ctx.guild]:
                 if queue.name.lower() == queue_name.lower():
                     await ctx.send(embed=self.embed_queue_info(queue))
                     return
@@ -896,13 +861,11 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        await self._pre_load_queues(ctx.guild)
-        await self._pre_load_games(ctx.guild)
         queueGames: dict[int, list[Game]] = {}
-        for game in self.games:
+        for game in self.games[ctx.guild]:
             queueGames.setdefault(game.queue.id, []).append(game)
 
-        embed = self.embed_active_games(queueGames)
+        embed = self.embed_active_games(ctx.guild, queueGames)
         await ctx.channel.send(embed=embed)
 
     @commands.command()
@@ -947,30 +910,31 @@ class SixMans(commands.Cog):
         await self.bot.wait_until_ready()
         while self.bot.get_cog("SixMans") == self:
             deadline = datetime.datetime.now() - datetime.timedelta(seconds=PLAYER_TIMEOUT_TIME)           
-            for queue in self.queues:
-                players_to_remove = []
-                ids_to_remove = []
-                for player_id, join_time in queue.activeJoinLog.items():
-                    if join_time < deadline:
+            for guild in self.bots.guilds:
+                for queue in self.queues[guild]:
+                    players_to_remove = []
+                    ids_to_remove = []
+                    for player_id, join_time in queue.activeJoinLog.items():
+                        if join_time < deadline:
+                            try:
+                                player = self.bot.get_user(player_id)
+                                if player:
+                                    players_to_remove.append(player)
+                                else:
+                                    # Can't see the user (no shared servers)
+                                    ids_to_remove.append(player_id)  
+                            except discord.HTTPException:
+                                pass
+                            except:
+                                ids_to_remove.append(player_id)
+                    for player in players_to_remove:
+                        await self._auto_remove_from_queue(player, queue)
+                    for player_id in ids_to_remove:
                         try:
-                            player = self.bot.get_user(player_id)
-                            if player:
-                                players_to_remove.append(player)
-                            else:
-                                # Can't see the user (no shared servers)
-                                ids_to_remove.append(player_id)  
-                        except discord.HTTPException:
-                            pass
+                            del queue.activeJoinLog[player_id]
                         except:
-                            ids_to_remove.append(player_id)
-                for player in players_to_remove:
-                    await self._auto_remove_from_queue(player, queue)
-                for player_id in ids_to_remove:
-                    try:
-                        del queue.activeJoinLog[player_id]
-                    except:
-                        pass
-            await asyncio.sleep(LOOP_TIME)
+                            pass
+                await asyncio.sleep(LOOP_TIME)
             
     async def _finish_game(self, guild: discord.Guild, game: Game, six_mans_queue: SixMansQueue, winning_team):
         winning_players = []
@@ -1001,7 +965,7 @@ class SixMans(commands.Cog):
         six_mans_queue.gamesPlayed += 1
 
         await self._save_scores(guild, _scores)
-        await self._save_queues(guild, self.queues)
+        await self._save_queues(guild, self.queues[guild])
         await self._save_players(guild, _players)
         await self._save_games_played(guild, _games_played)
 
@@ -1021,8 +985,8 @@ class SixMans(commands.Cog):
                 pass
 
     async def _remove_game(self, guild: discord.Guild, game: Game):
-        self.games.remove(game)
-        await self._save_games(guild, self.games)
+        self.games[guild].remove(game)
+        await self._save_games(guild, self.games[guild])
         await asyncio.sleep(CHANNEL_SLEEP_TIME)
         q_lobby_vc = await self._get_q_lobby_vc(guild)
         try:
@@ -1104,15 +1068,15 @@ class SixMans(commands.Cog):
         
         #Remove players from any other queue they were in
         for player in game.players:
-            for queue in self.queues:
+            for queue in self.queues[ctx.guild]:
                 if player in queue.queue:
                     await self._remove_from_queue(player, queue)
         
         # Notify all players that queue has popped
         # await game.textChannel.send("{}\n".format(", ".join([player.mention for player in game.players])))
 
-        self.games.append(game)
-        await self._save_games(ctx.guild, self.games)
+        self.games[ctx.guild].append(game)
+        await self._save_games(ctx.guild, self.games[ctx.guild])
         return True
 
     async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue):
@@ -1139,7 +1103,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize))
             return None
 
-        for queue in self.queues:
+        for queue in self.queues[ctx.guild]:
             if queue.id == game.queue.id:
                 return game, queue
 
@@ -1169,12 +1133,12 @@ class SixMans(commands.Cog):
             return None, None
 
     def _get_game_by_text_channel(self, channel: discord.TextChannel):
-        for game in self.games:
+        for game in self.games[channel.guild]:
             if game.textChannel == channel:
                 return game
 
     def _get_queue_by_text_channel(self, channel: discord.TextChannel):
-        for six_mans_queue in self.queues:
+        for six_mans_queue in self.queues[channel.guild]:
             for queuechannel in six_mans_queue.channels:
                 if queuechannel == channel:
                     return six_mans_queue
@@ -1183,15 +1147,15 @@ class SixMans(commands.Cog):
         if queue_name is None:
             return guild.name
         else:
-            for queue in self.queues:
+            for queue in self.queues[guild]:
                 if queue.name.lower() == queue_name.lower():
                     return queue.name
 
-    def _get_queue_id_by_name(self, queue_name):
+    def _get_queue_id_by_name(self, guild, queue_name):
         if queue_name is None:
             return None
         else:
-            for queue in self.queues:
+            for queue in self.queues[guild]:
                 if queue.name.lower() == queue_name.lower():
                     return queue.id
 
@@ -1238,8 +1202,6 @@ class SixMans(commands.Cog):
     async def process_six_mans_reaction_removed(self, channel: discord.TextChannel, user: discord.User, emoji):
         if user.bot:
             return
-        # await self._pre_load_games(user.guild)
-        # Un-vote if reaction pertains to a Six Mans TS Vote
         try:
             game = self._get_game_by_text_channel(channel)
 
@@ -1291,11 +1253,11 @@ class SixMans(commands.Cog):
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
-    def embed_active_games(self, queueGames: Dict[int, List[Game]]):
+    def embed_active_games(self, guild, queueGames: Dict[int, List[Game]]):
         embed = discord.Embed(title="{0} Mans Active Games".format(self.queueMaxSize), color=discord.Colour.blue())
         for queueId in queueGames.keys():
             games = queueGames[queueId]
-            queueName = next(queue.name for queue in self.queues if queue.id == queueId)
+            queueName = next(queue.name for queue in self.queues[guild] if queue.id == queueId)
             embed.add_field(name="{}:".format(queueName), value="{}".format("\n".join(["{0}\n{1}".format(str(game.id), ", ".join([player.mention for player in game.players])) for game in games])), inline=False)
         return embed
 
@@ -1367,24 +1329,28 @@ class SixMans(commands.Cog):
 #endregion
 
 #region load/save methods
+    async def _pre_load_data(self):
+        await self.bot.wait_until_ready()
+        # tier_schedule = schedule.setdefault(tier_role.name, {})
+        self.queues = {}
+        self.games = {}
 
-    async def _pre_load_queues(self, guild: discord.Guild):
-        if self.queues is None or self.queues == [] or self.queues[0].guild != guild:
+        for guild in self.bot.guilds:
+            self.queues[guild] = []
+            self.games[guild] = []
+
+            # Pre-load Queues
             queues = await self._queues(guild)
-            self.queues = []
-            default_team_selection = await self._team_selection(guild)
             for key, value in queues.items():
+                default_team_selection = await self._team_selection(guild)
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
                 team_selection = value["TeamSelection"] if "TeamSelection" in value else default_team_selection
                 six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, value["Points"], value["Players"], value["GamesPlayed"], self.queueMaxSize, team_selection)
                 six_mans_queue.id = int(key)
-                self.queues.append(six_mans_queue)
-
-    async def _pre_load_games(self, guild: discord.Guild):
-        await self._pre_load_queues(guild)
-        category = await self._category(guild)
-        if self.games is None or self.games == [] or self.games[0].queue.guild != guild:
+                self.queues[guild].append(six_mans_queue)
+            
+            # Pre-load Games
             games = await self._games(guild)
             game_list = []
             for key, value in games.items():
@@ -1394,7 +1360,7 @@ class SixMans(commands.Cog):
                 queueId = value["QueueId"]
 
                 queue = None
-                for q in self.queues:
+                for q in self.queues[guild]:
                     if q.id == queueId:
                         queue = q
                         
@@ -1413,8 +1379,8 @@ class SixMans(commands.Cog):
                     await game.process_team_selection_method()
                 game.scoreReported = value["ScoreReported"]
                 game_list.append(game)
-
-            self.games = game_list
+            
+            self.games[guild] = game_list
 
     async def _games(self, guild: discord.Guild):
         return await self.config.guild(guild).Games()
