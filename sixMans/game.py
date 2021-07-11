@@ -132,42 +132,6 @@ class Game:
         reacts = [hex(key) for key in SELECTION_MODES.keys()]
         await self._add_reactions(reacts, self.info_message)
 
-    async def pick_balanced_teams(self):
-        balanced_teams, balance_score = self.get_balanced_teams()
-        self.balance_score = balance_score
-        # Pick random balanced team
-        blue = random.choice(balanced_teams)
-        orange = []
-        for player in self.players:
-            if player not in blue:
-                orange.append(player)
-        for player in blue:
-            await self.add_to_blue(player)
-        for player in orange:
-            await self.add_to_orange(player)
-        
-        self.reset_players()
-        self.get_new_captains_from_teams()
-
-        await self.update_game_info()
-        
-    async def pick_random_teams(self):
-        self.blue = set()
-        self.orange = set()
-        for player in random.sample(self.players, int(len(self.players)//2)):
-            await self.add_to_orange(player)
-        blue = [player for player in self.players]
-        for player in blue:
-            await self.add_to_blue(player)
-        self.reset_players()
-        self.get_new_captains_from_teams()
-
-        await self.update_game_info()
-
-    async def shuffle_players(self):
-        await self.pick_random_teams()
-        await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
-
     async def captains_pick_teams(self, helper_role=None):
         if not helper_role:
             helper_role = self.helper_role
@@ -197,6 +161,45 @@ class Game:
         
         await self._add_reactions(self.react_player_picks.keys(), self.info_message)
 
+    async def pick_random_teams(self):
+        self.blue = set()
+        self.orange = set()
+        for player in random.sample(self.players, int(len(self.players)//2)):
+            await self.add_to_orange(player)
+        blue = [player for player in self.players]
+        for player in blue:
+            await self.add_to_blue(player)
+        self.reset_players()
+        self.get_new_captains_from_teams()
+
+        await self.update_game_info()
+
+    async def pick_balanced_teams(self):
+        balanced_teams, balance_score = self.get_balanced_teams()
+        self.balance_score = balance_score
+        # Pick random balanced team
+        blue = random.choice(balanced_teams)
+        orange = []
+        for player in self.players:
+            if player not in blue:
+                orange.append(player)
+        for player in blue:
+            await self.add_to_blue(player)
+        for player in orange:
+            await self.add_to_orange(player)
+        
+        self.reset_players()
+        self.get_new_captains_from_teams()
+
+        await self.update_game_info()
+    
+    async def self_picking_teams(self):
+        pass
+
+    async def shuffle_players(self):
+        await self.pick_random_teams()
+        await self.info_message.add_reaction(Strings.SHUFFLE_REACT)
+
 # Team Selection helpers
     async def process_team_selection_method(self, team_selection=None):
         if not team_selection:
@@ -213,6 +216,8 @@ class Game:
             await self.shuffle_players()
         elif team_selection == Strings.BALANCED_TS.lower():
             await self.pick_balanced_teams()
+        elif team_selection == Strings.SELF_PICKING_TS.lower():
+            await self.self_picking_teams()
         elif team_selection == Strings.DEFAULT_TS.lower():
             if self.queue.teamSelection.lower() != team_selection:
                 return self.process_team_selection_method(self.queue.teamSelection)
