@@ -8,6 +8,7 @@ class Strings:
     PLAYER_WINS_KEY = "Wins"
 
     # Team Selection
+    DEFAULT_TS = 'Default'
     VOTE_TS = 'Vote'
     RANDOM_TS = 'Random'
     SHUFFLE_TS = 'Shuffle'
@@ -22,6 +23,7 @@ class Strings:
     # Game states
     TEAM_SELECTION_GS = "team selection"
     ONGOING_GS = "ongoing"
+    CANCELED_GS = "canceled"
     GAME_OVER_GS = "game over"
 
     # Lobby Info

@@ -25,6 +25,7 @@ class Game:
             text_channel: discord.TextChannel=None, 
             voice_channels: List[discord.VoiceChannel]=[],
             info_message: discord.Message=None,
+            use_reactions=True,
             observers=None):
         self.id = uuid.uuid4().int
         self.players = set(players)
@@ -34,9 +35,10 @@ class Game:
         self.roomName = self._generate_name_pass()
         self.roomPass = self._generate_name_pass()
         self.queue = queue
+        self.use_reactions = use_reactions
         self.scoreReported = False
         self.teamSelection = queue.teamSelection
-        self.game_state = Strings.TEAM_SELECTION_GS
+        self.state = Strings.TEAM_SELECTION_GS
         
         # Optional params
         self.helper_role = helper_role
@@ -54,7 +56,7 @@ class Game:
 
     async def _notify(self, new_state=None):
         if new_state:
-            self.game_state = new_state
+            self.state = new_state
         for observer in self.observers:
             try:
                 await observer.update(self)
@@ -64,11 +66,13 @@ class Game:
 
 # Team Management
     async def create_game_channels(self, category=None):
+        if not category:
+            category = self.queue.category
         guild = self.queue.guild
         # sync permissions on channel creation, and edit overwrites (@everyone) immediately after
         code = str(self.id)[-3:]
         self.textChannel = await guild.create_text_channel(
-            "{} {} {} Mans".format(code, self.queue.name, self.queue.queueMaxSize), 
+            "{} {} {} Mans".format(code, self.queue.name, self.queue.maxSize), 
             permissions_synced=True,
             category=category
         )
@@ -193,18 +197,26 @@ class Game:
         await self._add_reactions(self.react_player_picks.keys(), self.info_message)
 
 # Team Selection helpers
-    async def process_team_selection_method(self):
+    async def process_team_selection_method(self, team_selection=None):
+        if not team_selection:
+            team_selection = self.teamSelection
+        team_selection = team_selection.lower()
         helper_role = self.helper_role
-        if self.teamSelection.lower() == Strings.VOTE_TS.lower():
+        if team_selection == Strings.VOTE_TS.lower():
             await self.vote_team_selection()
-        elif self.teamSelection.lower() == Strings.CAPTAINS_TS.lower():
+        elif team_selection == Strings.CAPTAINS_TS.lower():
             await self.captains_pick_teams(helper_role)
-        elif self.teamSelection.lower() == Strings.RANDOM_TS.lower():
+        elif team_selection == Strings.RANDOM_TS.lower():
             await self.pick_random_teams()
-        elif self.teamSelection.lower() == Strings.SHUFFLE_TS.lower():
+        elif team_selection == Strings.SHUFFLE_TS.lower():
             await self.shuffle_players()
-        elif self.teamSelection.lower() == Strings.BALANCED_TS.lower():
+        elif team_selection == Strings.BALANCED_TS.lower():
             await self.pick_balanced_teams()
+        elif team_selection == Strings.DEFAULT_TS.lower():
+            if self.queue.teamSelection.lower() != team_selection:
+                return self.process_team_selection_method(self.queue.teamSelection)
+            guild_ts = await self._guild_team_selection()
+            return self.process_team_selection_method(guild_ts)
         else:
             return print("you messed up fool: {}".format(self.teamSelection))
 
@@ -342,6 +354,7 @@ class Game:
         rank_total = 0
         wp_players = 0
         wp_total = 0
+        # Get each player's "rank" and QWP
         for player in self.players:
             player_stats = self.queue.get_player_summary(player)
 
@@ -373,6 +386,9 @@ class Game:
             score = p_rank + score_adj
             p_data['Score'] = score
             score_total += score
+        
+        # p_data['AvgPlayerScore'] = score_total/len(self.players)
+
         return scores 
 
     def _get_vote_embed(self, vote: dict={}, winning_vote=None):
@@ -455,6 +471,7 @@ class Game:
 
     async def report_winner(self, winner):
         await self.color_embed_for_winners(winner)
+        self.scoreReported = True
         await self._notify(new_state=Strings.GAME_OVER_GS)
 
     async def color_embed_for_winners(self, winner):
@@ -504,7 +521,7 @@ class Game:
     async def update_game_info(self, helper_role=None, invalid=False, prefix='?'):
         if not helper_role:
             helper_role = self.helper_role
-        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.queueMaxSize)
+        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
         embed_color = discord.Colour.green()
         if invalid:
             sm_title += " :x: [Teams Changed]"
@@ -631,7 +648,11 @@ class Game:
             "HelperRole": helper_role,
             "TeamSelection": self.teamSelection,
             "InfoMessage": info_msg,
-            "State": self.game_state
+            "UseReactions": self.use_reactions,
+            "State": self.state
         }
 
         return game_dict
+
+    async def _guild_team_selection(self):
+        return await self.config.guild(self.queue.guild).DefaultTeamSelection()
