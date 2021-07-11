@@ -617,6 +617,7 @@ class SixMans(commands.Cog):
 
         queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
         queue_id = queue.id if queue else None
+        queue_name = queue.name if queue else ctx.guild.name
         day_ago = datetime.datetime.now() - datetime.timedelta(days=1)
         players, games_played = self._filter_scores(ctx.guild, scores, day_ago, queue_id)
 
@@ -624,7 +625,6 @@ class SixMans(commands.Cog):
             await ctx.send(":x: Queue leaderboard not available for {0}".format(queue_name))
             return
 
-        queue_name = queue.name if queue else ctx.guild.name
         sorted_players = self._sort_player_dict(players)
         await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue, games_played, "Daily"))
 
