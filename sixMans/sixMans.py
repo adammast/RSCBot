@@ -212,7 +212,6 @@ class SixMans(commands.Cog):
         if not await self.has_perms(ctx.author):
             return
 
-        
         if len(args) == 1:
             game_id = None
             team_selection = args
