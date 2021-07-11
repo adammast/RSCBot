@@ -50,14 +50,17 @@ class SixMans(commands.Cog):
         self.queues: dict[list[SixMansQueue]] = {}
         self.games: dict[list[Game]] = {}
         self.queueMaxSize: dict[int] = {}
+        self.player_timeout_time: dict[int] = {}
         self.task = asyncio.create_task(self._pre_load_data())
+        self.timeout_tasks = {}
         # self.task = self.bot.loop.create_task(self.timeout_queues())
         self.observers = set()
         
     def cog_unload(self):
         """Clean up when cog shuts down."""
-        if self.task:
-            self.task.cancel()
+        for player, tasks in self.timeout_tasks.items():
+            for queue, timeout_task in tasks.items():
+                timeout_task.cancel()
 
 #region commmands
 
@@ -543,6 +546,7 @@ class SixMans(commands.Cog):
 
     @commands.Cog.listener("on_reaction_remove")
     async def on_reaction_remove(self, reaction, user):
+        return
         await self.process_six_mans_reaction_removed(reaction.message.channel, user, reaction.emoji)
 
     @commands.Cog.listener("on_raw_reaction_remove")
@@ -974,12 +978,34 @@ class SixMans(commands.Cog):
         six_mans_queue._remove(player)
         embed = self.embed_player_removed(player, six_mans_queue)
         await six_mans_queue.send_message(embed=embed)
+        await self.cancel_timeout_task(player, six_mans_queue)
 
     async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         try:
             await self._remove_from_queue(player, six_mans_queue)
             await player.send("You have been timed out from the {0} {1} Mans queue. You'll need to use the "
                 "queue command again if you wish to play some more.".format(six_mans_queue.name), six_mans_queue.maxSize)
+        except:
+            pass
+
+    async def create_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
+        # tier_schedule = schedule.setdefault(tier_role.name, {})
+        player_timeouts = self.timeout_tasks(player, {})
+        self.timeout_tasks[player][six_mans_queue] = asyncio.create_task(self.player_queue_timeout(player, six_mans_queue, time))
+
+    async def player_queue_timeout(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
+        if not time:
+            time = self.player_queue_timeout[six_mans_queue.guild]
+
+        await asyncio.sleep(time)
+        await self._auto_remove_from_queue(player, six_mans_queue)
+    
+    async def cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
+        try:
+            self.timeout_tasks[player][six_mans_queue].cancel()
+            del self.timeout_tasks[player][six_mans_queue]
+            if not self.timeout_tasks[player]:
+                del self.timeout_tasks[player]
         except:
             pass
 
@@ -1423,8 +1449,9 @@ class SixMans(commands.Cog):
             self.queues[guild] = []
             self.games[guild] = []
 
-            # Preload Default Queue Sizes
+            # Preload General Data
             self.queueMaxSize[guild] = await self._get_queue_max_size(guild)
+            self.player_timeout_time[guild] = PLAYER_TIMEOUT_TIME
 
             # Pre-load Queues
             queues = await self._queues(guild)
