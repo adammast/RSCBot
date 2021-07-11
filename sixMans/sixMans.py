@@ -13,12 +13,12 @@ from .game import Game
 from .queue import SixMansQueue
 from .strings import Strings
 
-DEBUG = True
-MINIMUM_GAME_TIME = 600                     # Seconds (10 Minutes)
-PLAYER_TIMEOUT_TIME = 14400                 # How long players can be in a queue in seconds (4 Hours)
-LOOP_TIME = 5                               # How often to check the queues in seconds
-VERIFY_TIMEOUT = 15                         # How long someone has to react to a prompt (seconds)
-CHANNEL_SLEEP_TIME = 5 if DEBUG else 30     # How long channels will persist after a game's score has been reported (seconds)
+DEBUG = False
+MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
+PLAYER_TIMEOUT_TIME = 10 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
+LOOP_TIME = 5                                   # How often to check the queues in seconds
+VERIFY_TIMEOUT = 15                             # How long someone has to react to a prompt (seconds)
+CHANNEL_SLEEP_TIME = 5 if DEBUG else 30         # How long channels will persist after a game's score has been reported (seconds)
 
 QTS_METHODS = [
     Strings.VOTE_TS,
@@ -53,7 +53,6 @@ class SixMans(commands.Cog):
         self.player_timeout_time: dict[int] = {}
         self.task = asyncio.create_task(self._pre_load_data())
         self.timeout_tasks = {}
-        # self.task = self.bot.loop.create_task(self.timeout_queues())
         self.observers = set()
         
     def cog_unload(self):
@@ -973,6 +972,7 @@ class SixMans(commands.Cog):
         six_mans_queue._put(player)
         embed = self.embed_player_added(player, six_mans_queue)
         await six_mans_queue.send_message(embed=embed)
+        await self.create_timeout_task(player, six_mans_queue, self.player_timeout_time[six_mans_queue.guild])
 
     async def _remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         six_mans_queue._remove(player)
@@ -983,14 +983,16 @@ class SixMans(commands.Cog):
     async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         try:
             await self._remove_from_queue(player, six_mans_queue)
-            await player.send("You have been timed out from the {0} {1} Mans queue. You'll need to use the "
-                "queue command again if you wish to play some more.".format(six_mans_queue.name), six_mans_queue.maxSize)
+            auto_remove_msg = (
+                "You have been timed out from the {0} {1} Mans queue. You'll need to use the "
+                + "queue command again if you wish to play some more."
+            )
+            await player.send(auto_remove_msg.format(six_mans_queue.name, six_mans_queue.maxSize))
         except:
             pass
 
     async def create_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
-        # tier_schedule = schedule.setdefault(tier_role.name, {})
-        player_timeouts = self.timeout_tasks(player, {})
+        player_timeouts = self.timeout_tasks.setdefault(player, {})
         self.timeout_tasks[player][six_mans_queue] = asyncio.create_task(self.player_queue_timeout(player, six_mans_queue, time))
 
     async def player_queue_timeout(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
@@ -998,8 +1000,11 @@ class SixMans(commands.Cog):
             time = self.player_queue_timeout[six_mans_queue.guild]
 
         await asyncio.sleep(time)
-        await self._auto_remove_from_queue(player, six_mans_queue)
-    
+        try:
+            await self._auto_remove_from_queue(player, six_mans_queue)
+        except:
+            pass
+
     async def cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
         try:
             self.timeout_tasks[player][six_mans_queue].cancel()
@@ -1009,6 +1014,7 @@ class SixMans(commands.Cog):
         except:
             pass
 
+    # TODO: remove
     async def timeout_queues(self):
         """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be timed out."""
         await self.bot.wait_until_ready()
@@ -1441,7 +1447,6 @@ class SixMans(commands.Cog):
 #region load/save methods
     async def _pre_load_data(self):
         await self.bot.wait_until_ready()
-        # tier_schedule = schedule.setdefault(tier_role.name, {})
         self.queues = {}
         self.games = {}
 
