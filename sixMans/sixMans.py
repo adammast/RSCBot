@@ -15,7 +15,7 @@ from .strings import Strings
 
 DEBUG = False
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
-PLAYER_TIMEOUT_TIME = 10 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
+PLAYER_TIMEOUT_TIME = 15 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
 VERIFY_TIMEOUT = 15                             # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30         # How long channels will persist after a game's score has been reported (seconds)
@@ -25,6 +25,7 @@ QTS_METHODS = [
     Strings.CAPTAINS_TS,
     Strings.RANDOM_TS,
     Strings.BALANCED_TS,
+    Strings.SELF_PICKING_TS
 ]  # , Strings.SHUFFLE_TS, Strings.BALANCED_TS]
 defaults = {
     "CategoryChannel": None,
@@ -204,10 +205,25 @@ class SixMans(commands.Cog):
     # team selection
     @commands.guild_only()
     @commands.command(aliases=["fts"])
-    async def forceTeamSelection(self, ctx, team_selection, game_id: int=None):
-        """Forces a popped queue to restart a specified team selection."""
+    async def forceTeamSelection(self, ctx, *, args):
+        """Forces a popped queue to restart a specified team selection.
+        
+        Format: `[p]fts <team_selection> [game_id]`"""
         if not await self.has_perms(ctx.author):
             return
+
+        
+        if len(args) == 1:
+            game_id = None
+            team_selection = args
+        elif len(args) > 1:
+            args = args.split()
+            try:
+                game_id = int(args[-1])
+                team_selection = ' '.join(args[0:-1])
+            except:
+                game_id = None
+                team_selection = ' '.join(args)
 
         game = None
         if game_id:
@@ -1469,8 +1485,8 @@ class SixMans(commands.Cog):
                 queue_name = value["Name"]
                 team_selection = value["TeamSelection"] if ("TeamSelection" in value and value["TeamSelection"]) else default_team_selection
                 queue_size = value["MaxSize"] if ("MaxSize" in value and value["MaxSize"]) else default_queue_size
-                category = value["Category"] if ("Category" in value and value["Category"]) else default_category
-                lobby_vc = value["LobbyVC"] if ("LobbyVC" in value and value["LobbyVC"]) else default_lobby_vc
+                category = guild.get_channel(value["Category"]) if ("Category" in value and value["Category"]) else default_category
+                lobby_vc = guild.get_channel(value["LobbyVC"]) if ("LobbyVC" in value and value["LobbyVC"]) else default_lobby_vc
                 six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, 
                     value["Points"], 
                     value["Players"], 

@@ -13,6 +13,7 @@ class Strings:
     RANDOM_TS = 'Random'
     SHUFFLE_TS = 'Shuffle'
     CAPTAINS_TS = 'Captains'
+    SELF_PICKING_TS = 'Self Picking Teams'
     BALANCED_TS = 'Balanced (beta)'
 
     # Reactions

@@ -12,9 +12,10 @@ from .queue import SixMansQueue
 
 
 SELECTION_MODES  = {
-    0x1F3B2: Strings.RANDOM_TS,     # game_die
-    0x1F1E8: Strings.CAPTAINS_TS,   # C
-    0x0262F: Strings.BALANCED_TS,   # Ying&Yang
+    0x1F3B2: Strings.RANDOM_TS,         # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,       # C
+    0x0262F: Strings.BALANCED_TS,       # yin_yang
+    0x1F530: Strings.SELF_PICKING_TS    # beginner
 }
 
 class Game:
