@@ -204,6 +204,7 @@ class Game:
     async def process_team_selection_method(self, team_selection=None):
         if not team_selection:
             team_selection = self.teamSelection
+        self.reset_players()
         team_selection = team_selection.lower()
         helper_role = self.helper_role
         if team_selection == Strings.VOTE_TS.lower():

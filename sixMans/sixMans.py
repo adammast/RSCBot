@@ -13,9 +13,9 @@ from .game import Game
 from .queue import SixMansQueue
 from .strings import Strings
 
-DEBUG = False
+DEBUG = True
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
-PLAYER_TIMEOUT_TIME = 15 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
+PLAYER_TIMEOUT_TIME = 5 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
 VERIFY_TIMEOUT = 15                             # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30         # How long channels will persist after a game's score has been reported (seconds)
@@ -995,19 +995,57 @@ class SixMans(commands.Cog):
         await six_mans_queue.send_message(embed=embed)
         await self.cancel_timeout_task(player, six_mans_queue)
 
-    async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
+    def get_visble_queue_channel(self, six_mans_queue: SixMansQueue, player: discord.Member):
+        for channel in six_mans_queue.channels:
+            if player in channel.members:
+                return channel
+        return None
+
+    async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
         try:
-            await self._remove_from_queue(player, six_mans_queue)
-            auto_remove_msg = (
-                "You have been timed out from the {0} {1} Mans queue. You'll need to use the "
-                + "queue command again if you wish to play some more."
-            )
-            await player.send(auto_remove_msg.format(six_mans_queue.name, six_mans_queue.maxSize))
+            invite = await channel.create_invite()
+            if type(invite) == discord.Invite:
+                print('works...')
+            return invite
+        except discord.HTTPException:
+            print('http')
+            if retry <= retry_max:
+                return await self.create_invite(channel, retry+1, retry_max)
+            else:
+                return None
+        except Exception as e:
+            print("??")
+            print(e)
+
+    async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
+        # try:
+        await self._remove_from_queue(player, six_mans_queue)
+        auto_remove_msg = (
+            "You have been timed out from the {} {} Mans queue. You'll need to use the "
+            + "queue command again if you wish to play some more."
+        )
+        auto_remove_msg = auto_remove_msg.format(six_mans_queue.name, six_mans_queue.maxSize)
+        try:
+            channel = self.get_visble_queue_channel(six_mans_queue, player)
+            if channel:
+                await channel.send("Channel")
+                # auto_remove_msg += "\n\nYou may rejoin the queue [here]({})!".format(invite.url)
+        except:
+            print("X")
+        
+        invite = await self.create_invite(channel)
+        try:
+            await player.send(auto_remove_msg)
+            if invite:
+                await player.send(invite)
         except:
             pass
-
+        
+        # except:
+        #     pass
+    
     async def create_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
-        player_timeouts = self.timeout_tasks.setdefault(player, {})
+        self.timeout_tasks.setdefault(player, {})
         self.timeout_tasks[player][six_mans_queue] = asyncio.create_task(self.player_queue_timeout(player, six_mans_queue, time))
 
     async def player_queue_timeout(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
