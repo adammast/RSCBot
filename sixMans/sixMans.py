@@ -1338,7 +1338,7 @@ class SixMans(commands.Cog):
 
         # Find Game
         game = self._get_game_by_text_channel(channel)
-        
+        game: Game
         if not game:
             return False
         if message != game.info_message:
@@ -1351,6 +1351,9 @@ class SixMans(commands.Cog):
 
         elif team_selection_mode == Strings.CAPTAINS_TS.lower():
             await game.process_captains_pick(emoji, user)
+        
+        elif team_selection_mode == Strings.SELF_PICKING_TS.lower():
+            await game.process_self_picking_teams(emoji, user, True)
 
         elif team_selection_mode == Strings.SHUFFLE_TS.lower():
             if emoji is not Strings.SHUFFLE_REACT:
@@ -1380,15 +1383,17 @@ class SixMans(commands.Cog):
         # on_raw_reaction_add
         if type(emoji) == discord.partial_emoji.PartialEmoji:
             emoji = emoji.name
-
         try:
             game = self._get_game_by_text_channel(channel)
-
+            game: Game 
             if not game:
                 return False
 
             if game.teamSelection.lower() == Strings.VOTE_TS.lower():
                 await game.process_team_select_vote(emoji, user, added=False)
+            
+            elif game.teamSelection.lower() == Strings.SELF_PICKING_TS.lower():
+                await game.process_self_picking_teams(emoji, user, False)
         except:
             pass
 

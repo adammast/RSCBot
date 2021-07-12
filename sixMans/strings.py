@@ -20,11 +20,13 @@ class Strings:
     SHUFFLE_REACT = "\U0001F500"                # :twisted_rightwards_arrows:
     WHITE_X_REACT = "\U0000274E"                # :negative_squared_cross_mark:
     WHITE_CHECK_REACT = "\U00002705"            # :white_check_mark:
+    BLUE_REACT = 0x1F535                        # :blue_circle:
+    ORANGE_REACT = 0x1F7E0                      # :orange_circle:    
 
     # Game states
     TEAM_SELECTION_GS = "team selection"
     ONGOING_GS = "ongoing"
-    CANCELED_GS = "canceled"
+    CANCELED_GS = "cancelled"
     GAME_OVER_GS = "game over"
 
     # Lobby Info
