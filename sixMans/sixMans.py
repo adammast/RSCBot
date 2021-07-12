@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import random
+from sys import exc_info
 from typing import Dict, List
 
 import discord
@@ -15,7 +16,7 @@ from .strings import Strings
 
 DEBUG = True
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
-PLAYER_TIMEOUT_TIME = 5 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
+PLAYER_TIMEOUT_TIME = 2 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
 VERIFY_TIMEOUT = 15                             # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30         # How long channels will persist after a game's score has been reported (seconds)
@@ -993,9 +994,9 @@ class SixMans(commands.Cog):
         six_mans_queue._remove(player)
         embed = self.embed_player_removed(player, six_mans_queue)
         await six_mans_queue.send_message(embed=embed)
-        await self.cancel_timeout_task(player, six_mans_queue)
+        await self.remove_timeout_task(player, six_mans_queue)
 
-    def get_visble_queue_channel(self, six_mans_queue: SixMansQueue, player: discord.Member):
+    async def get_visble_queue_channel(self, six_mans_queue: SixMansQueue, player: discord.Member):
         for channel in six_mans_queue.channels:
             if player in channel.members:
                 return channel
@@ -1003,46 +1004,49 @@ class SixMans(commands.Cog):
 
     async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
         try:
-            invite = await channel.create_invite()
-            if type(invite) == discord.Invite:
-                print('works...')
-            return invite
+            return await channel.create_invite()
         except discord.HTTPException:
-            print('http')
+            # Try x more times
             if retry <= retry_max:
                 return await self.create_invite(channel, retry+1, retry_max)
             else:
                 return None
-        except Exception as e:
-            print("??")
-            print(e)
 
     async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
-        # try:
+        # Remove player from queue
         await self._remove_from_queue(player, six_mans_queue)
+        
+        # Send Player Message
         auto_remove_msg = (
-            "You have been timed out from the {} {} Mans queue. You'll need to use the "
+            "You have been timed out from the **{} {} Mans queue**. You'll need to use the "
             + "queue command again if you wish to play some more."
         )
         auto_remove_msg = auto_remove_msg.format(six_mans_queue.name, six_mans_queue.maxSize)
-        try:
-            channel = self.get_visble_queue_channel(six_mans_queue, player)
-            if channel:
-                await channel.send("Channel")
-                # auto_remove_msg += "\n\nYou may rejoin the queue [here]({})!".format(invite.url)
-        except:
-            print("X")
-        
+        channel = await self.get_visble_queue_channel(six_mans_queue, player)
+
+        ## GENERATE INVITE
         invite = await self.create_invite(channel)
-        try:
-            await player.send(auto_remove_msg)
-            if invite:
-                await player.send(invite)
-        except:
-            pass
-        
-        # except:
-        #     pass
+
+        ## USE EMBED WITH SUCCESSFUL INVITE GENERATION
+        if invite:
+            invite_msg = "\n\n[Click here to revisit the queue!]({})".format(invite.url)
+            embed = discord.Embed(
+                title="{} Mans Timeout".format(six_mans_queue.maxSize),
+                description=auto_remove_msg + invite_msg,
+                color=discord.Color.red()
+            )
+            embed.set_thumbnail(url=six_mans_queue.guild.icon_url)
+            try:
+                await player.send(embed=embed)
+            except:
+                invite = None
+
+        ## SEND NORMAL DQ MESSAGE FOR FAILED INVITE GENERATION
+        if not invite:
+            try:
+                await player.send(auto_remove_msg)
+            except:
+                pass
     
     async def create_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue, time=None):
         self.timeout_tasks.setdefault(player, {})
@@ -1061,6 +1065,12 @@ class SixMans(commands.Cog):
     async def cancel_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
         try:
             self.timeout_tasks[player][six_mans_queue].cancel()
+            await self.remove_timeout_task(player, six_mans_queue)
+        except:
+            pass
+    
+    async def remove_timeout_task(self, player: discord.Member, six_mans_queue: SixMansQueue):
+        try:
             del self.timeout_tasks[player][six_mans_queue]
             if not self.timeout_tasks[player]:
                 del self.timeout_tasks[player]
