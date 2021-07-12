@@ -558,16 +558,21 @@ class Game:
         embed.set_thumbnail(url=self.queue.guild.icon_url)
 
         # List teams as they stand
-        blue_players = ', '.join(p.mention for p in self.blue) if self.blue else '<No Players>'
-        orange_players = ', '.join(p.mention for p in self.orange) if self.orange else '<No Players>'
-        unplaced_players = ', '.join(p.mention for p in self.players) if self.players else '<No Players>'
+        no_players_str = '[No Players]'
+        blue_players = ', '.join(p.mention for p in self.blue) if self.blue else no_players_str
+        orange_players = ', '.join(p.mention for p in self.orange) if self.orange else no_players_str
+        unplaced_players = ', '.join(p.mention for p in self.players) if self.players else no_players_str
         
+        ts_emoji = self._get_ts_emoji()
+        embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, self.teamSelection), inline=False)
         embed.add_field(name="Blue Team", value=blue_players, inline=False)
         embed.add_field(name="Orange Team", value=orange_players, inline=False)
         embed.add_field(name="Unplaced Players", value=unplaced_players, inline=False)
 
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
         if self.helper_role:
-            embed.add_field(name="Help", value="If you need any help or have questions please contact someone with the {} role.".format(self.helper_role.mention))
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(self.helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
         
         embed.set_footer(text="Game ID: {}".format(self.id))
         return embed
