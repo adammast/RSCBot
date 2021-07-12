@@ -204,7 +204,7 @@ class Game:
     async def process_team_selection_method(self, team_selection=None):
         if not team_selection:
             team_selection = self.teamSelection
-        self.reset_players()
+        self.full_player_reset()
         team_selection = team_selection.lower()
         helper_role = self.helper_role
         if team_selection == Strings.VOTE_TS.lower():
@@ -235,6 +235,15 @@ class Game:
         captain_picking = self.captains[0] if pick == 'blue' else self.captains[1]
         
         if user != captain_picking:
+            self.info_message = await self.textChannel.fetch_message(self.info_message.id)
+            for this_react in self.info_message.reactions:
+                this_react:discord.Reaction
+                reacted_members = await this_react.users().flatten()
+                if user in reacted_members:
+                    try:
+                        await this_react.remove(user)
+                    except:
+                        pass
             return False
         
         # get player from reaction
@@ -282,6 +291,7 @@ class Game:
         votes = {}
         self.info_message = await self.textChannel.fetch_message(self.info_message.id) # this is needed to get the up to date reactions for a message
         for this_react in self.info_message.reactions:
+            this_react:discord.Reaction
             react_hex_i = self._hex_i_from_emoji(this_react.emoji)
             if react_hex_i in SELECTION_MODES:
                 reacted_members = await this_react.users().flatten()
@@ -442,7 +452,7 @@ class Game:
 
         else:
             team_color = discord.Colour.green()
-            description="Teams have been set!"
+            description="Teams are finalized!"
 
         embed = discord.Embed(
             title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
@@ -573,6 +583,11 @@ class Game:
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
+
+    def full_player_reset(self):
+        self.reset_players()
+        self.blue = set()
+        self.orange = set()
 
     def reset_players(self):
         self.players.update(self.orange)

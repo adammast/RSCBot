@@ -16,7 +16,7 @@ from .strings import Strings
 
 DEBUG = True
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
-PLAYER_TIMEOUT_TIME = 2 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
+PLAYER_TIMEOUT_TIME = 10 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
 VERIFY_TIMEOUT = 15                             # How long someone has to react to a prompt (seconds)
 CHANNEL_SLEEP_TIME = 5 if DEBUG else 30         # How long channels will persist after a game's score has been reported (seconds)
@@ -225,7 +225,7 @@ class SixMans(commands.Cog):
                 game_id = None
                 team_selection = ' '.join(args)
 
-        game = None
+        game: Game = None
         if game_id:
             for active_game in self.games[ctx.guild]:
                 if active_game.id == game_id:
