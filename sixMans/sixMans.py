@@ -786,7 +786,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=["cq", "status"])
     async def checkQueue(self, ctx: Context):
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
-        if six_mans_queue is None:
+        if not six_mans_queue:
             await ctx.send(":x: No queue set up in this channel")
             return
         await ctx.send(embed=self.embed_queue_players(six_mans_queue))
@@ -1031,7 +1031,7 @@ class SixMans(commands.Cog):
         if invite:
             invite_msg = "\n\n[Click here to revisit the queue!]({})".format(invite.url)
             embed = discord.Embed(
-                title="{} Mans Timeout".format(six_mans_queue.maxSize),
+                title="{}: {} Mans Timeout".format(six_mans_queue.guild.name, six_mans_queue.maxSize),
                 description=auto_remove_msg + invite_msg,
                 color=discord.Color.red()
             )
@@ -1434,7 +1434,7 @@ class SixMans(commands.Cog):
     def embed_queue_players(self, queue: SixMansQueue):
         player_list = self.format_player_list(queue)
         embed = discord.Embed(title="{0} {1} Mans Queue".format(queue.name, queue.maxSize), color=discord.Colour.blue())
-        embed.add_field(name="Players in Queue", value=player_list, inline=False)
+        embed.add_field(name="Players in Queue ({}/{})".format(len(queue.queue.queue), queue.maxSize), value=player_list, inline=False)
         return embed
 
     def embed_active_games(self, guild, queueGames: Dict[int, List[Game]]):
