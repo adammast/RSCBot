@@ -14,7 +14,7 @@ from .game import Game
 from .queue import SixMansQueue
 from .strings import Strings
 
-DEBUG = True
+DEBUG = False
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
 PLAYER_TIMEOUT_TIME = 10 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
@@ -174,7 +174,6 @@ class SixMans(commands.Cog):
         seconds = minutes*60
         await self._save_player_timeout(ctx.guild, seconds)
         self.player_timeout_time[ctx.guild] = seconds
-
         s_if_plural = "" if minutes == 1 else "s"
         await ctx.send(":white_check_mark: Players in Six Mans Queues will now be timed out after **{} minute{}**.".format(minutes, s_if_plural))
         
@@ -1618,6 +1617,7 @@ class SixMans(commands.Cog):
         await self._save_category(guild, None)
         await self._save_q_lobby_vc(guild, None)
         await self._save_queue_max_size(guild, 6)
+        await self._save_player_timeout(guild, PLAYER_TIMEOUT_TIME)
         await self._save_helper_role(guild, None)
         await self._save_team_selection(guild, Strings.RANDOM_TS)
         await self._save_react_to_vote(guild, True)

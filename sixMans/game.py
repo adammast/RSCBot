@@ -329,18 +329,18 @@ class Game:
         
         # Check if Teams are determined
         teams_finalized = False
-        if len(self.orange) == self.queue.maxSize/2:
+        if len(self.orange) == self.queue.maxSize//2:
             self.blue.update(self.players)
             teams_finalized = True
-        elif len(self.blue) == self.queue.maxSize/2:
+        elif len(self.blue) == self.queue.maxSize//2:
             self.orange.update(self.players)
             teams_finalized = True
         
         if teams_finalized:
             self.reset_players()
+            self.get_new_captains_from_teams()
             await self.update_game_info()
             await self._notify(Strings.ONGOING_GS)
-
 
     async def process_team_select_vote(self, emoji, member, added=True):
         if member not in self.players:
