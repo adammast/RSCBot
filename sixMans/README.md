@@ -79,7 +79,7 @@ Sets the role that will be assigned to individuals to resolve issues with 6 mans
 
 #### `<p>getQueueNames` - Lists names of available queues
 
-#### `<p>fts <team selection> [Queue ID]` - Force team selection
+#### `<p>fts <team selection> [Queue ID]` - Force team selection for a popped queue game
 
 #### `<p>fr <winner>` - Forces result of 6 mans series (Blue/Orange)
 
