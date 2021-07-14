@@ -31,6 +31,14 @@ The `<p>setCategory` can be used to set the category that contains the 6 mans te
 <p>setCategory <cateory id>
 ```
 
+### Set Queue Timeout
+
+The `<p>setQueueTimeout` can be used to declare how long in minutes a player may wait in a queue before being timed out (Default: 240)
+
+```
+<p>setQueueTimeout <minutes>
+```
+
 ### Set Helper Role
 
 Sets the role that will be assigned to individuals to resolve issues with 6 mans queues and games.
@@ -43,6 +51,8 @@ Sets the role that will be assigned to individuals to resolve issues with 6 mans
 
 # Regular Use
 
+#### Common Commands:
+
 #### `<p>q` - Queue for a 6 mans series
 
 #### `<p>dq` - De-Queue from a 6 mans series
@@ -51,6 +61,16 @@ Sets the role that will be assigned to individuals to resolve issues with 6 mans
 
 #### `<p>cg` - Cancel Game
 
+#### Information:
+
+#### `<p>status` - Shows all players who are in the queue
+
+#### `<p>qi` - Shows all "Queue Info"
+
+#### `<p>qlb <timeframe> [queue_name]` - Gets a leaderboard for a timeframe ~~and queue if specified~~
+
+#### `<p>rank [timeframe]` - Enables a player to get a player card of their 6mans rating and overall win statistics
+
 <br>
 
 # Helper Commands
@@ -58,6 +78,8 @@ Sets the role that will be assigned to individuals to resolve issues with 6 mans
 #### `<p>cag` - "Check Active Games" - Lists all ongoing 6 mans series
 
 #### `<p>getQueueNames` - Lists names of available queues
+
+#### `<p>fts <team selection> [Queue ID]` - Force team selection
 
 #### `<p>fr <winner>` - Forces result of 6 mans series (Blue/Orange)
 

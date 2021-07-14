@@ -167,7 +167,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: **{}** is not a valid team selection method.".format(team_selection))
 
     @commands.guild_only()
-    @commands.command(aliases=['setQTO', 'sqto'])
+    @commands.command(aliases=['setQTimeout', 'setQTO', 'sqto'])
     @checks.admin_or_permissions()
     async def setQueueTimeout(self, ctx: Context, minutes: int):
         """Sets the player timeout in minutes for queues in the guild (Default: 240) ."""
@@ -712,7 +712,7 @@ class SixMans(commands.Cog):
     #region rank commands
 
     @commands.guild_only()
-    @commands.group(aliases=["rnk"])
+    @commands.group(aliases=["rnk", "playerCard", "pc"])
     async def rank(self, ctx: Context):
         """Get your rank in points, wins, and games played for the specific queue. If no queue name is given it will show your overall rank across all queues."""
 
