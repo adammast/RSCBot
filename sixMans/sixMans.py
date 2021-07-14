@@ -36,6 +36,7 @@ defaults = {
     "QLobby": None,
     "DefaultTeamSelection": Strings.RANDOM_TS,
     "DefaultQueueMaxSize": 6,
+    "PlayerTimeout": PLAYER_TIMEOUT_TIME,
     "Games": {},
     "Queues": {},
     "GamesPlayed": 0,
@@ -165,6 +166,27 @@ class SixMans(commands.Cog):
         else:
             await ctx.send(":x: **{}** is not a valid team selection method.".format(team_selection))
 
+    @commands.guild_only()
+    @commands.command(aliases=['setQTO', 'sqto'])
+    @checks.admin_or_permissions()
+    async def setQueueTimeout(self, ctx: Context, minutes: int):
+        """Sets the player timeout in minutes for queues in the guild (Default: 240) ."""
+        seconds = minutes*60
+        await self._save_player_timeout(ctx.guild, seconds)
+        self.player_timeout_time[ctx.guild] = seconds
+
+        s_if_plural = "" if minutes == 1 else "s"
+        await ctx.send(":white_check_mark: Players in Six Mans Queues will now be timed out after **{} minute{}**.".format(minutes, s_if_plural))
+        
+    @commands.guild_only()
+    @commands.command(aliases=['getQTO', 'gqto'])
+    async def getQueueTimeout(self, ctx: Context):
+        """Gets the player timeout in minutes for queues in the guild (Default: 240)."""
+        seconds = await self._player_timeout(ctx.guild)
+        minutes = seconds//60
+        s_if_plural = "" if minutes == 1 else "s"
+        await ctx.send("Players in Six Mans Queues are timed out after **{} minute{}**.".format(minutes, s_if_plural))
+    
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -1525,7 +1547,7 @@ class SixMans(commands.Cog):
 
             # Preload General Data
             self.queueMaxSize[guild] = await self._get_queue_max_size(guild)
-            self.player_timeout_time[guild] = PLAYER_TIMEOUT_TIME
+            self.player_timeout_time[guild] = await self._player_timeout(guild) ## if not DEBUG else PLAYER_TIMEOUT_TIME
 
             # Pre-load Queues
             queues = await self._queues(guild)
@@ -1632,6 +1654,12 @@ class SixMans(commands.Cog):
 
     async def _save_games_played(self, guild: discord.Guild, games_played: int):
         await self.config.guild(guild).GamesPlayed.set(games_played)
+
+    async def _player_timeout(self, guild: discord.Guild):
+        return await self.config.guild(guild).PlayerTimeout()
+    
+    async def _save_player_timeout(self, guild: discord.Guild, time_seconds: int):
+        await self.config.guild(guild).PlayerTimeout.set(time_seconds)
 
     async def _players(self, guild: discord.Guild):
         return await self.config.guild(guild).Players()
