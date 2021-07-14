@@ -32,10 +32,11 @@ class SixMansQueue:
         self.category = category
         self.lobby_vc = lobby_vc
         self.activeJoinLog = {}
+        # TODO: active join log could maintain queue during downtime
 
     def _put(self, player):
         self.queue.put(player)
-        self.activeJoinLog[player.id] = datetime.datetime.now()
+        # self.activeJoinLog[player.id] = datetime.datetime.now()
 
     def _get(self):
         player = self.queue.get()

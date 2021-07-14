@@ -1098,38 +1098,6 @@ class SixMans(commands.Cog):
                 del self.timeout_tasks[player]
         except:
             pass
-
-    # TODO: remove
-    async def timeout_queues(self):
-        """Loop task that checks if any players in a queue have been in there longer than the max queue time and need to be timed out."""
-        await self.bot.wait_until_ready()
-        while self.bot.get_cog("SixMans") == self:
-            deadline = datetime.datetime.now() - datetime.timedelta(seconds=PLAYER_TIMEOUT_TIME)           
-            for guild in self.bot.guilds:
-                for queue in self.queues[guild]:
-                    players_to_remove = []
-                    ids_to_remove = []
-                    for player_id, join_time in queue.activeJoinLog.items():
-                        if join_time < deadline:
-                            try:
-                                player = self.bot.get_user(player_id)
-                                if player:
-                                    players_to_remove.append(player)
-                                else:
-                                    # Can't see the user (no shared servers)
-                                    ids_to_remove.append(player_id)  
-                            except discord.HTTPException:
-                                pass
-                            except:
-                                ids_to_remove.append(player_id)
-                    for player in players_to_remove:
-                        await self._auto_remove_from_queue(player, queue)
-                    for player_id in ids_to_remove:
-                        try:
-                            del queue.activeJoinLog[player_id]
-                        except:
-                            pass
-                await asyncio.sleep(LOOP_TIME)
             
     async def _finish_game(self, guild: discord.Guild, game: Game, six_mans_queue: SixMansQueue, winning_team):
         winning_players = []
