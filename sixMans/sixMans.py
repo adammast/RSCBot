@@ -1026,7 +1026,7 @@ class SixMans(commands.Cog):
 
     async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
         try:
-            return await channel.create_invite()
+            return await channel.create_invite(temporary=True) # , max_uses=1, ) # max_age=86400)
         except discord.HTTPException:
             # Try x more times
             if retry <= retry_max:
