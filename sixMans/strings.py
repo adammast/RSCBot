@@ -26,7 +26,7 @@ class Strings:
     # Game states
     TEAM_SELECTION_GS = "team selection"
     ONGOING_GS = "ongoing"
-    CANCELED_GS = "cancelled"
+    CANCELED_GS = "canceled"
     GAME_OVER_GS = "game over"
 
     # Lobby Info
