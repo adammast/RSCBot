@@ -1,7 +1,7 @@
 import asyncio
 import datetime
 import random
-from sys import exc_info
+from sys import exc_info, maxsize
 from typing import Dict, List
 
 import discord
@@ -178,7 +178,7 @@ class SixMans(commands.Cog):
         await ctx.send(":white_check_mark: Players in Six Mans Queues will now be timed out after **{} minute{}**.".format(minutes, s_if_plural))
         
     @commands.guild_only()
-    @commands.command(aliases=['getQTO', 'gqto'])
+    @commands.command(aliases=['getQTO', 'gqto', 'qto'])
     async def getQueueTimeout(self, ctx: Context):
         """Gets the player timeout in minutes for queues in the guild (Default: 240)."""
         seconds = await self._player_timeout(ctx.guild)
@@ -186,6 +186,28 @@ class SixMans(commands.Cog):
         s_if_plural = "" if minutes == 1 else "s"
         await ctx.send("Players in Six Mans Queues are timed out after **{} minute{}**.".format(minutes, s_if_plural))
     
+    @commands.guild_only()
+    @commands.command(aliases=['setQueueSize', 'setQMaxSize', 'setQMS', 'sqms'])
+    @checks.admin_or_permissions()
+    async def setQueueMaxSize(self, ctx: Context, max_size: int):
+        if max_size <= 2:
+            return await ctx.send(":x: Queues sizes must be 4+.")
+        if max_size % 2 == 1:
+            return await ctx.send(":x: Queues sizes must be configured for an even number of players.")
+        
+        for queue in self.queues[ctx.guild]:
+            queue.maxSize = max_size
+        
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
+        await self._save_queue_max_size(ctx.guild, max_size)
+    
+    @commands.guild_only()
+    @commands.command(aliases=['getQMaxSize', 'getQMS', 'gqms', 'qms'])
+    @checks.admin_or_permissions()
+    async def getQueueMaxSize(self, ctx: Context):
+        guild_queue_size = await self._get_queue_max_size(ctx.guild)
+        await ctx.send("Default Queue Size: {}".format(guild_queue_size))
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -1521,7 +1543,7 @@ class SixMans(commands.Cog):
             default_team_selection = await self._team_selection(guild)
             default_category = await self._category(guild)
             default_lobby_vc = await self._get_q_lobby_vc(guild)
-            default_queue_size = await self._get_queue_max_size(guild)
+            default_queue_size = self.queueMaxSize[guild]
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]

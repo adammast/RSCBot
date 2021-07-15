@@ -33,10 +33,18 @@ The `<p>setCategory` can be used to set the category that contains the 6 mans te
 
 ### Set Queue Timeout
 
-The `<p>setQueueTimeout` can be used to declare how long in minutes a player may wait in a queue before being timed out (Default: 240)
+The `<p>setQueueTimeout` can be used to declare how long in minutes a player may wait in a queue before being timed out (Default: 240). This value will apply to all queues set up in the guild.
 
 ```
 <p>setQueueTimeout <minutes>
+```
+
+### Set Queue Sizes
+
+The `<p>setQueueMaxSize` can be used to declare how many players must be in a queue for it to pop (Default: 6). This value will apply to all queues set up in the guild.
+
+```
+<p>setQueueMaxSize <max_size>
 ```
 
 ### Set Helper Role
