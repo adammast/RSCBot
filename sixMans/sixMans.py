@@ -190,6 +190,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=['setQueueSize', 'setQMaxSize', 'setQMS', 'sqms'])
     @checks.admin_or_permissions()
     async def setQueueMaxSize(self, ctx: Context, max_size: int):
+        """Sets the max size for all queues in the guild. (Default: 6)"""
         if max_size <= 2:
             return await ctx.send(":x: Queues sizes must be 4+.")
         if max_size % 2 == 1:
@@ -205,6 +206,7 @@ class SixMans(commands.Cog):
     @commands.command(aliases=['getQMaxSize', 'getQMS', 'gqms', 'qms'])
     @checks.admin_or_permissions()
     async def getQueueMaxSize(self, ctx: Context):
+        """Gets the max size for all queues in the guild. (Default: 6)"""
         guild_queue_size = await self._get_queue_max_size(ctx.guild)
         await ctx.send("Default Queue Size: {}".format(guild_queue_size))
 
