@@ -8,20 +8,25 @@ class Strings:
     PLAYER_WINS_KEY = "Wins"
 
     # Team Selection
+    DEFAULT_TS = 'Default'
     VOTE_TS = 'Vote'
     RANDOM_TS = 'Random'
     SHUFFLE_TS = 'Shuffle'
     CAPTAINS_TS = 'Captains'
+    SELF_PICKING_TS = 'Self Picking Teams'
     BALANCED_TS = 'Balanced (beta)'
 
     # Reactions
     SHUFFLE_REACT = "\U0001F500"                # :twisted_rightwards_arrows:
     WHITE_X_REACT = "\U0000274E"                # :negative_squared_cross_mark:
     WHITE_CHECK_REACT = "\U00002705"            # :white_check_mark:
+    BLUE_REACT = 0x1F535                        # :blue_circle:
+    ORANGE_REACT = 0x1F7E0                      # :orange_circle:    
 
     # Game states
     TEAM_SELECTION_GS = "team selection"
     ONGOING_GS = "ongoing"
+    CANCELED_GS = "canceled"
     GAME_OVER_GS = "game over"
 
     # Lobby Info
