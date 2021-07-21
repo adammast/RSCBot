@@ -9,15 +9,16 @@ from .strings import Strings
 import discord
 
 SELECTION_MODES = {
-    0x1F3B2: Strings.RANDOM_TS,     # game_die
-    0x1F1E8: Strings.CAPTAINS_TS,   # C
-    0x0262F: Strings.BALANCED_TS,   # yin_yang
-    0x0FE0F: Strings.VOTE_TS        # ballot_box
+    0x1F3B2: Strings.RANDOM_TS,         # game_die
+    0x1F1E8: Strings.CAPTAINS_TS,       # C
+    0x0262F: Strings.BALANCED_TS,       # yin_yang
+    0x1F530: Strings.SELF_PICKING_TS,   # beginner
+    0x1F5F3: Strings.VOTE_TS            # ballot_box
 }
 
 class SixMansQueue:
     def __init__(self, name, guild: discord.Guild, channels: List[discord.TextChannel],
-        points, players, gamesPlayed, queueMaxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None,):
+        points, players, gamesPlayed, maxSize, teamSelection=Strings.RANDOM_TS, category: discord.CategoryChannel=None, lobby_vc: discord.VoiceChannel=None):
         self.id = uuid.uuid4().int
         self.name = name
         self.queue = PlayerQueue()
@@ -26,13 +27,16 @@ class SixMansQueue:
         self.points = points
         self.players = players
         self.gamesPlayed = gamesPlayed
-        self.queueMaxSize = queueMaxSize
+        self.maxSize = maxSize
         self.teamSelection = teamSelection
+        self.category = category
+        self.lobby_vc = lobby_vc
         self.activeJoinLog = {}
+        # TODO: active join log could maintain queue during downtime
 
     def _put(self, player):
         self.queue.put(player)
-        self.activeJoinLog[player.id] = datetime.datetime.now()
+        # self.activeJoinLog[player.id] = datetime.datetime.now()
 
     def _get(self):
         player = self.queue.get()
@@ -56,7 +60,7 @@ class SixMansQueue:
             pass
 
     def _queue_full(self):
-        return self.queue.qsize() >= self.queueMaxSize
+        return self.queue.qsize() >= self.maxSize
 
     async def send_message(self, message='', embed=None):
         messages = []
@@ -87,15 +91,19 @@ class SixMansQueue:
             return None
 
     def _to_dict(self):
+        lobby_vc_id = self.lobby_vc.id if self.lobby_vc else None
+        category_id = self.category.id if self.category else None
         return {
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
             "Points": self.points,
             "Players": self.players,
             "GamesPlayed": self.gamesPlayed,
-            "TeamSelection": self.teamSelection
+            "TeamSelection": self.teamSelection,
+            "MaxSize": self.maxSize,
+            "Category": category_id,
+            "LobbyVC": lobby_vc_id
         }
-
 
 class PlayerQueue(Queue):
     def _init(self, maxsize):
