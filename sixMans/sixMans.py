@@ -84,6 +84,15 @@ class SixMans(commands.Cog):
         else:
             await ctx.send(":x: Data **not** cleared.")
 
+    #region admin commands
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def preLoadData(self, ctx: Context):
+        """Reloads all data for the 6mans cog"""
+        await self._pre_load_data()
+        await ctx.send("Done")
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -202,6 +211,7 @@ class SixMans(commands.Cog):
         
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await self._save_queue_max_size(ctx.guild, max_size)
+        await ctx.send("Done")
     
     @commands.guild_only()
     @commands.command(aliases=['getQMaxSize', 'getQMS', 'gqms', 'qms'])
@@ -945,7 +955,10 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def setCategory(self, ctx: Context, category_channel: discord.CategoryChannel):
         """Sets the category channel where all game channels will be created under"""
+        for queue in self.queues[ctx.guild]:
+            queue.category = category_channel
         await self._save_category(ctx.guild, category_channel.id)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -1028,10 +1041,10 @@ class SixMans(commands.Cog):
 #region helper methods
 
     async def has_perms(self, member: discord.Member):
-        helper_role = await self._helper_role(member.guild)
         if member.guild_permissions.administrator:
             return True
-        elif helper_role and helper_role in member.roles:
+        helper_role = await self._helper_role(member.guild)
+        if helper_role and helper_role in member.roles:
             return True
 
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
@@ -1609,7 +1622,6 @@ class SixMans(commands.Cog):
         await self._save_team_selection(guild, Strings.RANDOM_TS)
         await self._save_react_to_vote(guild, True)
         await self._save_automove(guild, False)
-
 
     async def _games(self, guild: discord.Guild):
         return await self.config.guild(guild).Games()
