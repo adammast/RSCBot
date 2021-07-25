@@ -839,11 +839,14 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self.embed_queue_players(six_mans_queue))
 
     @commands.guild_only()
-    @commands.command(aliases=["setQLobby"])
+    @commands.command(aliases=["setQLobby", "setQVC"])
     @checks.admin_or_permissions(manage_guild=True)
     async def setQueueLobby(self, ctx: Context, lobby_voice: discord.VoiceChannel):
         #TODO: Consider having the queues save the Queue Lobby VC
+        for queue in self.queues[ctx.guild]:
+            queue.lobby_vc = lobby_voice
         await self._save_q_lobby_vc(ctx.guild, lobby_voice.id)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
     
     @commands.guild_only()
