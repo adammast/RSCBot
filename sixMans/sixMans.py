@@ -54,7 +54,8 @@ class SixMans(commands.Cog):
         self.games: dict[list[Game]] = {}
         self.queueMaxSize: dict[int] = {}
         self.player_timeout_time: dict[int] = {}
-        self.task = asyncio.create_task(self._pre_load_data())
+
+        asyncio.create_task(self._pre_load_data())
         self.timeout_tasks = {}
         self.observers = set()
         
@@ -1048,16 +1049,6 @@ class SixMans(commands.Cog):
                 return channel
         return None
 
-    async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
-        try:
-            return await channel.create_invite(temporary=True) # , max_uses=1, ) # max_age=86400)
-        except discord.HTTPException:
-            # Try x more times
-            if retry <= retry_max:
-                return await self.create_invite(channel, retry+1, retry_max)
-            else:
-                return None
-
     async def _auto_remove_from_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
         # Remove player from queue
         await self._remove_from_queue(player, six_mans_queue)
@@ -1070,25 +1061,16 @@ class SixMans(commands.Cog):
         auto_remove_msg = auto_remove_msg.format(six_mans_queue.name, six_mans_queue.maxSize)
         channel = await self.get_visble_queue_channel(six_mans_queue, player)
 
-        ## GENERATE INVITE
-        invite = await self.create_invite(channel)
-
-        ## USE EMBED WITH SUCCESSFUL INVITE GENERATION
-        if invite:
-            invite_msg = "\n\n[Click here to revisit the queue!]({})".format(invite.url)
+        try:
+            invite_msg = "\n\nYou may return to {} to rejoin the queue!".format(channel.mention)
             embed = discord.Embed(
                 title="{}: {} Mans Timeout".format(six_mans_queue.guild.name, six_mans_queue.maxSize),
                 description=auto_remove_msg + invite_msg,
                 color=discord.Color.red()
             )
             embed.set_thumbnail(url=six_mans_queue.guild.icon_url)
-            try:
-                await player.send(embed=embed)
-            except:
-                invite = None
-
-        ## SEND NORMAL DQ MESSAGE FOR FAILED INVITE GENERATION
-        if not invite:
+            await player.send(embed=embed)
+        except:
             try:
                 await player.send(auto_remove_msg)
             except:
@@ -1543,16 +1525,27 @@ class SixMans(commands.Cog):
             # Pre-load Queues
             queues = await self._queues(guild)
             default_team_selection = await self._team_selection(guild)
+            default_queue_size = self.queueMaxSize[guild]
             default_category = await self._category(guild)
             default_lobby_vc = await self._get_q_lobby_vc(guild)
-            default_queue_size = self.queueMaxSize[guild]
             for key, value in queues.items():
                 queue_channels = [guild.get_channel(x) for x in value["Channels"]]
                 queue_name = value["Name"]
-                team_selection = value["TeamSelection"] if ("TeamSelection" in value and value["TeamSelection"]) else default_team_selection
-                queue_size = value["MaxSize"] if ("MaxSize" in value and value["MaxSize"]) else default_queue_size
-                category = guild.get_channel(value["Category"]) if ("Category" in value and value["Category"]) else default_category
-                lobby_vc = guild.get_channel(value["LobbyVC"]) if ("LobbyVC" in value and value["LobbyVC"]) else default_lobby_vc
+                team_selection = value.setdefault("TeamSelection", default_team_selection)
+                queue_size = value.setdefault("MaxSize", default_queue_size)
+                if default_category:
+                    category = guild.get_channel(value.setdefault("Category", default_category.id))
+                elif "Category" in value and value["Category"]:
+                    category = value["Category"]
+                else:
+                    category = None
+                
+                if default_lobby_vc:
+                    lobby_vc = guild.get_channel(value.setdefault("Category", default_lobby_vc.id))
+                elif "Category" in value and value["Category"]:
+                    lobby_vc = value["Category"]
+                else:
+                    lobby_vc = None
                 six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, 
                     value["Points"], 
                     value["Players"], 
@@ -1562,7 +1555,6 @@ class SixMans(commands.Cog):
                     category=category,
                     lobby_vc=lobby_vc
                 )
-                six_mans_queue.teamSelection = value["TeamSelection"]
                 
                 six_mans_queue.id = int(key)
                 self.queues[guild].append(six_mans_queue)
