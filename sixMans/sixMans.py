@@ -927,16 +927,13 @@ class SixMans(commands.Cog):
         - **random**: selects random teams
         - **captains**: selects a captain for each team
         - **vote**: players vote for team selection method after queue pops
-        - ~~**balanced**: creates balanced teams from all participating players~~
+        - **balanced (beta)**: creates balanced teams from all participating players
         - ~~**shuffle**: selects random teams, but allows re-shuffling teams after they have been set~~
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
-        team_selection_method = team_selection_method.lower()
+        team_selection_method = team_selection_method.title()
         if team_selection_method not in QTS_METHODS:
             return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
-
-        if team_selection_method in ['vote', 'balanced']:
-            return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
         
         await self._save_team_selection(ctx.guild, team_selection_method)
 
