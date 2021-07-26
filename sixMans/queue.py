@@ -91,19 +91,21 @@ class SixMansQueue:
             return None
 
     def _to_dict(self):
-        lobby_vc_id = self.lobby_vc.id if self.lobby_vc else None
-        category_id = self.category.id if self.category else None
-        return {
+        q_data = {
             "Name": self.name,
             "Channels": [x.id for x in self.channels],
             "Points": self.points,
             "Players": self.players,
             "GamesPlayed": self.gamesPlayed,
             "TeamSelection": self.teamSelection,
-            "MaxSize": self.maxSize,
-            "Category": category_id,
-            "LobbyVC": lobby_vc_id
+            "MaxSize": self.maxSize
         }
+        if self.category:
+            q_data['Category'] = self.category.id
+        if self.lobby_vc:
+            q_data['LobbyVC'] = self.lobby_vc.id
+        
+        return q_data
 
 class PlayerQueue(Queue):
     def _init(self, maxsize):

@@ -88,47 +88,49 @@ class Game:
         # manually add helper role perms if one is set
         if self.helper_role:
             await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
-            await blue_vc.set_permissions(self.helper_role, connect=True)
-            await oran_vc.set_permissions(self.helper_role, connect=True)
+            await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+            await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
         
         self.voiceChannels = [blue_vc, oran_vc]
 
         # Mentions all players
         await self.textChannel.send(', '.join(player.mention for player in self.players))
 
-    async def add_to_blue(self, player):
+    def add_to_blue(self, player):
         if player in self.orange:
             self.orange.remove(player)
         if player in self.players:
             self.players.remove(player)
         self.blue.add(player)
 
-        blue_vc, orange_vc = self.voiceChannels
-        await blue_vc.set_permissions(player, connect=True)
-        await orange_vc.set_permissions(player, connect=False)
-
-        if self.automove:
-            try:
-                await player.move_to(blue_vc)
-            except:
-                pass
-
-    async def add_to_orange(self, player):
+    def add_to_orange(self, player):
         if player in self.blue:
             self.blue.remove(player)
         if player in self.players:
             self.players.remove(player)
         self.orange.add(player)
 
+    async def update_player_perms(self):
         blue_vc, orange_vc = self.voiceChannels
-        await blue_vc.set_permissions(player, connect=False)
-        await orange_vc.set_permissions(player, connect=True)
+        
+        for player in self.orange:
+            await blue_vc.set_permissions(player, connect=False)
+            await orange_vc.set_permissions(player, connect=True)
 
-        if self.automove:
-            try:
-                await player.move_to(orange_vc)
-            except:
-                pass
+            if self.automove:
+                try:
+                    await player.move_to(orange_vc)
+                except:
+                    pass
+        for player in self.blue:
+            await blue_vc.set_permissions(player, connect=True)
+            await orange_vc.set_permissions(player, connect=False)
+
+            if self.automove:
+                try:
+                    await player.move_to(blue_vc)
+                except:
+                    pass
 
 # Team Selection
     async def vote_team_selection(self, helper_role=None):
@@ -169,19 +171,19 @@ class Game:
         self.blue = set()
         self.orange = set()
         for player in random.sample(self.players, int(len(self.players)//2)):
-            await self.add_to_orange(player)
+            self.add_to_orange(player)
         blue = [player for player in self.players]
         for player in blue:
-            await self.add_to_blue(player)
+            self.add_to_blue(player)
         self.reset_players()
         self.get_new_captains_from_teams()
-
+        await self.update_player_perms()
         await self.update_game_info()
 
     async def self_picking_teams(self):
         embed = self._get_spt_embed()
         self.info_message = await self.textChannel.send(embed=embed)
-        await self._add_reactions([Strings.BLUE_REACT, Strings.ORANGE_REACT], self.info_message)
+        await self._add_reactions([Strings.ORANGE_REACT, Strings.BLUE_REACT], self.info_message)
 
     async def pick_balanced_teams(self):
         balanced_teams, balance_score = self.get_balanced_teams()
@@ -193,13 +195,13 @@ class Game:
             if player not in blue:
                 orange.append(player)
         for player in blue:
-            await self.add_to_blue(player)
+            self.add_to_blue(player)
         for player in orange:
-            await self.add_to_orange(player)
+            self.add_to_orange(player)
         
         self.reset_players()
         self.get_new_captains_from_teams()
-
+        await self.update_player_perms()
         await self.update_game_info()
    
     async def shuffle_players(self):
@@ -278,20 +280,24 @@ class Game:
         
         if teams_complete:
             for player in self.blue:
-                await self.add_to_blue(player)
+                self.add_to_blue(player)
             for player in self.orange:
-                await self.add_to_orange(player)
+                self.add_to_orange(player)
             self.reset_players()
+            await self.update_player_perms()
             await self.update_game_info()
         
         return teams_complete
     
     async def process_self_picking_teams(self, emoji, user, added=True):
         self.info_message = await self.textChannel.fetch_message(self.info_message.id)
+        if self.state != Strings.TEAM_SELECTION_GS:
+            return False
         
         if added:
             if ord(emoji) == Strings.ORANGE_REACT:
-                await self.add_to_orange(user)
+                if len(self.orange) < self.queue.maxSize//2:
+                    self.add_to_orange(user)
                 # Remove opposite color reaction
                 for react in self.info_message.reactions:
                     if ord(react.emoji) == Strings.BLUE_REACT:
@@ -302,7 +308,8 @@ class Game:
                             except:
                                 pass
             elif ord(emoji) == Strings.BLUE_REACT:
-                await self.add_to_blue(user)
+                if len(self.blue) < self.queue.maxSize//2:
+                    self.add_to_blue(user)
                 # Remove opposite color reaction
                 for react in self.info_message.reactions:
                     if ord(react.emoji) == Strings.ORANGE_REACT:
@@ -339,6 +346,7 @@ class Game:
         if teams_finalized:
             self.reset_players()
             self.get_new_captains_from_teams()
+            await self.update_player_perms()
             await self.update_game_info()
             await self._notify(Strings.ONGOING_GS)
 
@@ -553,7 +561,7 @@ class Game:
         embed = discord.Embed(
             title="{} Game | Team Selection".format(self.textChannel.name.replace('-', ' ').title()[4:]),
             color=self._get_completion_color(placed, self.queue.maxSize-placed),
-            description="React with :blue_circle: or :orange_circle: to pick your team!"
+            description="React :orange_circle: with or :blue_circle: to pick your team!"
         )
         embed.set_thumbnail(url=self.queue.guild.icon_url)
 
