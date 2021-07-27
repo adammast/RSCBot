@@ -1,15 +1,16 @@
 import asyncio 
 import discord
-from datetime import datetime
+from datetime import date, datetime
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
 
 NEW_MEMBER_JOIN_TIME = 300  # 5 minutes
+ACC_AGE_THRESHOLD = 86400   # 1 day
+DISABLE_BOT_INVITES = False
 
-defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None}
-
+defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None, "BotDetection": False, "WelcomeMessage": None}
 
 class ModeratorLink(commands.Cog):
     def __init__(self, bot):
@@ -22,14 +23,57 @@ class ModeratorLink(commands.Cog):
         self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
         self.STAR_EMOJI = "\U00002B50" # :star:
         self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
-        
+        self.bot_detection = {}
+        self.recently_joined_members = {}
         asyncio.create_task(self._pre_load_data())
 
     def cog_unload(self):
         """Clean up when cog shuts down."""
-        for guild in self.bot.guilds:
-            for name, name_join_data in self.recently_joined_members[guild]:
-                name_join_data['timeout'].cancel()
+        self.cancel_all_tasks()
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def toggleBotDetection(self, ctx: discord.Context):
+        """Enables or disables bot dection for new member joins"""
+        new_bot_detection_status = not await self._get_bot_detection(ctx.guild)
+        await self._save_bot_detection(ctx.guild, new_bot_detection_status)
+        self._get_bot_detection[ctx.guild] = new_bot_detection_status
+
+        if not new_bot_detection_status:
+            await self.cancel_all_tasks(ctx.guild)
+
+        action = "enabled" if new_bot_detection_status else "disabled"
+        message = "Bot detection has been **{}** for this guild.".format(action)
+        await ctx.send(message)
+    
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setWelcomeMessage(self, ctx, *, welcome_message):
+        """Sends a welcome message to the guild's system channel when a new member joins the guild.
+        
+        Notes:
+         - Use `{member}` in your message in place of the newly added member (Optional)
+         - Use `{guild}` in your message in place of the guild name (Optional)
+         - Members or Roles mentioned in the message parameter will be pinged when a message is sent for a newly joined member
+
+        __Examples:__
+         - [p]setWelcomeMessage Hey {member}! Welcome to {guild}! We're happy to have you here.
+         - [p]setWelcomeMessage @WelcomeCommittee we have a newcomer! Everyone welcome {member}! 
+        """
+        await self._save_welcome_message(ctx.guild, welcome_message)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setWelcomeMessage(self, ctx):
+        """Clears welcome message set for the guild, disabling messages for new members."""
+        await self._save_welcome_message(ctx.guild, None)
+        await ctx.send("Done")
+
 
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
@@ -155,15 +199,18 @@ class ModeratorLink(commands.Cog):
         """Processes events for when a member joins the guild such as welcome messages and 
         nickname standardization, and bot purging."""
 
+        # Run bot detection if enabled
+        if self.bot_detection[member.guild]:
+            # Do not process member standardization if member has been detected as a bot
+            if await self.run_bot_detection(member):
+                return
+        
         event_log_channel = await self._event_log_channel(member.guild)
-        
-        if await self.run_bot_detection(member):
-            return
-        
         if event_log_channel:
             await self.process_member_standardization(member)
         
-        # await self.maybe_send_welcome_message(member)
+        # Send welcome message if one exists
+        await self.maybe_send_welcome_message(member)
         
 
     async def process_member_standardization(self, member):
@@ -200,10 +247,14 @@ class ModeratorLink(commands.Cog):
                     return
 
     async def maybe_send_welcome_message(self, member):
-        welcome_msg = "Welcome, {}!".member.format(member.mention)
-        channel = member.guild.system_channel
-        if channel:
-            await channel.send(welcome_msg)
+        guild = member.guild
+        welcome_msg = await self._get_welcome_message(guild)
+        channel = guild.system_channel
+        if channel and welcome_msg:
+            mention_roles = True    # or roles<list>
+            mention_users = True    # or members<list>
+            allowed_mentions = discord.AllowedMentions(roles=mention_roles, users=mention_users)
+            await channel.send(welcome_msg.format(member=member.mention, guild=guild.name), allowed_mentions=allowed_mentions)
     
     #region bot detection
     async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
@@ -232,15 +283,18 @@ class ModeratorLink(commands.Cog):
 
         # TODO: Check blacklisted names
         for blacklist_name in []:  # await self._get_name_blacklist():
-            if member.name in blacklist_name:
+            account_age = (datetime.uctnow() - member.created_at).seconds
+            if member.name in blacklist_name and account_age <= ACC_AGE_THRESHOLD + 10:
                 await self.process_member_kick(member)
                 return True
         return False
 
-    def _pre_load_data(self):
+    async def _pre_load_data(self):
+        self.bot_detection = {}
         self.recently_joined_members = {}
         for guild in self.bot.guilds:
             self.recently_joined_members[guild] = {}
+            self.bot_detection[guild] = await self._get_bot_detection(guild)
     
     def track_member_join(self, member: discord.Member):
         members = self.recently_joined_members[member.guild].setdefault(member.name, {'members': [], 'timeout': None})
@@ -307,6 +361,12 @@ class ModeratorLink(commands.Cog):
                 ))
         except:
             pass
+
+    def cancel_all_tasks(self, guild=None):
+        guilds = [guild] if guild else self.bot.guilds
+        for guild in guilds:
+            for name, join_data in self.recently_joined_members[guild]:
+                join_data['timeout'].cancel()
 
     #endregion bot detection
 
@@ -471,6 +531,19 @@ class ModeratorLink(commands.Cog):
             new_name += " {}".format(rewards)
         return new_name
 
+    #region json data
+    async def _get_bot_detection(self, guild: discord.Guild):
+        return await self.config.guild(guild).BotDetection()
+
+    async def _save_bot_detection(self, guild: discord.Guild, bot_detection: bool):
+        await self.config.guild(guild).BotDetection.set(bot_detection)
+
+    async def _get_welcome_message(self, guild: discord.Guild):
+        return await self.config.guild(guild).WelcomeMessage()
+
+    async def _save_welcome_message(self, guild: discord.Guild, message: str):
+        await self.config.guild(guild).WelcomeMessage.set(message)
+
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
         # await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
@@ -483,3 +556,4 @@ class ModeratorLink(commands.Cog):
 
     async def _get_shared_role_names(self, guild):
         return await self.config.guild(guild).SharedRoles()
+    #endregion json data
