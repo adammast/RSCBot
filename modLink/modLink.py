@@ -419,7 +419,7 @@ class ModeratorLink(commands.Cog):
         # cover case where member leaves, rejoins
         repeat_member = member.id in [m.id for m in member_join_data['members']]
         if repeat_member:
-            if len(member_join_data['members']) > 1:
+            if len(member_join_data['members']) == 1:
                 return False
             return True
         
@@ -450,20 +450,15 @@ class ModeratorLink(commands.Cog):
         else:
             invite = None
         
-        print('a')
         action = "banned" if ban else "kicked"
         message = ("You have been flagged as a bot account and **{}** from **{}**. "
                 + "\n\nIf this was a mistake, please send a message to **{}#{}**.")
         message = message.format(action, guild.name, owner.name, owner.discriminator)
 
-        print('b')
         # TODO: save invite as "trusted" invite
         if invite:
             message += " Alternatively, you can wait 5 minutes, then [Click Here]({}) to rejoin the guild!".format(invite.url)
         message += "\n\nWe aplogize for the inconvenience."
-        print('c')
-        print(message)
-        print('d')
 
         embed = discord.Embed(
             title="Message from {}".format(guild.name),
@@ -482,22 +477,22 @@ class ModeratorLink(commands.Cog):
         if reason:
             reason_note += ": {}".format(reason)
 
+        print('a')
         # Kick or Ban members, log if even log channel is set
         try:
-            try:
-                if ban:
-                    await member.ban(reason=reason_note, delete_message_days=7)
-                else:
-                    await member.kick(reason=reason_note, delete_message_days=7)
-            except:
-                pass
-            event_log_channel = await self._event_log_channel(member.guild)
-            if event_log_channel:
-                await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server (Reason: {}).".format(
-                    member.name, member.id, action, reason
-                ))
+            print('b')
+            if ban:
+                await member.ban(reason=reason_note, delete_message_days=7)
+            else:
+                await member.kick(reason=reason_note, delete_message_days=7)
         except:
-            pass
+            print("could not {} {}".format(action[:-2], member.name))
+            # pass
+        event_log_channel = await self._event_log_channel(member.guild)
+        if event_log_channel:
+            await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server (Reason: {}).".format(
+                member.name, member.id, action, reason
+            ))
 
     def cancel_all_tasks(self, guild=None):
         guilds = [guild] if guild else self.bot.guilds
