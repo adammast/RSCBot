@@ -304,14 +304,11 @@ class ModeratorLink(commands.Cog):
         guild = member.guild
         welcome_msg = await self._get_welcome_message(guild)
         channel = guild.system_channel
-        await channel.send("Nine is here")
         if channel and welcome_msg:
-            await channel.send("Nine is here 2")
             mention_roles = True    # or roles<list>
             mention_users = True    # or members<list>
             allowed_mentions = discord.AllowedMentions(roles=guild.roles, users=mention_users)
             return await channel.send(welcome_msg.format(member=member.mention, guild=guild.name), allowed_mentions=allowed_mentions)
-        await channel.send("No special message :(")
     
     #region bot detection
     async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
