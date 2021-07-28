@@ -41,6 +41,7 @@ class ModeratorLink(commands.Cog):
         """Clean up when cog shuts down."""
         self.cancel_all_tasks()
 
+# Bot Detection
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -63,8 +64,9 @@ class ModeratorLink(commands.Cog):
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def whitelistUser(self, ctx, user_id: discord.User):
-        """Allows a member to manually pass bot detection for 24 hours"""
+        """Allows a member to manually pass bot detection"""
         self.whitelist.append(user_id.id)
+        await ctx.send("Done")
     
     @commands.guild_only()
     @commands.command()
@@ -72,26 +74,76 @@ class ModeratorLink(commands.Cog):
     async def blacklistName(self, ctx, *, name: str):
         """Adds a name to the bot account blacklist"""
         name = name.lower()
-        blacklisted_names = await self._blacklisted_names(ctx.guild)
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
         if name not in blacklisted_names:
             blacklisted_names.append(name)
             await self._save_blacklisted_names(ctx.guild, blacklisted_names)
         
         await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getBlacklistedNames(self, ctx):
+        """Gets all names in the bot name blacklist"""
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
+        blacklisted = "__Blacklisted Names:__\n - {}".format('\n - '.join(blacklisted_names))
+        if blacklisted_names:
+            return await ctx.send(blacklisted)
+        return await ctx.send(":x: No names are currently blacklisted.")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getUserWhitelist(self, ctx):
+        """Gets all user ids in the bot name whitelist"""
+        whitelisted_str = [str(w) for w in self.whitelist]
+        whitelisted = "__Whitelisted User IDs:__\n - {}".format('\n - '.join(whitelisted_str))
+        if self.whitelist:
+            return await ctx.send(whitelisted)
+        return await ctx.send(":x: No users are currently whitelisted.")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getRecentJoins(self, ctx):
+        """Gets all recent member names being tracked"""
+        recent_joins = "__Recent Member Joins:__"
+        tracked_joins = 0
+        for name, join_data in self.recently_joined_members[ctx.guild].items():
+            num_joins = len(join_data['members'])
+            recent_joins += "\n - {} ({})".format(name, num_joins)
+            tracked_joins += num_joins
+
+        if tracked_joins:
+            return await ctx.send(recent_joins)
+        minutes = NEW_MEMBER_JOIN_TIME // 60
+        return await ctx.send(":x: No members have joined in the past {} minutes.".format(minutes))
     
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
     async def unblacklistName(self, ctx, *, name: str):
-        """Adds a name to the bot account blacklist"""
-        blacklisted_names = await self._blacklisted_names(ctx.guild)
+        """Removes a name to the bot account blacklist"""
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
         if name.lower() in blacklisted_names:
             blacklisted_names.remove(name.lower())
             await self._save_blacklisted_names(ctx.guild, blacklisted_names)    
             return await ctx.send("Done")
         else:
             await ctx.send(":x: **{}** is not a blacklisted name.".format(name))
+        
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unwhitelistUser(self, ctx, user_id: discord.User):
+        """Removes a name to the bot account blacklist"""
+        if user_id.id in self.whitelist:
+            self.whitelist.remove(user_id.id)
+            return await ctx.send("Done")
+        return await ctx.send(":x: User ID {} was not whitelisted.".format(user_id))
 
+# Welcome Messages
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -128,7 +180,8 @@ class ModeratorLink(commands.Cog):
             await ctx.send("__Welcome Message:__\n{}".format(welcome_msg))
         else:
             await ctx.send(":x: No welcome message set.")
-        
+
+# Event Log Channel    
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -159,6 +212,7 @@ class ModeratorLink(commands.Cog):
         except:
             await ctx.send(":x: Event log channel not set")
 
+# League Awards
     @commands.guild_only()
     @commands.command(aliases=['champion', 'assignTrophy', 'awardTrophy'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -180,6 +234,7 @@ class ModeratorLink(commands.Cog):
         """Adds a first place medal to each user passed in the userList"""
         await self.award_players(ctx, self.FIRST_PLACE_EMOJI, userList)
 
+# Ban/Unban
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
@@ -194,6 +249,7 @@ class ModeratorLink(commands.Cog):
     #     await ctx.guild.unban(user, reason=reason)
     #     await ctx.send("Done.")
 
+# Events
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
         """Catches when a user changes their discord name or discriminator. [Not yet supported]"""
@@ -266,7 +322,7 @@ class ModeratorLink(commands.Cog):
         # Send welcome message if one exists
         await self.maybe_send_welcome_message(member)
         
-
+# Helper Functions
     async def process_member_standardization(self, member):
         mutual_guilds = self._member_mutual_guilds(member)
         shared_role_names = await self._get_shared_role_names(member.guild)
@@ -336,13 +392,13 @@ class ModeratorLink(commands.Cog):
 
         ## Kick/ban newly joined member
         if repeat_recent_name:
-            await self.process_member_bot_kick(first_member, reason=SPAM_JOIN_BT)
+            await self.process_member_bot_kick(member, reason=SPAM_JOIN_BT)
             # TODO: save bot name as blacklisted name?
             return True
 
         # SUSPICIOUS NEW ACCOUNTS
         for blacklist_name in await self._get_blacklisted_names(member.guild):  # await self._get_name_blacklist():
-            account_age = (datetime.uctnow() - member.created_at).seconds
+            account_age = (datetime.utcnow() - member.created_at).seconds
             if blacklist_name in member.name.lower() and account_age <= ACC_AGE_THRESHOLD + 10:
                 await self.process_member_bot_kick(member, reason=SUS_NEW_ACC_BT)
                 return True
@@ -359,6 +415,15 @@ class ModeratorLink(commands.Cog):
     
     def track_member_join(self, member: discord.Member):
         member_join_data = self.recently_joined_members[member.guild].setdefault(member.name, {'members': [], 'timeout': None})
+        
+        # cover case where member leaves, rejoins
+        repeat_member = member.id in [m.id for m in member_join_data['members']]
+        if repeat_member:
+            if len(member_join_data['members']) > 1:
+                return False
+            return True
+        
+        # add member to recent joins
         member_join_data['members'].append(member)
         if member_join_data['timeout']:
             member_join_data['timeout'].cancel()
@@ -384,24 +449,26 @@ class ModeratorLink(commands.Cog):
             invite = await self.create_invite(channel)
         else:
             invite = None
-
+        
+        print('a')
         action = "banned" if ban else "kicked"
         message = ("You have been flagged as a bot account and **{}** from **{}**. "
-                + "If this was a mistake, please send a message to **{}#{}**.".format(
-                    action, guild.name, owner.name, owner.discriminator
-                ))
+                + "\n\nIf this was a mistake, please send a message to **{}#{}**.")
+        message = message.format(action, guild.name, owner.name, owner.discriminator)
 
+        print('b')
         # TODO: save invite as "trusted" invite
         if invite:
-            message += "Alternatively, you can wait 5 minutes, then [Click Here]({}) to rejoin the guild! We aplogize for the inconvenience.".format(invite.url)
+            message += " Alternatively, you can wait 5 minutes, then [Click Here]({}) to rejoin the guild!".format(invite.url)
+        message += "\n\nWe aplogize for the inconvenience."
+        print('c')
+        print(message)
+        print('d')
 
-        reason_note = "suspected bot"
-        if reason:
-            reason_note += ": {}".format(reason)
         embed = discord.Embed(
             title="Message from {}".format(guild.name),
-            discriminator=message,
-            colo=discord.Color.red()
+            color=discord.Color.red(),
+            description=message,
         )
         embed.set_thumbnail(url=guild.icon_url)
 
@@ -411,12 +478,19 @@ class ModeratorLink(commands.Cog):
         except:
             pass
 
+        reason_note = "suspected bot"
+        if reason:
+            reason_note += ": {}".format(reason)
+
         # Kick or Ban members, log if even log channel is set
         try:
-            if ban:
-                await member.ban(reason=reason_note, delete_message_days=7)
-            else:
-                await member.kick(reason=reason_note, delete_message_days=7)
+            try:
+                if ban:
+                    await member.ban(reason=reason_note, delete_message_days=7)
+                else:
+                    await member.kick(reason=reason_note, delete_message_days=7)
+            except:
+                pass
             event_log_channel = await self._event_log_channel(member.guild)
             if event_log_channel:
                 await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server (Reason: {}).".format(
