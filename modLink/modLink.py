@@ -5,12 +5,21 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-
+# Bot Detection
+SPAM_JOIN_BT = "spam join"
+SUS_NEW_ACC_BT = "suspicious new account"
 NEW_MEMBER_JOIN_TIME = 300  # 5 minutes
 ACC_AGE_THRESHOLD = 86400   # 1 day
 DISABLE_BOT_INVITES = False
 
-defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None, "BotDetection": False, "WelcomeMessage": None}
+defaults = {
+    "Guilds": [], 
+    "SharedRoles": ["Muted"], 
+    "EventLogChannel": None, 
+    "BotDetection": False, 
+    "WelcomeMessage": None,
+    "BlacklistedNames": ["reward", "giveaway", "give away", "gift", "drop"]
+}
 
 class ModeratorLink(commands.Cog):
     def __init__(self, bot):
@@ -23,6 +32,7 @@ class ModeratorLink(commands.Cog):
         self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
         self.STAR_EMOJI = "\U00002B50" # :star:
         self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
+        self.whitelist = []
         self.bot_detection = {}
         self.recently_joined_members = {}
         asyncio.create_task(self._pre_load_data())
@@ -34,19 +44,53 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def toggleBotDetection(self, ctx: discord.Context):
+    async def toggleBotDetection(self, ctx):
         """Enables or disables bot dection for new member joins"""
-        new_bot_detection_status = not await self._get_bot_detection(ctx.guild)
+        new_bot_detection_status = not (await self._get_bot_detection(ctx.guild))
         await self._save_bot_detection(ctx.guild, new_bot_detection_status)
-        self._get_bot_detection[ctx.guild] = new_bot_detection_status
+        self.bot_detection[ctx.guild] = new_bot_detection_status
 
-        if not new_bot_detection_status:
-            await self.cancel_all_tasks(ctx.guild)
+        if new_bot_detection_status:
+            await self._pre_load_data()
+        else:
+            self.cancel_all_tasks(ctx.guild)
 
         action = "enabled" if new_bot_detection_status else "disabled"
         message = "Bot detection has been **{}** for this guild.".format(action)
         await ctx.send(message)
     
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def whitelistUser(self, ctx, user_id: discord.User):
+        """Allows a member to manually pass bot detection for 24 hours"""
+        self.whitelist.append(user_id.id)
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def blacklistName(self, ctx, *, name: str):
+        """Adds a name to the bot account blacklist"""
+        name = name.lower()
+        blacklisted_names = await self._blacklisted_names(ctx.guild)
+        if name not in blacklisted_names:
+            blacklisted_names.append(name)
+            await self._save_blacklisted_names(ctx.guild, blacklisted_names)
+        
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unblacklistName(self, ctx, *, name: str):
+        """Adds a name to the bot account blacklist"""
+        blacklisted_names = await self._blacklisted_names(ctx.guild)
+        if name.lower() in blacklisted_names:
+            blacklisted_names.remove(name.lower())
+            await self._save_blacklisted_names(ctx.guild, blacklisted_names)    
+            return await ctx.send("Done")
+        else:
+            await ctx.send(":x: **{}** is not a blacklisted name.".format(name))
 
     @commands.guild_only()
     @commands.command()
@@ -69,12 +113,22 @@ class ModeratorLink(commands.Cog):
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setWelcomeMessage(self, ctx):
+    async def clearWelcomeMessage(self, ctx):
         """Clears welcome message set for the guild, disabling messages for new members."""
         await self._save_welcome_message(ctx.guild, None)
         await ctx.send("Done")
-
-
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getWelcomeMessage(self, ctx):
+        """Gets welcome message set for the guild which is sent to newly joined members."""
+        welcome_msg = await self._get_welcome_message(ctx.guild)
+        if welcome_msg:
+            await ctx.send("__Welcome Message:__\n{}".format(welcome_msg))
+        else:
+            await ctx.send(":x: No welcome message set.")
+        
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -250,11 +304,14 @@ class ModeratorLink(commands.Cog):
         guild = member.guild
         welcome_msg = await self._get_welcome_message(guild)
         channel = guild.system_channel
+        await channel.send("Nine is here")
         if channel and welcome_msg:
+            await channel.send("Nine is here 2")
             mention_roles = True    # or roles<list>
             mention_users = True    # or members<list>
-            allowed_mentions = discord.AllowedMentions(roles=mention_roles, users=mention_users)
-            await channel.send(welcome_msg.format(member=member.mention, guild=guild.name), allowed_mentions=allowed_mentions)
+            allowed_mentions = discord.AllowedMentions(roles=guild.roles, users=mention_users)
+            return await channel.send(welcome_msg.format(member=member.mention, guild=guild.name), allowed_mentions=allowed_mentions)
+        await channel.send("No special message :(")
     
     #region bot detection
     async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
@@ -268,28 +325,35 @@ class ModeratorLink(commands.Cog):
                 return None
     
     async def run_bot_detection(self, member):
-        # Recent Name check
+        # IGNORE WHITELISTED MEMBERS
+        if member.id in self.whitelist:
+            return False
+
+        # SPAM JOIN PREVENTION
         repeat_recent_name = self.track_member_join(member)
             
-        # Kick/Ban first member when subsequent member flagged as bot
+        ## Kick/Ban first member when subsequent member flagged as bot
         if repeat_recent_name and len(self.recently_joined_members[member.guild][member.name]['members']) == 2:
             first_member = self.recently_joined_members[member.guild][member.name]['members'][0]
-            await self.process_member_kick(first_member)
+            await self.process_member_bot_kick(first_member, reason=(SPAM_JOIN_BT + " - catch first"))
 
+        ## Kick/ban newly joined member
         if repeat_recent_name:
-            await self.process_member_kick(first_member)
-            # TODO: save bot name as blacklisted name
+            await self.process_member_bot_kick(first_member, reason=SPAM_JOIN_BT)
+            # TODO: save bot name as blacklisted name?
             return True
 
-        # TODO: Check blacklisted names
-        for blacklist_name in []:  # await self._get_name_blacklist():
+        # SUSPICIOUS NEW ACCOUNTS
+        for blacklist_name in await self._get_blacklisted_names(member.guild):  # await self._get_name_blacklist():
             account_age = (datetime.uctnow() - member.created_at).seconds
-            if member.name in blacklist_name and account_age <= ACC_AGE_THRESHOLD + 10:
-                await self.process_member_kick(member)
+            if blacklist_name in member.name.lower() and account_age <= ACC_AGE_THRESHOLD + 10:
+                await self.process_member_bot_kick(member, reason=SUS_NEW_ACC_BT)
                 return True
         return False
 
     async def _pre_load_data(self):
+        await self.bot.wait_until_ready()
+        self.whitelist = []
         self.bot_detection = {}
         self.recently_joined_members = {}
         for guild in self.bot.guilds:
@@ -297,14 +361,14 @@ class ModeratorLink(commands.Cog):
             self.bot_detection[guild] = await self._get_bot_detection(guild)
     
     def track_member_join(self, member: discord.Member):
-        members = self.recently_joined_members[member.guild].setdefault(member.name, {'members': [], 'timeout': None})
-        members.append(member)
-        if members['timeout']:
-            members['timeout'].cancel()
+        member_join_data = self.recently_joined_members[member.guild].setdefault(member.name, {'members': [], 'timeout': None})
+        member_join_data['members'].append(member)
+        if member_join_data['timeout']:
+            member_join_data['timeout'].cancel()
 
-        timeout = asyncio.create_task(self.schedule_new_member_name_clear(member))
-        self.recently_joined_members[member.guild][member.name] = {'members': members, 'timeout': timeout}
-        repeat_recent_name = len(members) > 1
+        member_join_data['timeout'] = asyncio.create_task(self.schedule_new_member_name_clear(member))
+        self.recently_joined_members[member.guild][member.name] = member_join_data
+        repeat_recent_name = len(member_join_data['members']) > 1
 
         return repeat_recent_name
 
@@ -315,7 +379,7 @@ class ModeratorLink(commands.Cog):
         self.recently_joined_members[member.guild][member.name]['timeout'].cancel()
         del self.recently_joined_members[member.guild][member.name]
 
-    async def process_member_kick(self, member: discord.Member, ban=False):
+    async def process_member_bot_kick(self, member: discord.Member, reason=None, ban=False):
         guild = member.guild
         channel = guild.system_channel
         owner = guild.owner
@@ -325,7 +389,7 @@ class ModeratorLink(commands.Cog):
             invite = None
 
         action = "banned" if ban else "kicked"
-        message = ("You have been **{}** from **{}** because you have been detected as a bot account. "
+        message = ("You have been flagged as a bot account and **{}** from **{}**. "
                 + "If this was a mistake, please send a message to **{}#{}**.".format(
                     action, guild.name, owner.name, owner.discriminator
                 ))
@@ -334,7 +398,9 @@ class ModeratorLink(commands.Cog):
         if invite:
             message += "Alternatively, you can wait 5 minutes, then [Click Here]({}) to rejoin the guild! We aplogize for the inconvenience.".format(invite.url)
 
-        reason = "suspected bot"
+        reason_note = "suspected bot"
+        if reason:
+            reason_note += ": {}".format(reason)
         embed = discord.Embed(
             title="Message from {}".format(guild.name),
             discriminator=message,
@@ -351,13 +417,13 @@ class ModeratorLink(commands.Cog):
         # Kick or Ban members, log if even log channel is set
         try:
             if ban:
-                await member.ban(reason=reason, delete_message_days=7)
+                await member.ban(reason=reason_note, delete_message_days=7)
             else:
-                await member.kick(reason=reason, delete_message_days=7)
+                await member.kick(reason=reason_note, delete_message_days=7)
             event_log_channel = await self._event_log_channel(member.guild)
             if event_log_channel:
-                await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server.".format(
-                    member.name, member.id, action
+                await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server (Reason: {}).".format(
+                    member.name, member.id, action, reason
                 ))
         except:
             pass
@@ -365,8 +431,9 @@ class ModeratorLink(commands.Cog):
     def cancel_all_tasks(self, guild=None):
         guilds = [guild] if guild else self.bot.guilds
         for guild in guilds:
-            for name, join_data in self.recently_joined_members[guild]:
+            for name, join_data in self.recently_joined_members[guild].items():
                 join_data['timeout'].cancel()
+            self.recently_joined_members[guild] = {}
 
     #endregion bot detection
 
@@ -543,6 +610,12 @@ class ModeratorLink(commands.Cog):
 
     async def _save_welcome_message(self, guild: discord.Guild, message: str):
         await self.config.guild(guild).WelcomeMessage.set(message)
+
+    async def _get_blacklisted_names(self, guild: discord.Guild):
+        return await self.config.guild(guild).BlacklistedNames()
+
+    async def _save_blacklisted_names(self, guild: discord.Guild, name: str):
+        await self.config.guild(guild).BlacklistedNames.set(name)
 
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
