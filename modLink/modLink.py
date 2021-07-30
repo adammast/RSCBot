@@ -388,11 +388,11 @@ class ModeratorLink(commands.Cog):
         ## Kick/Ban first member when subsequent member flagged as bot
         if repeat_recent_name and len(self.recently_joined_members[member.guild][member.name]['members']) == 2:
             first_member = self.recently_joined_members[member.guild][member.name]['members'][0]
-            await self.process_member_bot_kick(first_member, reason=(SPAM_JOIN_BT + " - catch first"))
+            await self.process_bot_member_kick(first_member, reason=(SPAM_JOIN_BT + " - catch first"))
 
         ## Kick/ban newly joined member
         if repeat_recent_name:
-            await self.process_member_bot_kick(member, reason=SPAM_JOIN_BT)
+            await self.process_bot_member_kick(member, reason=SPAM_JOIN_BT)
             # TODO: save bot name as blacklisted name?
             return True
 
@@ -400,7 +400,7 @@ class ModeratorLink(commands.Cog):
         for blacklist_name in await self._get_blacklisted_names(member.guild):  # await self._get_name_blacklist():
             account_age = (datetime.utcnow() - member.created_at).seconds
             if blacklist_name in member.name.lower() and account_age <= ACC_AGE_THRESHOLD + 10:
-                await self.process_member_bot_kick(member, reason=SUS_NEW_ACC_BT)
+                await self.process_bot_member_kick(member, reason=SUS_NEW_ACC_BT)
                 return True
         return False
 
@@ -441,7 +441,7 @@ class ModeratorLink(commands.Cog):
         self.recently_joined_members[member.guild][member.name]['timeout'].cancel()
         del self.recently_joined_members[member.guild][member.name]
 
-    async def process_member_bot_kick(self, member: discord.Member, reason=None, ban=False):
+    async def process_bot_member_kick(self, member: discord.Member, reason=None, ban=False):
         guild = member.guild
         channel = guild.system_channel
         owner = guild.owner
@@ -598,7 +598,7 @@ class ModeratorLink(commands.Cog):
         return guild.get_member(member_id)
     
     def _guild_role_from_name(self, guild, role_name):
-        for member in guild.roles:
+        for role in guild.roles:
             if role.name == role_name:
                 return role
     
@@ -691,7 +691,7 @@ class ModeratorLink(commands.Cog):
         return guild.get_channel(await self.config.guild(guild).EventLogChannel())
 
     async def _save_shared_roles(self, guild, shared_role_names):
-        await self.config.guild(guild).SharedRoles.set(shared_roles)
+        await self.config.guild(guild).SharedRoles.set(shared_role_names)
 
     async def _get_shared_role_names(self, guild):
         return await self.config.guild(guild).SharedRoles()
