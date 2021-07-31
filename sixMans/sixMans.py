@@ -84,6 +84,15 @@ class SixMans(commands.Cog):
         else:
             await ctx.send(":x: Data **not** cleared.")
 
+    #region admin commands
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def preLoadData(self, ctx: Context):
+        """Reloads all data for the 6mans cog"""
+        await self._pre_load_data()
+        await ctx.send("Done")
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -202,6 +211,7 @@ class SixMans(commands.Cog):
         
         await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await self._save_queue_max_size(ctx.guild, max_size)
+        await ctx.send("Done")
     
     @commands.guild_only()
     @commands.command(aliases=['getQMaxSize', 'getQMS', 'gqms', 'qms'])
@@ -848,11 +858,14 @@ class SixMans(commands.Cog):
         await ctx.send(embed=self.embed_queue_players(six_mans_queue))
 
     @commands.guild_only()
-    @commands.command(aliases=["setQLobby"])
+    @commands.command(aliases=["setQLobby", "setQVC"])
     @checks.admin_or_permissions(manage_guild=True)
     async def setQueueLobby(self, ctx: Context, lobby_voice: discord.VoiceChannel):
         #TODO: Consider having the queues save the Queue Lobby VC
+        for queue in self.queues[ctx.guild]:
+            queue.lobby_vc = lobby_voice
         await self._save_q_lobby_vc(ctx.guild, lobby_voice.id)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
     
     @commands.guild_only()
@@ -923,16 +936,13 @@ class SixMans(commands.Cog):
         - **random**: selects random teams
         - **captains**: selects a captain for each team
         - **vote**: players vote for team selection method after queue pops
-        - ~~**balanced**: creates balanced teams from all participating players~~
+        - **balanced (beta)**: creates balanced teams from all participating players
         - ~~**shuffle**: selects random teams, but allows re-shuffling teams after they have been set~~
         """
         # TODO: Support Captains [captains random, captains shuffle], Balanced
-        team_selection_method = team_selection_method.lower()
+        team_selection_method = team_selection_method.title()
         if team_selection_method not in QTS_METHODS:
             return await ctx.send("**{}** is not a valid method of team selection.".format(team_selection_method))
-
-        if team_selection_method in ['vote', 'balanced']:
-            return await ctx.send("**{}** is not currently supported as a method of team selection.".format(team_selection_method))
         
         await self._save_team_selection(ctx.guild, team_selection_method)
 
@@ -951,7 +961,10 @@ class SixMans(commands.Cog):
     @checks.admin_or_permissions(manage_guild=True)
     async def setCategory(self, ctx: Context, category_channel: discord.CategoryChannel):
         """Sets the category channel where all game channels will be created under"""
+        for queue in self.queues[ctx.guild]:
+            queue.category = category_channel
         await self._save_category(ctx.guild, category_channel.id)
+        await self._save_queues(ctx.guild, self.queues[ctx.guild])
         await ctx.send("Done")
 
     @commands.guild_only()
@@ -1034,10 +1047,10 @@ class SixMans(commands.Cog):
 #region helper methods
 
     async def has_perms(self, member: discord.Member):
-        helper_role = await self._helper_role(member.guild)
         if member.guild_permissions.administrator:
             return True
-        elif helper_role and helper_role in member.roles:
+        helper_role = await self._helper_role(member.guild)
+        if helper_role and helper_role in member.roles:
             return True
 
     async def _add_to_queue(self, player: discord.Member, six_mans_queue: SixMansQueue):
@@ -1615,7 +1628,6 @@ class SixMans(commands.Cog):
         await self._save_team_selection(guild, Strings.RANDOM_TS)
         await self._save_react_to_vote(guild, True)
         await self._save_automove(guild, False)
-
 
     async def _games(self, guild: discord.Guild):
         return await self.config.guild(guild).Games()
