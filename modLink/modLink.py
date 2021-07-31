@@ -31,7 +31,7 @@ class ModeratorLink(commands.Cog):
         self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # gold medal
         self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
         self.STAR_EMOJI = "\U00002B50" # :star:
-        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
+        self.LEAGUE_AWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
         self.whitelist = []
         self.bot_detection = {}
         self.recently_joined_members = {}
@@ -234,6 +234,38 @@ class ModeratorLink(commands.Cog):
         """Adds a first place medal to each user passed in the userList"""
         await self.award_players(ctx, self.FIRST_PLACE_EMOJI, userList)
 
+    @commands.guild_only()
+    @commands.command(aliases=['clearAllStars'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeAllStars(self, ctx):
+        """Removes the Star Emoji from all discord members who have it."""
+        all_stars = []
+        for member in ctx.guild.members:
+            if member.nick:
+                if self.STAR_EMOJI in member.nick:
+                    all_stars.append(member)
+        
+        successes = []
+        failures = []
+        for member in all_stars:
+            try:
+                new_name = member.nick.replace(self.STAR_EMOJI, '')
+                await member.edit(nick=new_name)
+                successes.append(member)
+            except:
+                failures.append(member)
+        
+        msg = ''
+        if successes:
+            msg = "{} award removed from **{} members**:\n - {}".format(self.STAR_EMOJI, len(successes), '\n - '.join(member.mention for member in successes))
+        if failures:
+            msg += "\n{} award could not be removed from **{} members**:\n - {}".format(self.STAR_EMOJI, len(failures), '\n - '.join(member.mention for member in failures))
+        
+        if msg:
+            return await ctx.send(msg)
+        await ctx.send(":x: No members have been awarded with the {} emoji.".format(self.STAR_EMOJI))
+        
+
 # Ban/Unban
     # @commands.guild_only()
     # @commands.command()
@@ -332,7 +364,7 @@ class ModeratorLink(commands.Cog):
             guild_event_log_channel = await self._event_log_channel(guild)
             if guild_event_log_channel:
                 guild_member = self._guild_member_from_id(guild, member.id)
-                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
+                guild_prefix, guild_nick, guild_awards = self._get_name_components(guild_member)
 
                 if guild_nick != member.name:
                     await member.edit(nick=guild_nick)
@@ -517,9 +549,9 @@ class ModeratorLink(commands.Cog):
                 notFound.append(user)
         
         for player in found:
-            prefix, nick, rewards = self._get_name_components(player)
-            rewards += award
-            new_name = self._generate_new_name(prefix, nick, rewards)
+            prefix, nick, awards = self._get_name_components(player)
+            awards += award
+            new_name = self._generate_new_name(prefix, nick, awards)
             try:
                 await player.edit(nick=new_name)
                 success_count += 1
@@ -616,8 +648,8 @@ class ModeratorLink(commands.Cog):
         return None
 
     async def _process_nickname_update(self, before, after):
-        b_prefix, b_nick, b_rewards = self._get_name_components(before)
-        a_prefix, a_nick, a_rewards = self._get_name_components(after)
+        b_prefix, b_nick, b_awards = self._get_name_components(before)
+        a_prefix, a_nick, a_awards = self._get_name_components(after)
         event_log_channel = await self._event_log_channel(before.guild)
 
         if b_nick == a_nick or not event_log_channel:
@@ -630,10 +662,10 @@ class ModeratorLink(commands.Cog):
             channel = await self._event_log_channel(guild)
             if channel:
                 guild_member = self._guild_member_from_id(guild, before.id)
-                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
+                guild_prefix, guild_nick, guild_awards = self._get_name_components(guild_member)
                 try:
                     if guild_nick != a_nick:
-                        new_guild_name = self._generate_new_name(guild_prefix, a_nick, guild_rewards)
+                        new_guild_name = self._generate_new_name(guild_prefix, a_nick, guild_awards)
                         await guild_member.edit(nick=new_guild_name)
                         await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(guild_member.mention, guild_nick, a_nick, before.guild.name))
                 except:
@@ -648,20 +680,21 @@ class ModeratorLink(commands.Cog):
         if prefix:
             name = name[name.index(' | ')+3:]
         player_name = ""
-        rewards = ""
+        awards = ""
         for char in name[::-1]:
-            if char not in self.LEAGUE_REWARDS:
+            if char not in self.LEAGUE_AWARDS:
                 break
-            rewards = char + rewards
+            awards = char + awards
 
-        player_name = name.replace(" " + rewards, "") if rewards else name
+        player_name = name.replace(" " + awards, "") if awards else name
 
-        return prefix.strip(), player_name.strip(), rewards.strip()
+        return prefix.strip(), player_name.strip(), awards.strip()
 
-    def _generate_new_name(self, prefix, name, rewards):
+    def _generate_new_name(self, prefix, name, awards):
         new_name = "{} | {}".format(prefix, name) if prefix else name
-        if rewards:
-            new_name += " {}".format(rewards)
+        if awards:
+            awards = ''.join(sorted(awards))
+            new_name += " {}".format(awards)
         return new_name
 
     #region json data
