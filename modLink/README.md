@@ -47,13 +47,13 @@ This cog has a number of commands for nickname management as it pertains to leag
 
 Bot Detection tracks for bots disguised as user accounts and takes action when a recently joined member is detected as a bot.
 
-Members who are flagged as bots are sent a message to let them know they have been flagged as a bot account, then kicks them from the server. These events are logged in the event log channel if one is set.
+Members who are flagged as bots are sent a message to let them know they have been flagged as a bot account. This message contains a new invite link and informs kicked users to send a message to the guild owner if the issue persists. Afterwards, the member is kicked from the server. These events are logged in the event log channel if one is set.
 
 If a member is falsely flagged as a bot, an admin or mod may whitelist them by their discord ID, and they will bypass bot detection.
 
 ## Ban Conditions
 
-For a user to be flagged as a potentially malicous bot account, and banned from the guild, one of two conditions must be met upon the member join:
+For a user to be flagged as a potentially malicous bot account, and banned from the guild, the member's id must not be on the whitelist, and one of two conditions must be met upon the member join:
 
 - The username associated with the member is the same as another member who joined within the last five (5) minutes.
 - The member's account is less than approximately 24 hours old, and a subset of their name appears in the username blacklist.
