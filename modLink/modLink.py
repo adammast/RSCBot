@@ -251,23 +251,26 @@ class ModeratorLink(commands.Cog):
 # League Awards
     @commands.guild_only()
     @commands.command(aliases=['champion', 'assignTrophy', 'awardTrophy'])
-    @checks.admin_or_permissions(manage_guild=True)
     async def addTrophy(self, ctx, *userList):
         """Adds a trophy to each user passed in the userList"""
+        if not await self.has_perms(ctx.author):
+            return
         await self.award_players(ctx, self.TROPHY_EMOJI, userList)
 
     @commands.guild_only()
     @commands.command(aliases=['allstar', 'assignStar', 'awardStar'])
-    @checks.admin_or_permissions(manage_guild=True)
     async def addStar(self, ctx, *userList):
         """Adds a star to each user passed in the userList"""
+        if not await self.has_perms(ctx.author):
+            return
         await self.award_players(ctx, self.STAR_EMOJI, userList)
         
     @commands.guild_only()
     @commands.command(aliases=['assignMedal', 'awardMedal'])
-    @checks.admin_or_permissions(manage_guild=True)
     async def addMedal(self, ctx, *userList):
         """Adds a first place medal to each user passed in the userList"""
+        if not await self.has_perms(ctx.author):
+            return
         await self.award_players(ctx, self.FIRST_PLACE_EMOJI, userList)
 
     @commands.guild_only()
