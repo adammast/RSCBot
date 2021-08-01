@@ -19,7 +19,7 @@ defaults = {
     "BotDetection": False, 
     "WelcomeMessage": None,
     "ModeratorRole": None,
-    "BlacklistedNames": ["reward", "giveaway", "give away", "gift", "drop"]
+    "BlacklistedNames": ["reward", "giveaway", "give away", "gift", "drop", "bot"]
 }
 
 class ModeratorLink(commands.Cog):
@@ -406,7 +406,7 @@ class ModeratorLink(commands.Cog):
 
                 if guild_nick != member.name:
                     await member.edit(nick=guild_nick)
-                    await event_log_channel.send("{} (**{}**) has had thier nickname set to **{}** upon joining the server [discovered from **{}**]".format(member.mention, member.name, guild_nick, guild.name))
+                    await event_log_channel.send("{} (**{}**, id: {}) has had thier nickname set to **{}** upon joining the server [discovered from **{}**]".format(member.mention, member.name, member.id, guild_nick, guild.name))
                 
                 if shared_role_names:
                     # if member has shared role
