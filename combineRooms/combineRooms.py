@@ -136,9 +136,12 @@ class CombineRooms(commands.Cog):
         # Creates a combines category and room for each tier
         # await self._add_combines_info_channel(ctx.guild, combines_category, "Combines Details")
         categories = []
-        for tier in await self.team_manager_cog.tiers(ctx):
-            tier_category = await self._add_combines_category(ctx, "{0} Combines".format(tier))
-            await self._add_combines_voice(ctx.guild, tier, tier_category)
+        tiers = self.team_manager_cog.tiers(ctx)
+        tier_roles = [self._get_tier_role(ctx, tier) for tier in tiers]
+        tier_roles.sort(key=lambda role: role.position, reverse=True)
+        for tier_role in await tier_roles:
+            tier_category = await self._add_combines_category(ctx, "{0} Combines".format(tier_role.name))
+            await self._add_combines_voice(ctx.guild, tier_role.name, tier_category)
             categories.append(tier_category.id)
         await self._save_combine_category_ids(ctx.guild, categories)
         return True
