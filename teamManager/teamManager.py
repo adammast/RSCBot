@@ -1,4 +1,5 @@
 from sys import prefix
+from typing import NewType
 import discord
 import re
 import ast
@@ -167,6 +168,69 @@ class TeamManager(commands.Cog):
             
         
         await ctx.send("{0} is the new General Manager for {1}.".format(new_gm.name, franchise_name))
+    
+    @commands.command()
+    @commands.guild_only()
+    @commands.admin_or_permissions(manage_guild=True)
+    async def rebrandFranchise(self, ctx, franchise_identifier: str, prefix: str, franchise_name: str, *teams):
+        franchise_data = await self._get_franchise_data(ctx, franchise_identifier)
+        if not franchise_data:
+            await ctx.send("No franchise could be found with the identifier: **{0}**".format(franchise_identifier))
+            return False
+        
+        # teams = teams.split()
+        franchise_role, gm_name, old_franchise_prefix, old_franchise_name = franchise_data
+        # for team in teams:
+        #     team_role = (await self._roles_for_team(ctx, team))[1]
+        old_teams = await self._find_teams_for_franchise(ctx, franchise_role)
+        tier_roles = [role[1] for role in [await self._roles_for_team(ctx, team) for team in old_teams]]
+        # await ctx.send("tier roles: {}".format(", ".join(tier_role.mention for tier_role in tier_roles)))
+        if len(tier_roles) != len(teams):
+            return await ctx.send(
+                ":x: **{} ({})** has {} teams, but **{}** new team names were provided. Please make sure the number of teams match the current tier range.".format(
+                    old_franchise_name, old_franchise_prefix, len(tier_roles), len(teams)
+                )
+            )
+
+        tier_roles.sort(key=lambda role: role.position, reverse=True)
+        if_not_msg = "**{}** was not rebranded.".format(old_franchise_name)
+        prompt = "Are you sure you want to rebrand **{}**?".format(old_franchise_name)
+        prompt += "\n - Prefix: {}".format(prefix)
+        for i in range(len(tier_roles)):
+            tier_role = tier_roles[i]
+            new_team = teams[i]
+            prompt += "\n - {}: {}".format(tier_role.mention, new_team)
+        
+        if not await self._react_prompt(ctx, prompt, if_not_msg):
+            return 
+
+        # Rename Franchise
+        franchise_role_name = "{} ({})".format(franchise_name, gm_name)
+        await franchise_role.edit(name=franchise_role_name)
+
+        # Update Prefix
+        await self.prefix_cog.remove_prefix(ctx, gm_name)
+        await self.prefix_cog.add_prefix(ctx, gm_name, prefix)
+        
+        # Remove old teams
+        for old_team in old_teams:
+            await self._remove_team(ctx, old_team)
+        
+        # Add New Teams
+        added = []
+        failed = []
+        for i in range(len(tier_roles)):
+            tier_role = tier_roles[i]
+            new_team = teams[i]
+            if await self._add_team(ctx, new_team, gm_name, tier_role.name):
+                added.append(new_team)
+            else:
+                failed.append(new_team)
+
+        if failed:
+            await ctx.send(":x: Something went wrong... Only {}/{} teams have been rebranded.".format(len(added), len(added)+len(failed)))
+
+        await ctx.send("Done")
     
     @commands.command(aliases=["getFranchises", "listFranchises"])
     @commands.guild_only()
@@ -748,12 +812,12 @@ class TeamManager(commands.Cog):
 
     async def _format_teams_for_franchise(self, ctx, franchise_role):
         teams = await self._find_teams_for_franchise(ctx, franchise_role)
-        teams_message = ""
-        for team in teams:
-            tier_role = (await self._roles_for_team(ctx, team))[1]
-            teams_message += "\n\t{0} ({1})".format(team, tier_role.name)
-
-        embed = discord.Embed(title="{0}:".format(franchise_role.name), color=discord.Colour.blue(), description=teams_message)
+        tiers = [(await self._roles_for_team(ctx, team))[1].name for team in teams]
+        embed = discord.Embed(title="{0}".format(franchise_role.name), color=discord.Colour.blue())
+        
+        embed.add_field(name="Tier", value="{}\n".format("\n".join(tiers)), inline=True)
+        embed.add_field(name="Team", value="{}\n".format("\n".join(teams)), inline=True)
+        
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
         if(emoji):
             embed.set_thumbnail(url=emoji.url)
@@ -761,6 +825,7 @@ class TeamManager(commands.Cog):
 
     async def _format_teams_for_tier(self, ctx, tier):
         teams = await self._find_teams_for_tier(ctx, tier)
+        franchises = [self._extract_franchise_name_from_role((await self._roles_for_team(ctx, team))[0]) for team in teams]
         teams_message = ""
         for team in teams:
             franchise_role = (await self._roles_for_team(ctx, team))[0]
@@ -772,7 +837,10 @@ class TeamManager(commands.Cog):
             if role.name.lower() == tier.lower():
                 color = role.color
 
-        embed = discord.Embed(title="{0} teams:".format(tier), color=color, description=teams_message)
+        embed = discord.Embed(title="{0} teams".format(tier), color=color)
+        embed.add_field(name="Team", value="{}\n".format("\n".join(teams)), inline=True)
+        embed.add_field(name="Franchise", value="{}\n".format("\n".join(franchises)), inline=True)
+        embed.set_thumbnail(url=ctx.guild.icon_url)
         return embed
 
     async def tiers(self, ctx):
@@ -833,7 +901,7 @@ class TeamManager(commands.Cog):
         if errors:
             await ctx.send(":x: Errors with input:\n\n  "
                                "* {0}\n".format("\n  * ".join(errors)))
-            return
+            return False
 
         try:
             teams.append(team_name)
@@ -858,7 +926,6 @@ class TeamManager(commands.Cog):
             return False
         await self._save_teams(ctx, teams)
         await self._save_team_roles(ctx, team_roles)
-        gm = self._get_gm(ctx, franchise_role)
         return True
 
     def _get_tier_role(self, ctx, tier: str):
