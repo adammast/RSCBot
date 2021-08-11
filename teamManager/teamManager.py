@@ -423,6 +423,19 @@ class TeamManager(commands.Cog):
                     message += " `{0}`".format(possible_team)
             await ctx.send(message)
 
+    @commands.command(aliases=["tiers", "getTiers"])
+    @commands.guild_only()
+    async def listTiers(self, ctx):
+        """Provides a list of all the tiers set up in the server"""
+        tiers = await self.tiers(ctx)
+        tier_roles = [self._get_tier_role(ctx, tier) for tier in tiers]
+        tier_roles.sort(key=lambda role: role.position, reverse=True)
+        if tiers:
+            await ctx.send(
+                "Tiers set up in this server: {0}".format(", ".join(role.mention for role in tier_roles)))
+        else:
+            await ctx.send("No tiers set up in this server.")
+        
     @commands.command(aliases=["captain", "cptn", "cptns"])
     @commands.guild_only()
     async def captains(self, ctx, *, franchise_tier_prefix: str):
@@ -464,19 +477,6 @@ class TeamManager(commands.Cog):
                 return
         
         await ctx.send("No franchise, tier, or prefix with name: {0}".format(franchise_tier_prefix))
-
-    @commands.command(aliases=["listTiers", "getTiers"])
-    @commands.guild_only()
-    async def tiers(self, ctx):
-        """Provides a list of all the tiers set up in the server"""
-        tiers = await self.tiers(ctx)
-        tier_roles = [self._get_tier_role(ctx, tier) for tier in tiers]
-        tier_roles.sort(key=lambda role: role.position, reverse=True)
-        if tiers:
-            await ctx.send(
-                "Tiers set up in this server: {0}".format(", ".join(role.mention for role in tier_roles)))
-        else:
-            await ctx.send("No tiers set up in this server.")
 
     @commands.command(aliases=["getTeams"])
     @commands.guild_only()
@@ -982,7 +982,7 @@ class TeamManager(commands.Cog):
         return True
 
     def _get_tier_role(self, ctx, tier: str):
-        roles = ctx.message.guild.roles
+        roles = ctx.guild.roles
         for role in roles:
             if role.name.lower() == tier.lower():
                 return role

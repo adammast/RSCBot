@@ -131,15 +131,14 @@ class CombineRooms(commands.Cog):
         if before.channel:
             await self._member_leaves_voice(member, before.channel)
 
-
     async def _start_combines(self, ctx):
         # Creates a combines category and room for each tier
         # await self._add_combines_info_channel(ctx.guild, combines_category, "Combines Details")
         categories = []
-        tiers = self.team_manager_cog.tiers(ctx)
+        tiers = await self.team_manager_cog.tiers(ctx)
         tier_roles = [self._get_tier_role(ctx, tier) for tier in tiers]
         tier_roles.sort(key=lambda role: role.position, reverse=True)
-        for tier_role in await tier_roles:
+        for tier_role in tier_roles:
             tier_category = await self._add_combines_category(ctx, "{0} Combines".format(tier_role.name))
             await self._add_combines_voice(ctx.guild, tier_role.name, tier_category)
             categories.append(tier_category.id)
@@ -223,7 +222,7 @@ class CombineRooms(commands.Cog):
         for vc in empty_vcs[1:]:
             await vc.delete()
 
-    async def _get_tier_category(guild: discord.Guild, tier: str):
+    async def _get_tier_category(self, guild: discord.Guild, tier: str):
         categories = await self._combine_category_ids(guild)
         for tier_cat in categories:
             if tier == tier_cat.name:
@@ -254,6 +253,13 @@ class CombineRooms(commands.Cog):
             return True
         return False
      
+    def _get_tier_role(self, ctx, tier: str):
+        roles = ctx.guild.roles
+        for role in roles:
+            if role.name.lower() == tier.lower():
+                return role
+        return None
+
     def _get_role_by_name(self, guild: discord.Guild, name: str):
         for role in guild.roles:
             if role.name == name:
