@@ -750,9 +750,6 @@ class Game:
         return item in self.players or item in self.orange or item in self.blue
 
     def _to_dict(self):
-        info_msg = self.info_message.id if self.info_message else None
-        txt_channel = self.textChannel.id if self.textChannel else None
-        helper_role = self.helper_role.id if self.helper_role else None
         try:
             vc_channels = [x.id for x in self.voiceChannels]
         except:
@@ -765,16 +762,19 @@ class Game:
             "Orange": [x.id for x in self.orange],
             "RoomName": self.roomName,
             "RoomPass": self.roomPass,
-            "TextChannel": txt_channel,
             "VoiceChannels": vc_channels,
             "QueueId": self.queue.id,
             "ScoreReported": self.scoreReported,
-            "HelperRole": helper_role,
             "TeamSelection": self.teamSelection,
-            "InfoMessage": info_msg,
             "UseReactions": self.use_reactions,
             "State": self.state
         }
+        if self.info_message:
+            game_dict["InfoMessage"] = self.info_message.id
+        if self.textChannel:
+            game_dict["TextChannel"] = self.textChannel.id
+        if self.helper_role:
+            game_dict["HelperRole"] = self.helper_role.id
 
         return game_dict
 
