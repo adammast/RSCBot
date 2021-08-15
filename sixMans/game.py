@@ -81,9 +81,9 @@ class Game:
         for player in self.players:
             await self.textChannel.set_permissions(player, read_messages=True)
 		
-		# create a general VC lobby for all players in a session
-		general_vc = await guild.create_voice_channel("{} | {} General VC".format(code, self.queue.name), permissions_synced=True, category=category)
-		await general_vc.set_permissions(guild.default_role, connect=False)
+        # create a general VC lobby for all players in a session
+        general_vc = await guild.create_voice_channel("{} | {} General VC".format(code, self.queue.name), permissions_synced=True, category=category)
+        await general_vc.set_permissions(guild.default_role, connect=False)
 
         blue_vc = await guild.create_voice_channel("{} | {} Blue Team".format(code, self.queue.name), permissions_synced=True, category=category)
         await blue_vc.set_permissions(guild.default_role, connect=False)
@@ -93,7 +93,7 @@ class Game:
         # manually add helper role perms if one is set
         if self.helper_role:
             await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
-			await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+		    await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
         
@@ -120,7 +120,7 @@ class Game:
         blue_vc, orange_vc, general_vc = self.voiceChannels
         
         for player in self.orange:
-			await general_vc.set_permission(player, connect=True)
+            await general_vc.set_permission(player, connect=True)
             await blue_vc.set_permissions(player, connect=False)
             await orange_vc.set_permissions(player, connect=True)
 
@@ -130,7 +130,7 @@ class Game:
                 except:
                     pass
         for player in self.blue:
-			await general_vc.set_permission(player, connect=True)
+            await general_vc.set_permission(player, connect=True)
             await blue_vc.set_permissions(player, connect=True)
             await orange_vc.set_permissions(player, connect=False)
 
