@@ -93,7 +93,7 @@ class Game:
         # manually add helper role perms if one is set
         if self.helper_role:
             await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
-		    await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
+            await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
         
