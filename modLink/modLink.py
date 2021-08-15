@@ -1,11 +1,26 @@
+import asyncio 
 import discord
-from datetime import datetime
+from datetime import date, datetime
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"Guilds": [], "SharedRoles": ["Muted"], "EventLogChannel": None}
+# Bot Detection
+SPAM_JOIN_BT = "spam join"
+SUS_NEW_ACC_BT = "suspicious new account"
+NEW_MEMBER_JOIN_TIME = 300  # 5 minutes
+ACC_AGE_THRESHOLD = 86400   # 1 day
+DISABLE_BOT_INVITES = False
 
+defaults = {
+    "Guilds": [], 
+    "SharedRoles": ["Muted"], 
+    "EventLogChannel": None, 
+    "BotDetection": False, 
+    "WelcomeMessage": None,
+    "ModeratorRole": None,
+    "BlacklistedNames": ["reward", "giveaway", "give away", "gift", "drop", "bot"]
+}
 
 class ModeratorLink(commands.Cog):
     def __init__(self, bot):
@@ -17,8 +32,192 @@ class ModeratorLink(commands.Cog):
         self.GOLD_MEDAL_EMOJI = "\U0001F3C5" # gold medal
         self.FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
         self.STAR_EMOJI = "\U00002B50" # :star:
-        self.LEAGUE_REWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
+        self.LEAGUE_AWARDS = [self.TROPHY_EMOJI, self.GOLD_MEDAL_EMOJI, self.FIRST_PLACE_EMOJI, self.STAR_EMOJI]
+        self.whitelist = []
+        self.bot_detection = {}
+        self.recently_joined_members = {}
+        asyncio.create_task(self._pre_load_data())
 
+    def cog_unload(self):
+        """Clean up when cog shuts down."""
+        self.cancel_all_tasks()
+
+# Mod Role
+    @commands.guild_only()
+    @commands.command(aliases=['setModeratorRole'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setModRole(self, ctx, role: discord.Role):
+        """Sets the mod role for bot detection commands"""
+        await self._save_mod_role(ctx.guild, role.id)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command(aliases=['getModeratorRole'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getModRole(self, ctx):
+        """Gets the mod role for bot detection commands"""
+        mod_role = await self._mod_role(ctx.guild)
+        if mod_role:
+            await ctx.send("Moderator Role: {}".format(mod_role.mention))
+        else:
+            await ctx.send(":x: Moderator role has not been set.")
+    
+    @commands.guild_only()
+    @commands.command(aliases=['unsetModRole', 'unsetModeratorRole'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearModRole(self, ctx):
+        """Clears the mod role from the modLink cog"""
+        await self._save_mod_role(ctx.guild, None)
+        await ctx.send("Done")
+    
+# Bot Detection
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def toggleBotDetection(self, ctx):
+        """Enables or disables bot dection for new member joins"""
+        new_bot_detection_status = not (await self._get_bot_detection(ctx.guild))
+        await self._save_bot_detection(ctx.guild, new_bot_detection_status)
+        self.bot_detection[ctx.guild] = new_bot_detection_status
+
+        if new_bot_detection_status:
+            await self._pre_load_data()
+        else:
+            self.cancel_all_tasks(ctx.guild)
+
+        action = "enabled" if new_bot_detection_status else "disabled"
+        message = "Bot detection has been **{}** for this guild.".format(action)
+        await ctx.send(message)
+    
+    @commands.guild_only()
+    @commands.command()
+    async def whitelistUser(self, ctx, user_id: discord.User):
+        """Allows a member to manually pass bot detection"""
+        if not await self.has_perms(ctx.author):
+            return
+        self.whitelist.append(user_id.id)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    async def blacklistName(self, ctx, *, name: str):
+        """Adds a name to the bot account blacklist"""
+        if not await self.has_perms(ctx.author):
+            return
+        name = name.lower()
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
+        if name not in blacklisted_names:
+            blacklisted_names.append(name)
+            await self._save_blacklisted_names(ctx.guild, blacklisted_names)
+        
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    async def getBlacklistedNames(self, ctx):
+        """Gets all names in the bot name blacklist"""
+        if not await self.has_perms(ctx.author):
+            return
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
+        blacklisted = "__Blacklisted Names:__\n - {}".format('\n - '.join(blacklisted_names))
+        if blacklisted_names:
+            return await ctx.send(blacklisted)
+        return await ctx.send(":x: No names are currently blacklisted.")
+    
+    @commands.guild_only()
+    @commands.command()
+    async def getUserWhitelist(self, ctx):
+        """Gets all user ids in the bot name whitelist"""
+        if not await self.has_perms(ctx.author):
+            return
+        whitelisted_str = [str(w) for w in self.whitelist]
+        whitelisted = "__Whitelisted User IDs:__\n - {}".format('\n - '.join(whitelisted_str))
+        if self.whitelist:
+            return await ctx.send(whitelisted)
+        return await ctx.send(":x: No users are currently whitelisted.")
+    
+    @commands.guild_only()
+    @commands.command(aliases=['recentJoins'])
+    async def getRecentJoins(self, ctx):
+        """Gets all recent member names being tracked"""
+        if not await self.has_perms(ctx.author):
+            return
+        recent_joins = "__Recent Member Joins:__"
+        tracked_joins = 0
+        for name, join_data in self.recently_joined_members[ctx.guild].items():
+            num_joins = len(join_data['members'])
+            recent_joins += "\n - {} ({})".format(name, num_joins)
+            tracked_joins += num_joins
+
+        if tracked_joins:
+            return await ctx.send(recent_joins)
+        minutes = NEW_MEMBER_JOIN_TIME // 60
+        return await ctx.send(":x: No members have joined in the past {} minutes.".format(minutes))
+    
+    @commands.guild_only()
+    @commands.command()
+    async def unblacklistName(self, ctx, *, name: str):
+        """Removes a name to the bot account blacklist"""
+        if not await self.has_perms(ctx.author):
+            return
+        blacklisted_names = await self._get_blacklisted_names(ctx.guild)
+        if name.lower() in blacklisted_names:
+            blacklisted_names.remove(name.lower())
+            await self._save_blacklisted_names(ctx.guild, blacklisted_names)    
+            return await ctx.send("Done")
+        else:
+            await ctx.send(":x: **{}** is not a blacklisted name.".format(name))
+        
+    @commands.guild_only()
+    @commands.command()
+    async def unwhitelistUser(self, ctx, user_id: discord.User):
+        """Removes a name to the bot account blacklist"""
+        if not await self.has_perms(ctx.author):
+            return
+        if user_id.id in self.whitelist:
+            self.whitelist.remove(user_id.id)
+            return await ctx.send("Done")
+        return await ctx.send(":x: User ID {} was not whitelisted.".format(user_id))
+
+# Welcome Messages
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setWelcomeMessage(self, ctx, *, welcome_message):
+        """Sends a welcome message to the guild's system channel when a new member joins the guild.
+        
+        Notes:
+         - Use `{member}` in your message in place of the newly added member (Optional)
+         - Use `{guild}` in your message in place of the guild name (Optional)
+         - Members or Roles mentioned in the message parameter will be pinged when a message is sent for a newly joined member
+
+        __Examples:__
+         - [p]setWelcomeMessage Hey {member}! Welcome to {guild}! We're happy to have you here.
+         - [p]setWelcomeMessage @WelcomeCommittee we have a newcomer! Everyone welcome {member}! 
+        """
+        await self._save_welcome_message(ctx.guild, welcome_message)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearWelcomeMessage(self, ctx):
+        """Clears welcome message set for the guild, disabling messages for new members."""
+        await self._save_welcome_message(ctx.guild, None)
+        await ctx.send("Done")
+    
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getWelcomeMessage(self, ctx):
+        """Gets welcome message set for the guild which is sent to newly joined members."""
+        welcome_msg = await self._get_welcome_message(ctx.guild)
+        if welcome_msg:
+            await ctx.send("__Welcome Message:__\n{}".format(welcome_msg))
+        else:
+            await ctx.send(":x: No welcome message set.")
+
+# Event Log Channel    
     @commands.guild_only()
     @commands.command(aliases=['setEventLogChannel'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -49,94 +248,63 @@ class ModeratorLink(commands.Cog):
         except:
             await ctx.send(":x: Event log channel not set")
 
+# League Awards
     @commands.guild_only()
     @commands.command(aliases=['champion', 'assignTrophy', 'awardTrophy'])
-    @checks.admin_or_permissions(manage_guild=True)
     async def addTrophy(self, ctx, *userList):
         """Adds a trophy to each user passed in the userList"""
-        found = []
-        notFound = []
-        success_count = 0
-        failed = 0
-        for user in userList:
-            try:
-                member = await commands.MemberConverter().convert(ctx, user)
-                if member in ctx.guild.members:
-                    found.append(member)
-            except:
-                notFound.append(user)
-        
-        for player in found:
-            prefix, nick, rewards = self._get_name_components(player)
-            rewards += self.TROPHY_EMOJI
-            new_name = self._generate_new_name(prefix, nick, rewards)
-            try:
-                await player.edit(nick=new_name)
-                success_count += 1
-            except:
-                failed += 1
-        
-        message = ""
-        if success_count:
-            message = ":white_check_mark: Trophies have been added to **{} player(s)**.".format(success_count)
-        
-        if notFound:
-            message += "\n:x: {} members could not be found.".format(len(notFound))
-        
-        if failed:
-            message += "\n:x: Nicknames could not be changed for {} members.".format(failed)
-        
-        if message:
-            message += "\nDone"
-        else:
-            message = "No members changed."
+        if not await self.has_perms(ctx.author):
+            return
+        await self.award_players(ctx, self.TROPHY_EMOJI, userList)
 
-        await ctx.send(message)
+    @commands.guild_only()
+    @commands.command(aliases=['allstar', 'assignStar', 'awardStar'])
+    async def addStar(self, ctx, *userList):
+        """Adds a star to each user passed in the userList"""
+        if not await self.has_perms(ctx.author):
+            return
+        await self.award_players(ctx, self.STAR_EMOJI, userList)
         
     @commands.guild_only()
     @commands.command(aliases=['assignMedal', 'awardMedal'])
-    @checks.admin_or_permissions(manage_guild=True)
     async def addMedal(self, ctx, *userList):
         """Adds a first place medal to each user passed in the userList"""
-        found = []
-        notFound = []
-        success_count = 0
-        failed = 0
-        for user in userList:
-            try:
-                member = await commands.MemberConverter().convert(ctx, user)
-                if member in ctx.guild.members:
-                    found.append(member)
-            except:
-                notFound.append(user)
-        
-        for player in found:
-            prefix, nick, rewards = self._get_name_components(player)
-            rewards += self.FIRST_PLACE_EMOJI
-            new_name = self._generate_new_name(prefix, nick, rewards)
-            try:
-                await player.edit(nick=new_name)
-                success_count += 1
-            except:
-                failed += 1
-        
-        message = ""
-        if success_count:
-            message = ":white_check_mark: Trophies have been added to **{} player(s)**.".format(success_count)
-        
-        if notFound:
-            message += "\n:x: {} members could not be found.".format(len(notFound))
-        
-        if failed:
-            message += "\n:x: Nicknames could not be changed for {} members.".format(failed)
-        
-        if message:
-            message += "\nDone"
-        else:
-            message = "No members changed."
+        if not await self.has_perms(ctx.author):
+            return
+        await self.award_players(ctx, self.FIRST_PLACE_EMOJI, userList)
 
-        await ctx.send(message)
-
+    @commands.guild_only()
+    @commands.command(aliases=['clearAllStars'])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def removeAllStars(self, ctx):
+        """Removes the Star Emoji from all discord members who have it."""
+        all_stars = []
+        for member in ctx.guild.members:
+            if member.nick:
+                if self.STAR_EMOJI in member.nick:
+                    all_stars.append(member)
+        
+        successes = []
+        failures = []
+        for member in all_stars:
+            try:
+                new_name = member.nick.replace(self.STAR_EMOJI, '')
+                await member.edit(nick=new_name)
+                successes.append(member)
+            except:
+                failures.append(member)
+        
+        msg = ''
+        if successes:
+            msg = "{} award removed from **{} members**:\n - {}".format(self.STAR_EMOJI, len(successes), '\n - '.join(member.mention for member in successes))
+        if failures:
+            msg += "\n{} award could not be removed from **{} members**:\n - {}".format(self.STAR_EMOJI, len(failures), '\n - '.join(member.mention for member in failures))
+        
+        if msg:
+            return await ctx.send(msg)
+        await ctx.send(":x: No members have been awarded with the {} emoji.".format(self.STAR_EMOJI))
+        
+# Ban/Unban
     # @commands.guild_only()
     # @commands.command()
     # @checks.admin_or_permissions(manage_guild=True)
@@ -151,6 +319,7 @@ class ModeratorLink(commands.Cog):
     #     await ctx.guild.unban(user, reason=reason)
     #     await ctx.send("Done.")
 
+# Events
     @commands.Cog.listener("on_user_update")
     async def on_user_update(self, before, after):
         """Catches when a user changes their discord name or discriminator. [Not yet supported]"""
@@ -207,43 +376,215 @@ class ModeratorLink(commands.Cog):
 
     @commands.Cog.listener("on_member_join")
     async def on_member_join(self, member):
-        """Updates member nickname and shared roles when they join the discord guild from their active status in the guild network."""
+        """Processes events for when a member joins the guild such as welcome messages and 
+        nickname standardization, and bot purging."""
+
+        # Run bot detection if enabled
+        if self.bot_detection[member.guild]:
+            # Do not process member standardization if member has been detected as a bot
+            if await self.run_bot_detection(member):
+                return 
+        
+        event_log_channel = await self._event_log_channel(member.guild)
+        if event_log_channel:
+            await self.process_member_standardization(member)
+        
+        # Send welcome message if one exists
+        await self.maybe_send_welcome_message(member)
+        
+# Helper Functions
+    async def process_member_standardization(self, member):
         mutual_guilds = self._member_mutual_guilds(member)
         shared_role_names = await self._get_shared_role_names(member.guild)
         event_log_channel = await self._event_log_channel(member.guild)
-        if not event_log_channel or not shared_role_names:
-            return
-    
-        # check each mutual guild with event logs set
         mutual_guilds.remove(member.guild)
         for guild in mutual_guilds:
             guild_event_log_channel = await self._event_log_channel(guild)
             if guild_event_log_channel:
                 guild_member = self._guild_member_from_id(guild, member.id)
-                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
+                guild_prefix, guild_nick, guild_awards = self._get_name_components(guild_member)
 
                 if guild_nick != member.name:
                     await member.edit(nick=guild_nick)
-                    await event_log_channel.send("{} (**{}**) has had thier nickname set to **{}** upon joining the server [discovered from **{}**]".format(member.mention, member.name, guild_nick, guild.name))
+                    await event_log_channel.send("{} (**{}**, id: {}) has had thier nickname set to **{}** upon joining the server [discovered from **{}**]".format(member.mention, member.name, member.id, guild_nick, guild.name))
                 
-                # if member has shared role
-                member_shared_roles = []
-                for guild_member_role in guild_member.roles:
-                    if guild_member_role.name in shared_role_names:
-                        sis_role = self._guild_sister_role(member.guild, guild_member_role)
-                        if sis_role:
-                            member_shared_roles.append(sis_role)
+                if shared_role_names:
+                    # if member has shared role
+                    member_shared_roles = []
+                    for guild_member_role in guild_member.roles:
+                        if guild_member_role.name in shared_role_names:
+                            sis_role = self._guild_sister_role(member.guild, guild_member_role)
+                            if sis_role:
+                                member_shared_roles.append(sis_role)
+                    
+                    if member_shared_roles:
+                        await member.add_roles(*member_shared_roles)
+                        await event_log_channel.send(
+                            "{} had one or more shared roles assigned upon joining this server: {} [discovered from **{}**]".format(
+                                member.mention, ', '.join(role.mention for role in member_shared_roles), guild.name
+                            ))
                 
-                if member_shared_roles:
-                    await member.add_roles(*member_shared_roles)
-                    await event_log_channel.send(
-                        "{} had one or more shared roles assigned upon joining this server: {} [discovered from **{}**]".format(
-                            member.mention, ', '.join(role.mention for role in member_shared_roles), guild.name
-                        ))
-                
-                return
+                    return
 
+    async def maybe_send_welcome_message(self, member):
+        guild = member.guild
+        welcome_msg = await self._get_welcome_message(guild)
+        channel = guild.system_channel
+        if channel and welcome_msg:
+            mention_roles = True    # or roles<list>
+            mention_users = True    # or members<list>
+            allowed_mentions = discord.AllowedMentions(roles=guild.roles, users=mention_users)
+            return await channel.send(welcome_msg.format(member=member.mention, guild=guild.name), allowed_mentions=allowed_mentions)
+    
+    # region bot detection
+    async def has_perms(self, member: discord.Member):
+        if member.guild_permissions.administrator:
+            return True
+        helper_role = await self._mod_role(member.guild)
+        if helper_role and helper_role in member.roles:
+            return True
 
+    async def create_invite(self, channel: discord.TextChannel, retry=0, retry_max=3):
+        try:
+            return await channel.create_invite(temporary=True) # , max_uses=1, ) # max_age=86400)
+        except discord.HTTPException:
+            # Try x more times
+            if retry <= retry_max:
+                return await self.create_invite(channel, retry+1, retry_max)
+            else:
+                return None
+    
+    async def run_bot_detection(self, member):
+        # IGNORE WHITELISTED MEMBERS
+        if member.id in self.whitelist:
+            return False
+
+        # SPAM JOIN PREVENTION
+        repeat_recent_name = self.track_member_join(member)
+            
+        ## Kick/Ban first member when subsequent member flagged as bot
+        if repeat_recent_name and len(self.recently_joined_members[member.guild][member.name]['members']) == 2:
+            first_member = self.recently_joined_members[member.guild][member.name]['members'][0]
+            await self.process_bot_member_kick(first_member, reason=(SPAM_JOIN_BT + " - catch first"))
+
+        ## Kick/ban newly joined member
+        if repeat_recent_name:
+            await self.process_bot_member_kick(member, reason=SPAM_JOIN_BT)
+            # TODO: save bot name as blacklisted name?
+            return True
+
+        # SUSPICIOUS NEW ACCOUNTS
+        for blacklist_name in await self._get_blacklisted_names(member.guild):  # await self._get_name_blacklist():
+            account_age = (datetime.utcnow() - member.created_at).seconds
+            if blacklist_name in member.name.lower() and account_age <= ACC_AGE_THRESHOLD + 10:
+                await self.process_bot_member_kick(member, reason=SUS_NEW_ACC_BT)
+                return True
+        return False
+
+    async def _pre_load_data(self):
+        await self.bot.wait_until_ready()
+        self.whitelist = []
+        self.bot_detection = {}
+        self.recently_joined_members = {}
+        for guild in self.bot.guilds:
+            self.recently_joined_members[guild] = {}
+            self.bot_detection[guild] = await self._get_bot_detection(guild)
+    
+    def track_member_join(self, member: discord.Member):
+        member_join_data = self.recently_joined_members[member.guild].setdefault(member.name, {'members': [], 'timeout': None})
+        
+        # cover case where member leaves, rejoins
+        repeat_member = member.id in [m.id for m in member_join_data['members']]
+        if repeat_member:
+            if len(member_join_data['members']) == 1:
+                return False
+            return True
+        
+        # add member to recent joins
+        member_join_data['members'].append(member)
+        if member_join_data['timeout']:
+            member_join_data['timeout'].cancel()
+
+        member_join_data['timeout'] = asyncio.create_task(self.schedule_new_member_name_clear(member))
+        self.recently_joined_members[member.guild][member.name] = member_join_data
+        repeat_recent_name = len(member_join_data['members']) > 1
+
+        return repeat_recent_name
+
+    async def schedule_new_member_name_clear(self, member: discord.Member, time_sec: int=None):
+        if not time_sec:
+            time_sec = NEW_MEMBER_JOIN_TIME
+        await asyncio.sleep(time_sec)
+        self.recently_joined_members[member.guild][member.name]['timeout'].cancel()
+        del self.recently_joined_members[member.guild][member.name]
+
+    async def process_bot_member_kick(self, member: discord.Member, reason=None, ban=False):
+        guild = member.guild
+        channel = guild.system_channel
+        owner = guild.owner
+        if channel:
+            invite = await self.create_invite(channel)
+        else:
+            invite = None
+        
+        action = "banned" if ban else "kicked"
+        message = ("You have been flagged as a bot account and **{}** from **{}**. "
+                + "\n\nIf this was a mistake or the issue persists, please send a message to **{}#{}**.")
+        message = message.format(action, guild.name, owner.name, owner.discriminator)
+
+        # TODO: save invite as "trusted" invite
+        if invite:
+            message += " Alternatively, you can wait 5 minutes, then [Click Here]({}) to rejoin the guild!".format(invite.url)
+        message += "\n\nWe aplogize for the inconvenience."
+
+        embed = discord.Embed(
+            title="Message from {}".format(guild.name),
+            color=discord.Color.red(),
+            description=message,
+        )
+        embed.set_thumbnail(url=guild.icon_url)
+
+        # Send message to kicked/banned member
+        try:
+            await member.send(embed=embed)
+        except:
+            pass
+
+        reason_note = "suspected bot"
+        if reason:
+            reason_note += ": {}".format(reason)
+
+        # Kick or Ban members, log if even log channel is set
+        event_log_channel = await self._event_log_channel(member.guild)
+        try:
+            if ban:
+                await member.ban(reason=reason_note, delete_message_days=7)
+            else:
+                await member.kick(reason=reason_note)
+            if event_log_channel:
+                await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account and **{}** from the server (Reason: {}).".format(
+                    member.name, member.id, action, reason
+                ))
+        except:
+            if event_log_channel:
+                current_action_word = 'banning' if action == 'banned' else 'kicked'
+                await event_log_channel.send("**{}** (id: {}) has been flagged as a bot account, but an error ocurred when **{}ing** from the server (Reason: {}).".format(
+                    member.name, member.id, action, current_action_word
+                ))
+
+        
+        
+
+    def cancel_all_tasks(self, guild=None):
+        guilds = [guild] if guild else self.bot.guilds
+        for guild in guilds:
+            for name, join_data in self.recently_joined_members[guild].items():
+                join_data['timeout'].cancel()
+            self.recently_joined_members[guild] = {}
+
+    # endregion bot detection
+
+    # region general helpers
     async def _process_role_update(self, before, after):
         removed_roles = before.roles
         added_roles = after.roles
@@ -299,7 +640,7 @@ class ModeratorLink(commands.Cog):
         return guild.get_member(member_id)
     
     def _guild_role_from_name(self, guild, role_name):
-        for member in guild.roles:
+        for role in guild.roles:
             if role.name == role_name:
                 return role
     
@@ -315,10 +656,52 @@ class ModeratorLink(commands.Cog):
             if role.name == sister_role.name and role != sister_role:
                 return role
         return None
+    # endregion general helpers
+    
+    # region nickname mgmt
+    async def award_players(self, ctx, award, userList):
+        found = []
+        notFound = []
+        success_count = 0
+        failed = 0
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    found.append(member)
+            except:
+                notFound.append(user)
+        
+        for player in found:
+            prefix, nick, awards = self._get_name_components(player)
+            awards += award
+            new_name = self._generate_new_name(prefix, nick, awards)
+            try:
+                await player.edit(nick=new_name)
+                success_count += 1
+            except:
+                failed += 1
+        
+        message = ""
+        if success_count:
+            message = ":white_check_mark: Trophies have been added to **{} player(s)**.".format(success_count)
+        
+        if notFound:
+            message += "\n:x: {} members could not be found.".format(len(notFound))
+        
+        if failed:
+            message += "\n:x: Nicknames could not be changed for {} members.".format(failed)
+        
+        if message:
+            message += "\nDone"
+        else:
+            message = "No members changed."
+
+        await ctx.send(message)
 
     async def _process_nickname_update(self, before, after):
-        b_prefix, b_nick, b_rewards = self._get_name_components(before)
-        a_prefix, a_nick, a_rewards = self._get_name_components(after)
+        b_prefix, b_nick, b_awards = self._get_name_components(before)
+        a_prefix, a_nick, a_awards = self._get_name_components(after)
         event_log_channel = await self._event_log_channel(before.guild)
 
         if b_nick == a_nick or not event_log_channel:
@@ -331,10 +714,10 @@ class ModeratorLink(commands.Cog):
             channel = await self._event_log_channel(guild)
             if channel:
                 guild_member = self._guild_member_from_id(guild, before.id)
-                guild_prefix, guild_nick, guild_rewards = self._get_name_components(guild_member)
+                guild_prefix, guild_nick, guild_awards = self._get_name_components(guild_member)
                 try:
                     if guild_nick != a_nick:
-                        new_guild_name = self._generate_new_name(guild_prefix, a_nick, guild_rewards)
+                        new_guild_name = self._generate_new_name(guild_prefix, a_nick, guild_awards)
                         await guild_member.edit(nick=new_guild_name)
                         await channel.send("{} has changed their name from **{}** to **{}** [initiated from **{}**]".format(guild_member.mention, guild_nick, a_nick, before.guild.name))
                 except:
@@ -349,21 +732,43 @@ class ModeratorLink(commands.Cog):
         if prefix:
             name = name[name.index(' | ')+3:]
         player_name = ""
-        rewards = ""
+        awards = ""
         for char in name[::-1]:
-            if char not in self.LEAGUE_REWARDS:
+            if char not in self.LEAGUE_AWARDS:
                 break
-            rewards = char + rewards
+            awards = char + awards
 
-        player_name = name.replace(" " + rewards, "") if rewards else name
+        player_name = name.replace(" " + awards, "") if awards else name
 
-        return prefix.strip(), player_name.strip(), rewards.strip()
+        return prefix.strip(), player_name.strip(), awards.strip()
 
-    def _generate_new_name(self, prefix, name, rewards):
+    def _generate_new_name(self, prefix, name, awards):
         new_name = "{} | {}".format(prefix, name) if prefix else name
-        if rewards:
-            new_name += " {}".format(rewards)
+        if awards:
+            awards = ''.join(sorted(awards))
+            new_name += " {}".format(awards)
         return new_name
+    
+    # endregion nickname mgmt
+
+    # region json data
+    async def _get_bot_detection(self, guild: discord.Guild):
+        return await self.config.guild(guild).BotDetection()
+
+    async def _save_bot_detection(self, guild: discord.Guild, bot_detection: bool):
+        await self.config.guild(guild).BotDetection.set(bot_detection)
+
+    async def _get_welcome_message(self, guild: discord.Guild):
+        return await self.config.guild(guild).WelcomeMessage()
+
+    async def _save_welcome_message(self, guild: discord.Guild, message: str):
+        await self.config.guild(guild).WelcomeMessage.set(message)
+
+    async def _get_blacklisted_names(self, guild: discord.Guild):
+        return await self.config.guild(guild).BlacklistedNames()
+
+    async def _save_blacklisted_names(self, guild: discord.Guild, name: str):
+        await self.config.guild(guild).BlacklistedNames.set(name)
 
     async def _save_event_log_channel(self, guild, event_channel):
         await self.config.guild(guild).EventLogChannel.set(event_channel)
@@ -372,8 +777,17 @@ class ModeratorLink(commands.Cog):
     async def _event_log_channel(self, guild):
         return guild.get_channel(await self.config.guild(guild).EventLogChannel())
 
+    async def _save_mod_role(self, guild, mod_role):
+        await self.config.guild(guild).ModeratorRole.set(mod_role)
+        # await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
+
+    async def _mod_role(self, guild):
+        return guild.get_role(await self.config.guild(guild).ModeratorRole())
+
     async def _save_shared_roles(self, guild, shared_role_names):
-        await self.config.guild(guild).SharedRoles.set(shared_roles)
+        await self.config.guild(guild).SharedRoles.set(shared_role_names)
 
     async def _get_shared_role_names(self, guild):
         return await self.config.guild(guild).SharedRoles()
+    
+    # endregion json data

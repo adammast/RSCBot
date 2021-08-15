@@ -598,39 +598,48 @@ class SixMans(commands.Cog):
     #endregion player commands
 
     #region listeners
-    @commands.guild_only()
     @commands.Cog.listener("on_reaction_add")
     async def on_reaction_add(self, reaction, user):
         return
         channel = reaction.message.channel
+        if type(channel) == discord.DMChannel:
+            return
         await self.process_six_mans_reaction_add(reaction.message, channel, user, reaction.emoji) 
 
-    @commands.guild_only()
     @commands.Cog.listener("on_raw_reaction_add")
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         channel = self.bot.get_channel(payload.channel_id)
+        if type(channel) == discord.DMChannel:
+            return
+
         message = await channel.fetch_message(payload.message_id)
         user = self.bot.get_user(payload.user_id)
         if not user:
             user = await self.bot.fetch_user(payload.user_id)
-
+        
+        
         await self.process_six_mans_reaction_add(message, channel, user, payload.emoji)
 
     @commands.Cog.listener("on_reaction_remove")
     async def on_reaction_remove(self, reaction, user):
         return
+        if type(reaction.message.channel) == discord.DMChannel:
+            return
+
         await self.process_six_mans_reaction_removed(reaction.message.channel, user, reaction.emoji)
 
     @commands.Cog.listener("on_raw_reaction_remove")
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
         channel = self.bot.get_channel(payload.channel_id)
+        if type(channel) == discord.DMChannel:
+            return
+
         user = self.bot.get_user(payload.user_id)
         if not user:
             user = await self.bot.fetch_user(payload.user_id)
 
         await self.process_six_mans_reaction_removed(channel, user, payload.emoji)
 
-    @commands.guild_only()
     @commands.Cog.listener("on_guild_channel_delete")
     async def on_guild_channel_delete(self, channel):
         """If a queue channel is deleted, removes it from the queue class instance. If the last queue channel is deleted, the channel is replaced."""
