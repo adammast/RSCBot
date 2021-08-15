@@ -45,7 +45,7 @@ class Game:
         self.helper_role = helper_role
         self.automove = automove
         self.textChannel = text_channel
-        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange]
+        self.voiceChannels = voice_channels #List of voice channels: [Blue, Orange, General]
         self.info_message = info_message
         self.observers = observers if observers else []
 
@@ -80,6 +80,11 @@ class Game:
         await self.textChannel.set_permissions(guild.default_role, view_channel=False, read_messages=False)
         for player in self.players:
             await self.textChannel.set_permissions(player, read_messages=True)
+		
+		# create a general VC lobby for all players in a session
+		general_vc = await guild.create_voice_channel("{} | {} General VC".format(code, self.queue.name), permissions_synced=True, category=category)
+		await general_vc.set_permissions(guild.default_role, connect=False)
+
         blue_vc = await guild.create_voice_channel("{} | {} Blue Team".format(code, self.queue.name), permissions_synced=True, category=category)
         await blue_vc.set_permissions(guild.default_role, connect=False)
         oran_vc = await guild.create_voice_channel("{} | {} Orange Team".format(code, self.queue.name), permissions_synced=True, category=category)
@@ -88,10 +93,11 @@ class Game:
         # manually add helper role perms if one is set
         if self.helper_role:
             await self.textChannel.set_permissions(self.helper_role, view_channel=True, read_messages=True)
+			await general_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await blue_vc.set_permissions(self.helper_role, connect=True, move_members=True)
             await oran_vc.set_permissions(self.helper_role, connect=True, move_members=True)
         
-        self.voiceChannels = [blue_vc, oran_vc]
+        self.voiceChannels = [blue_vc, oran_vc, general_vc]
 
         # Mentions all players
         await self.textChannel.send(', '.join(player.mention for player in self.players))
@@ -111,9 +117,10 @@ class Game:
         self.orange.add(player)
 
     async def update_player_perms(self):
-        blue_vc, orange_vc = self.voiceChannels
+        blue_vc, orange_vc, general_vc = self.voiceChannels
         
         for player in self.orange:
+			await general_vc.set_permission(player, connect=True)
             await blue_vc.set_permissions(player, connect=False)
             await orange_vc.set_permissions(player, connect=True)
 
@@ -123,6 +130,7 @@ class Game:
                 except:
                     pass
         for player in self.blue:
+			await general_vc.set_permission(player, connect=True)
             await blue_vc.set_permissions(player, connect=True)
             await orange_vc.set_permissions(player, connect=False)
 
