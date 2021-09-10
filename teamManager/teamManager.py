@@ -552,7 +552,7 @@ class TeamManager(commands.Cog):
                 else:
                     if perm_fa_role is not None and perm_fa_role in member.roles:
                         fa_Dictionary["PermFA"].append(member.display_name)
-                    else
+                    else:
                         fa_Dictionary["FA"].append(member.display_name)
 
         message = "```"
