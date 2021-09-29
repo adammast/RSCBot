@@ -556,9 +556,9 @@ class TeamManager(commands.Cog):
                         fa_Dictionary["FA"].append(member.display_name)
 
         message = "```"
-        for fa in sorted(fa_Dictionary["FA"]):
+        for fa in sorted(fa_Dictionary["FA"], key=str.casefold):
             message += "\n{0}".format(fa)
-        for permFA in sorted(fa_Dictionary["PermFA"]):
+        for permFA in sorted(fa_Dictionary["PermFA"], key=str.casefold):
             message += "\n{0} {1}".format(permFA, "(Permanent FA)")
         message += "```"
 
