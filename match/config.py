@@ -34,11 +34,11 @@ class config:
 
     third_match_descr = ("**three game** series")
 
-    first_match_time = ("10:00 pm ET (7:00 pm PT)")
+    first_match_time = ("9:30 pm ET (6:30 pm PT)")
 
-    second_match_time = ("approximately 10:15 pm ET (7:15 pm PT)")
+    second_match_time = ("approximately 9:45 pm ET (6:45 pm PT)")
 
-    third_match_time = ("approximately 10:30 pm ET (7:30 pm PT)")
+    third_match_time = ("approximately 10:00 pm ET (7:00 pm PT)")
 
     solo_matchup = ("{away_player:25s} vs.\t{home_player}")
 
