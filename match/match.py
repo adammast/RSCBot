@@ -10,17 +10,19 @@ from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
 
-defaults = {"MatchDay": 0, "Schedules": {}, "Segment": "Regular Season", "Game": "Rocket League"}
+defaults = {"MatchDay": 0, "Schedules": {}, "Segment": "Regular Season",
+            "Game": "Rocket League", "GameTeamSize": 3, "SeriesType": "GS-4"}
+
 
 class Match(commands.Cog):
     """Used to get the match information"""
 
     MATCHES_KEY = "Matches"
-    TEAM_DAY_INDEX_KEY = "TeamDays"
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567893, force_registration=True)
+        self.config = Config.get_conf(
+            self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
         self.team_manager = bot.get_cog("TeamManager")
 
@@ -45,7 +47,7 @@ class Match(commands.Cog):
                 "Current match day is: {0}".format(match_day))
         else:
             await ctx.send(":x: Match day not set. Set with setMatchDay "
-                               "command.")
+                           "command.")
 
     @commands.command()
     @commands.guild_only()
@@ -62,7 +64,7 @@ class Match(commands.Cog):
         schedule = await self._schedule(ctx)
         dump = json.dumps(schedule, indent=4, sort_keys=True)
         await ctx.send("Here is all of the schedule data in "
-                           "JSON format.\n```json\n{0}\n```".format(dump))
+                       "JSON format.\n```json\n{0}\n```".format(dump))
 
     @commands.command()
     @commands.guild_only()
@@ -96,7 +98,7 @@ class Match(commands.Cog):
         match_day = args[0] if args else await self._match_day(ctx)
         if not match_day:
             await ctx.send("Match day not provided and not set for "
-                               "the server.")
+                           "the server.")
             return
         team_names = []
         user_team_names = await self.team_manager.teams_for_user(
@@ -110,8 +112,8 @@ class Match(commands.Cog):
 
         if not team_names:
             await ctx.send("No teams found. If you provided teams, "
-                               "check the spelling. If not, you do not have "
-                               "roles corresponding to a team.")
+                           "check the spelling. If not, you do not have "
+                           "roles corresponding to a team.")
             return
 
         on_mobile = ctx.message.author.is_on_mobile()
@@ -127,7 +129,8 @@ class Match(commands.Cog):
 
             if not team_matches:
                 await ctx.message.author.send(
-                    "No matches on day {0} for {1}".format(match_day, team_name)
+                    "No matches on day {0} for {1}".format(
+                        match_day, team_name)
                 )
 
         await ctx.message.delete()
@@ -138,7 +141,7 @@ class Match(commands.Cog):
         """Informs players of the opposing team that the private match lobby is ready and joinable."""
         match_day = await self._match_day(ctx)
         teams = await self.team_manager.teams_for_user(ctx, ctx.author)
-        
+
         if not (match_day and teams):
             return
 
@@ -150,23 +153,26 @@ class Match(commands.Cog):
             return await ctx.send(":x: Match could not be found")
 
         opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
-        
+
         opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
         opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
-        opposing_roster = self.team_manager.members_from_team(ctx, opp_franchise_role, tier_role)
+        opposing_roster = self.team_manager.members_from_team(
+            ctx, opp_franchise_role, tier_role)
         opposing_roster.remove(opp_captain)
-        
-        message = "Please join your match against the **{}** with the following lobby information:".format(opposing_team)
+
+        message = "Please join your match against the **{}** with the following lobby information:".format(
+            opposing_team)
         message += "\n\n**Name:** {}".format(match_data['roomName'])
         message += "\n**Password:** {}".format(match_data['roomPass'])
-        
-        embed = discord.Embed(title="Your Opponents are ready!", color=tier_role.color, description=message)
+
+        embed = discord.Embed(title="Your Opponents are ready!",
+                              color=tier_role.color, description=message)
 
         # TODO: cover scenario where captain has promoted
         # only send to captain if in-game
         if await self._is_in_game(opp_captain):
             return await opp_captain.send(embed)
-        
+
         # send to captain if status is online
         if opp_captain.status == "online":
             await opp_captain.send(embed)
@@ -176,18 +182,18 @@ class Match(commands.Cog):
         for player in opposing_roster:
             if await self._is_in_game(player):
                 actively_playing.append(player)
-        
+
         if actively_playing:
             for player in actively_playing:
                 await player.send(embed)
             return
-        
+
         # send to all online players if no players are in-game
         online = []
         for player in opposing_roster:
             if player.status == "online":
                 online.append(player)
-        
+
         if online:
             for player in online:
                 await player.send(embed)
@@ -197,17 +203,18 @@ class Match(commands.Cog):
         opposing_roster.append(opp_captain)
         for player in opposing_roster:
             await player.send(embed)
-        
+
         # Don't double send to GM
         opposing_gm = self.team_manager._get_gm(ctx, opp_franchise_role)
         if opposing_gm in opposing_roster:
             return
 
         embed.description += "\n_This message has been sent to you because none of the players on your "
-        embed.description += "{} team, the {} appear to be in-game or online._".format(tier_role.name, opposing_team)
+        embed.description += "{} team, the {} appear to be in-game or online._".format(
+            tier_role.name, opposing_team)
 
         await opposing_gm.send(embed)
-        await ctx.message.add_reaction("\U00002705") # white check mark
+        await ctx.message.add_reaction("\U00002705")  # white check mark
         # TODO: Maybe react with franchise emojis? could be fun :)
 
     @commands.command()
@@ -271,7 +278,6 @@ class Match(commands.Cog):
         if match:
             await ctx.send("Done")
 
-
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
         # Process inputs to normalize the data (e.g. convert team names to
@@ -298,10 +304,11 @@ class Match(commands.Cog):
         if not awayRoles:
             errors.append("Away team roles not found ({}).".format(away))
         if homeRoles[1] != awayRoles[1]:
-            errors.append("Home and Away teams are in different tiers ({}, {})".format(home, away))
+            errors.append(
+                "Home and Away teams are in different tiers ({}, {})".format(home, away))
         if errors:
             await ctx.send(":x: Errors with input:\n\n  "
-                               "* {0}\n".format("\n  * ".join(errors)))
+                           "* {0}\n".format("\n  * ".join(errors)))
             return
 
         schedule = await self._schedule(ctx)
@@ -312,8 +319,7 @@ class Match(commands.Cog):
             'home': home,
             'away': away,
             'roomName': roomName,
-            'roomPass': roomPass,
-            'streamDetails': None
+            'roomPass': roomPass
         }
 
         # Adds match to correct location within Schedules hierarchy
@@ -332,38 +338,6 @@ class Match(commands.Cog):
         result['away'] = away
         return result
 
-    # outdated
-    async def _set_match_on_stream(self, ctx, match_day, team, stream_details):
-        matches = await self._matches(ctx)
-        for match in matches:
-            if match['matchDay'] == match_day and (team == match['home'] or team == match['away']):
-                match['streamDetails'] = stream_details
-                #match['time'] = time  # ((could add time param to match))
-                await self._save_matches(ctx, matches)
-                return True
-        return False
-
-    async def _schedule(self, ctx):
-        return await self.config.guild(ctx.guild).Schedules()
-
-    async def _save_schedule(self, ctx, schedules):
-        await self.config.guild(ctx.guild).Schedules.set(schedules)
-
-    async def _matches(self, ctx):
-        schedule = await self._schedule(ctx)
-        return schedule.setdefault(self.MATCHES_KEY, {})
-
-    async def _save_matches(self, ctx, matches):
-        schedule = await self._schedule(ctx)
-        schedule[self.MATCHES_KEY] = matches
-        await self._save_schedule(ctx, schedule)
-
-    async def _match_day(self, ctx):
-        return await self.config.guild(ctx.guild).MatchDay()
-
-    async def _save_match_day(self, ctx, match_day):
-        await self.config.guild(ctx.guild).MatchDay.set(match_day)
-
     async def _format_match_embed(self, ctx, match, user_team_name):
         # Match format:
         # match = {
@@ -373,22 +347,23 @@ class Match(commands.Cog):
         #     'away': away,
         #     'roomName': roomName,
         #     'roomPass': roomPass,
-        #     'stream_details' : <stream details/None>
         # }
         home = match['home']
         away = match['away']
 
         tier_role = (await self.team_manager._roles_for_team(ctx, home))[1]
 
-        title = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
+        title = "__Match Day {0}: {1}__\n".format(
+            match['matchDay'], match['matchDate'])
         description = "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
 
-        embed = discord.Embed(title=title, description=description, color=tier_role.color)
+        embed = discord.Embed(
+            title=title, description=description, color=tier_role.color)
 
         player_ratings = self.bot.get_cog("PlayerRatings")
         if player_ratings and await player_ratings.guild_has_players(ctx):
             return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
-            
+
         return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
 
     async def _format_match_message(self, ctx, match, user_team_name):
@@ -400,24 +375,19 @@ class Match(commands.Cog):
         #     'away': away,
         #     'roomName': roomName,
         #     'roomPass': roomPass
-        #     'stream_details`: {
-        #         'live_stream': live_stream,
-        #         'slot': slot,
-        #         'time': time
-        #      }
         # }
         home = match['home']
         away = match['away']
 
-        message = "__Match Day {0}: {1}__\n".format(match['matchDay'], match['matchDate'])
+        message = "__Match Day {0}: {1}__\n".format(
+            match['matchDay'], match['matchDate'])
         message += "**{0}**\n    versus\n**{1}**\n\n".format(home, away)
-
 
         player_ratings = self.bot.get_cog("PlayerRatings")
         if player_ratings and await player_ratings.guild_has_players(ctx):
             message += await self._create_solo_match_message(ctx, match, player_ratings, user_team_name, home, away)
             return message
-            
+
         message += await self._create_normal_match_message(ctx, match, user_team_name, home, away)
         return message
 
@@ -434,93 +404,58 @@ class Match(commands.Cog):
             tier_matches = []
             for match_day, matches in tier_schedule.items():
                 tier_matches += matches
-        
+
         team_matches = []
         for match in tier_matches:
             if team_name.lower() in [match['home'].lower(), match['away'].lower()]:
                 team_matches.append(match)
-        
+
         return team_matches
 
     # outdated
-    async def set_match_on_stream(self, ctx, match_day, team_name, stream_data):
-        matches = await self._matches(ctx)
-        for match in matches:
-            if not match['matchDay'] == match_day:
-                break 
-            if match['home'] == team_name or match['away'] == team_name:
-                match['streamDetails'] = stream_data
-                await self._save_matches(ctx, matches)
-                return True
-        return False
-
-    async def remove_match_from_stream(self, ctx, match_day, team_name):
-        matches = await self._matches(ctx)
-        for match in matches:
-            if not match['matchDay'] == match_day:
-                break 
-            if match['home'] == team_name or match['away'] == team_name:
-                match.pop('streamDetails', None)
-                await self._save_matches(ctx, matches)
-                return True
-        return False
-
-    def _create_additional_info(self, user_team_name, home, away, stream_details=None, is_playoffs=False):
+    def _create_additional_info(self, user_team_name, home, away, is_playoffs=False):
         additional_info = ""
         if user_team_name:
-            if stream_details:
-                if user_team_name.casefold() == home.casefold():
-                    additional_info += config.stream_info.format(
-                        home_or_away='home', 
-                        time_slot=stream_details['slot'],
-                        time=stream_details['time'],
-                        live_stream=stream_details['live_stream']
-                    )
-                elif user_team_name.casefold() == away.casefold():
-                    additional_info += config.stream_info.format(
-                        home_or_away='away', 
-                        time_slot=stream_details['slot'],
-                        time=stream_details['time'],
-                        live_stream=stream_details['live_stream']
-                    )
-            else:
-                if user_team_name == home:
-                    additional_info += config.home_info
-                elif user_team_name == away:
-                    additional_info += config.away_info
-                
+            if user_team_name == home:
+                additional_info += config.home_info
+            elif user_team_name == away:
+                additional_info += config.away_info
 
-        # TODO: Add other info (complaint form, disallowed maps,
-        #       enable crossplay, etc.)
+        # TODO: Add other info (complaint form, disallowed maps, enable crossplay, etc.)
         # REGULAR SEASON INFO
-        additional_info += config.regular_info
+        additional_info += config.regular_info.format(
+            series_type="4-game series")
         # PLAYOFF INFO
         #additional_info += config.playoff_info
         return additional_info
 
     async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away):
         embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
-                                        .format(match['roomName'], match['roomPass']), inline=False)
+                        .format(match['roomName'], match['roomPass']), inline=False)
         embed.add_field(name="**Home Team:**",
-                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+                        value=await self.team_manager.format_roster_info(ctx, home), inline=False)
         embed.add_field(name="**Away Team:**",
-                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+                        value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
         try:
-            additional_info = self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+            additional_info = self._create_additional_info(
+                user_team_name, home, away)
         except KeyError:
-            additional_info = self._create_additional_info(user_team_name, home, away)
+            additional_info = self._create_additional_info(
+                user_team_name, home, away)
 
         embed.add_field(name="Additional Info:", value=additional_info)
         return embed
 
     async def _create_normal_match_message(self, ctx, match, user_team_name, home, away):
-        message = "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'], match['roomPass'])
+        message = "**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(
+            match['roomName'], match['roomPass'])
         message += "**Home Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, home))
         message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
 
         try:
-            message += self._create_additional_info(user_team_name, home, away, stream_details=match['streamDetails'])
+            message += self._create_additional_info(
+                user_team_name, home, away)
         except KeyError:
             message += self._create_additional_info(user_team_name, home, away)
 
@@ -528,9 +463,9 @@ class Match(commands.Cog):
 
     async def _create_solo_match_embed(self, ctx, embed, match, player_ratings_cog, user_team_name, home, away):
         embed.add_field(name="**Home Team:**",
-                value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+                        value=await self.team_manager.format_roster_info(ctx, home), inline=False)
         embed.add_field(name="**Away Team:**",
-                value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+                        value=await self.team_manager.format_roster_info(ctx, away), inline=False)
         message = ""
         seed = await player_ratings_cog.get_player_seed(ctx, user_team_name)
         if seed:
@@ -555,40 +490,47 @@ class Match(commands.Cog):
         if user_team_name.casefold() == home.casefold():
             ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, True, away)
             message += config.solo_home_info.format(seed)
-            message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(match['roomName'] + str(seed), match['roomPass'] + str(seed))
-            message += config.solo_home_match_info.format(config.first_match_descr, ordered_opponent_names[0], config.first_match_time)
-            message += config.solo_home_match_info.format(config.second_match_descr, ordered_opponent_names[1], config.second_match_time)
-            message += config.solo_home_match_info.format(config.third_match_descr, ordered_opponent_names[2], config.third_match_time)
+            message += "\n\n**Lobby Info:**\nName: **{0}**\nPassword: **{1}**\n\n".format(
+                match['roomName'] + str(seed), match['roomPass'] + str(seed))
+            message += config.solo_home_match_info.format(
+                config.first_match_descr, ordered_opponent_names[0], config.first_match_time)
+            message += config.solo_home_match_info.format(
+                config.second_match_descr, ordered_opponent_names[1], config.second_match_time)
+            message += config.solo_home_match_info.format(
+                config.third_match_descr, ordered_opponent_names[2], config.third_match_time)
         else:
             ordered_opponent_names, ordered_opponent_seeds = await player_ratings_cog.get_ordered_opponent_names_and_seeds(ctx, seed, False, home)
             message += config.solo_away_info.format(seed)
-            message += "\n\n{0}".format(config.solo_away_match_info.format(config.first_match_descr, ordered_opponent_names[0], config.first_match_time, 
-                match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
-            message += "\n\n{0}".format(config.solo_away_match_info.format(config.second_match_descr, ordered_opponent_names[1], config.second_match_time, 
-                match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
-            message += "\n\n{0}".format(config.solo_away_match_info.format(config.third_match_descr, ordered_opponent_names[2], config.third_match_time, 
-                match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.first_match_descr, ordered_opponent_names[0], config.first_match_time,
+                                                                           match['roomName'] + str(ordered_opponent_seeds[0]), match['roomPass'] + str(ordered_opponent_seeds[0])))
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.second_match_descr, ordered_opponent_names[1], config.second_match_time,
+                                                                           match['roomName'] + str(ordered_opponent_seeds[1]), match['roomPass'] + str(ordered_opponent_seeds[1])))
+            message += "\n\n{0}".format(config.solo_away_match_info.format(config.third_match_descr, ordered_opponent_names[2], config.third_match_time,
+                                                                           match['roomName'] + str(ordered_opponent_seeds[2]), match['roomPass'] + str(ordered_opponent_seeds[2])))
         return message
 
     async def _create_generic_solo_matchups_message(self, ctx, player_ratings_cog, home, away):
         message = ""
         try:
             # First match
-            message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(config.first_match_time)
+            message += "\n\nThe first **one game** series will begin at {0} and will include the following matchups: ".format(
+                config.first_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 3)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 1)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 2)
             message += "```"
             # Second match
-            message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(config.second_match_time)
+            message += "\n\nThe second **one game** series will begin at {0} and will include the following matchups: ".format(
+                config.second_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 2)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 3)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 3, 1)
             message += "```"
             # Third match
-            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(config.third_match_time)
+            message += "\n\nThe final **three game** series will begin at {0} and will include the following matchups: ".format(
+                config.third_match_time)
             message += "```"
             message += await self._create_matchup_string(ctx, player_ratings_cog, home, away, 1, 1)
             message += "\n" + await self._create_matchup_string(ctx, player_ratings_cog, home, away, 2, 2)
@@ -599,17 +541,19 @@ class Match(commands.Cog):
         return message
 
     async def _create_matchup_string(self, ctx, player_ratings_cog, home, away, home_seed, away_seed):
-        away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick) # We convert to string to handle None cases
-        home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick) # We convert to string to handle None cases
-        return config.solo_matchup.format(away_player = away_player_nick, home_player = home_player_nick)
+        # We convert to string to handle None cases
+        away_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, away, away_seed)).nick)
+        # We convert to string to handle None cases
+        home_player_nick = str((await player_ratings_cog.get_member_by_team_and_seed(ctx, home, home_seed)).nick)
+        return config.solo_matchup.format(away_player=away_player_nick, home_player=home_player_nick)
 
     def _generate_name_pass(self):
         return config.room_pass[random.randrange(len(config.room_pass))]
 
     async def _is_in_game(self, member):
         if not member.activities:
-            return False 
-        
+            return False
+
         playing = False
         game = await self._get_guild_game(member.guild)
 
@@ -623,9 +567,30 @@ class Match(commands.Cog):
                         playing = not activity.end
                     return playing
 
+# json
+    async def _schedule(self, ctx):
+        return await self.config.guild(ctx.guild).Schedules()
+
+    async def _save_schedule(self, ctx, schedules):
+        await self.config.guild(ctx.guild).Schedules.set(schedules)
+
+    async def _matches(self, ctx):
+        schedule = await self._schedule(ctx)
+        return schedule.setdefault(self.MATCHES_KEY, {})
+
+    async def _save_matches(self, ctx, matches):
+        schedule = await self._schedule(ctx)
+        schedule[self.MATCHES_KEY] = matches
+        await self._save_schedule(ctx, schedule)
+
+    async def _match_day(self, ctx):
+        return await self.config.guild(ctx.guild).MatchDay()
+
+    async def _save_match_day(self, ctx, match_day):
+        await self.config.guild(ctx.guild).MatchDay.set(match_day)
+
     async def _save_guild_game(self, guild, game):
         await self.config.guild(guild).Game.set(game)
 
     async def _get_guild_game(self, guild):
         return await self.config.guild(guild).Game()
-    

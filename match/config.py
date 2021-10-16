@@ -3,8 +3,8 @@ class config:
     home_info = ("You are the **home** team. You will create the "
                 "room using the above information. Contact the "
                 "other team when your team is ready to begin the "
-                "match. Do not join a team until the away team starts "
-                "to.\nRemember to ask before the match begins if the other "
+                "match. Do not join a team before the away team does. "
+                "\nRemember to ask before the match begins if the other "
                 "team would like to switch server region after 2 "
                 "games.")
 
@@ -20,7 +20,6 @@ class config:
     solo_away_info = ("You are on the **away** team. You are the {0} seed. "
                 "You will participate in the following matchups: ")
                 
-
     solo_home_match_info = ("Your {0} will be against `{1}` at {2}.\n\n")
 
     solo_away_match_info = ("Your {0} will be against `{1}` at "
@@ -55,7 +54,7 @@ class config:
     regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                     "and screenshots of the end-of-game scoreboard. Do not leave "
                     "the game until screenshots have been taken. "
-                    "These must be uploaded by one member of your team after the 4-game series "
+                    "These must be uploaded by one member of your team after the {series_type} "
                     "is over. Remember that the deadline to reschedule matches is "
                     "at 10 minutes before the currently scheduled match time. They "
                     "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
