@@ -11,7 +11,7 @@ from redbot.core import commands
 from redbot.core import checks
 
 defaults = {"MatchDay": 0, "Schedules": {}, "Segment": "Regular Season",
-            "Game": "Rocket League", "GameTeamSize": 3, "SeriesType": "GS-4"}
+            "Game": "Rocket League", "GameTeamSize": 3, "MatchupType": "GS-4"}
 
 
 class Match(commands.Cog):
@@ -26,6 +26,9 @@ class Match(commands.Cog):
         self.config.register_guild(**defaults)
         self.team_manager = bot.get_cog("TeamManager")
 
+        # TODO: Data Setup on startup - guild[field] = x -> match dates, time zone, gameTeamSize, SeriesType
+
+# Admin Configuration
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -36,186 +39,6 @@ class Match(commands.Cog):
         """
         await self._save_match_day(ctx, str(day))
         await ctx.send("Done")
-
-    @commands.command()
-    @commands.guild_only()
-    async def getMatchDay(self, ctx):
-        """Gets the currently active match day."""
-        match_day = await self._match_day(ctx)
-        if match_day:
-            await ctx.send(
-                "Current match day is: {0}".format(match_day))
-        else:
-            await ctx.send(":x: Match day not set. Set with setMatchDay "
-                           "command.")
-
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def printScheduleData(self, ctx):
-        """Print all raw schedule data.
-
-        Note: In the real server, this will likely fail just due to the amount
-        of data. Intended for use in debugging on test servers. Basically,
-        when there are only a handful of matches total.
-
-        TODO: Might even comment this out in prod.
-        """
-        schedule = await self._schedule(ctx)
-        dump = json.dumps(schedule, indent=4, sort_keys=True)
-        await ctx.send("Here is all of the schedule data in "
-                       "JSON format.\n```json\n{0}\n```".format(dump))
-
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def clearSchedule(self, ctx):
-        """Clear all scheduled matches."""
-        await self._save_schedule(ctx, {})
-        await ctx.send("Done.")
-
-    @commands.command()
-    @commands.guild_only()
-    async def match(self, ctx, *args):
-        """Get match info.
-
-        If no arguments are provided, retrieve the match info for the
-        server's currently active match day for the requesting user's
-        team or teams. This will fail if the user has no team role or if
-        the match day is not set.
-
-        If one argument is provided, it must be the match day to retrieve. If
-        more than one argument is provided, the first must be the match day
-        followed by a list of teams for which the match info should be
-        retrieved.
-
-        Example: `[p]match 1 derechos "killer bees"`
-
-        Note: If no team names are sent, GMs (or anyone with multiple team
-        roles) will get matchups for all their teams. User's without a team
-        role will get nothing.
-        """
-        match_day = args[0] if args else await self._match_day(ctx)
-        if not match_day:
-            await ctx.send("Match day not provided and not set for "
-                           "the server.")
-            return
-        team_names = []
-        user_team_names = await self.team_manager.teams_for_user(
-            ctx, ctx.message.author)
-
-        team_names_provided = len(args) > 1
-        if team_names_provided:
-            team_names = args[1:]
-        else:
-            team_names = user_team_names
-
-        if not team_names:
-            await ctx.send("No teams found. If you provided teams, "
-                           "check the spelling. If not, you do not have "
-                           "roles corresponding to a team.")
-            return
-
-        on_mobile = ctx.message.author.is_on_mobile()
-        for team_name in team_names:
-            team_matches = await self.get_team_matches(ctx, team_name, str(match_day))
-            for match in team_matches:
-                if on_mobile:
-                    message = await self._format_match_message(ctx, match, team_name)
-                    await ctx.message.author.send(message)
-                else:
-                    embed = await self._format_match_embed(ctx, match, team_name)
-                    await ctx.message.author.send(embed=embed)
-
-            if not team_matches:
-                await ctx.message.author.send(
-                    "No matches on day {0} for {1}".format(
-                        match_day, team_name)
-                )
-
-        await ctx.message.delete()
-
-    @commands.command(aliases=['lobbyup', 'up'])
-    @commands.guild_only()
-    async def lobbyready(self, ctx):
-        """Informs players of the opposing team that the private match lobby is ready and joinable."""
-        match_day = await self._match_day(ctx)
-        teams = await self.team_manager.teams_for_user(ctx, ctx.author)
-
-        if not (match_day and teams):
-            return
-
-        team_name = teams[0]
-        # TODO: handle more gracefully for 2s league, simplify logic
-        match_data = await self.get_team_matches(ctx, team_name, match_day)[0]
-
-        if not match_data:
-            return await ctx.send(":x: Match could not be found")
-
-        opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
-
-        opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
-        opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
-        opposing_roster = self.team_manager.members_from_team(
-            ctx, opp_franchise_role, tier_role)
-        opposing_roster.remove(opp_captain)
-
-        message = "Please join your match against the **{}** with the following lobby information:".format(
-            opposing_team)
-        message += "\n\n**Name:** {}".format(match_data['roomName'])
-        message += "\n**Password:** {}".format(match_data['roomPass'])
-
-        embed = discord.Embed(title="Your Opponents are ready!",
-                              color=tier_role.color, description=message)
-
-        # TODO: cover scenario where captain has promoted
-        # only send to captain if in-game
-        if await self._is_in_game(opp_captain):
-            return await opp_captain.send(embed)
-
-        # send to captain if status is online
-        if opp_captain.status == "online":
-            await opp_captain.send(embed)
-
-        # send to all rostered players in-game if captain isn't in-game
-        actively_playing = []
-        for player in opposing_roster:
-            if await self._is_in_game(player):
-                actively_playing.append(player)
-
-        if actively_playing:
-            for player in actively_playing:
-                await player.send(embed)
-            return
-
-        # send to all online players if no players are in-game
-        online = []
-        for player in opposing_roster:
-            if player.status == "online":
-                online.append(player)
-
-        if online:
-            for player in online:
-                await player.send(embed)
-            return
-
-        # send to everyone if nobody is online, including opposing team's GM
-        opposing_roster.append(opp_captain)
-        for player in opposing_roster:
-            await player.send(embed)
-
-        # Don't double send to GM
-        opposing_gm = self.team_manager._get_gm(ctx, opp_franchise_role)
-        if opposing_gm in opposing_roster:
-            return
-
-        embed.description += "\n_This message has been sent to you because none of the players on your "
-        embed.description += "{} team, the {} appear to be in-game or online._".format(
-            tier_role.name, opposing_team)
-
-        await opposing_gm.send(embed)
-        await ctx.message.add_reaction("\U00002705")  # white check mark
-        # TODO: Maybe react with franchise emojis? could be fun :)
 
     @commands.command()
     @commands.guild_only()
@@ -278,6 +101,147 @@ class Match(commands.Cog):
         if match:
             await ctx.send("Done")
 
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def printScheduleData(self, ctx):
+        """Print all raw schedule data.
+
+        Note: In the real server, this will likely fail just due to the amount
+        of data. Intended for use in debugging on test servers. Basically,
+        when there are only a handful of matches total.
+
+        TODO: Might even comment this out in prod.
+        """
+        schedule = await self._schedule(ctx)
+        dump = json.dumps(schedule, indent=4, sort_keys=True)
+        await ctx.send("Here is all of the schedule data in "
+                       "JSON format.\n```json\n{0}\n```".format(dump))
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def clearSchedule(self, ctx):
+        """Clear all scheduled matches."""
+        await self._save_schedule(ctx, {})
+        await ctx.send("Done.")
+
+# General Info Commands
+    @commands.command()
+    @commands.guild_only()
+    async def getMatchDay(self, ctx):
+        """Gets the currently active match day."""
+        match_day = await self._match_day(ctx)
+        if match_day:
+            await ctx.send(
+                "Current match day is: {0}".format(match_day))
+        else:
+            await ctx.send(":x: Match day not set. Set with setMatchDay "
+                           "command.")
+
+# Player Commands
+    @commands.command()
+    @commands.guild_only()
+    async def match(self, ctx, *args):
+        """Get match info.
+
+        If no arguments are provided, retrieve the match info for the
+        server's currently active match day for the requesting user's
+        team or teams. This will fail if the user has no team role or if
+        the match day is not set.
+
+        If one argument is provided, it must be the match day to retrieve. If
+        more than one argument is provided, the first must be the match day
+        followed by a list of teams for which the match info should be
+        retrieved.
+
+        Example: `[p]match 1 derechos "killer bees"`
+
+        Note: If no team names are sent, GMs (or anyone with multiple team
+        roles) will get matchups for all their teams. User's without a team
+        role will get nothing.
+        """
+        match_day = args[0] if args else await self._match_day(ctx)
+        if not match_day:
+            await ctx.send("Match day not provided and not set for "
+                           "the server.")
+            return
+        team_names = []
+        user_team_names = await self.team_manager.teams_for_user(
+            ctx, ctx.message.author)
+
+        team_names_provided = len(args) > 1
+        if team_names_provided:
+            team_names = args[1:]
+        else:
+            team_names = user_team_names
+
+        if not team_names:
+            await ctx.send("No teams found. If you provided teams, "
+                           "check the spelling. If not, you do not have "
+                           "roles corresponding to a team.")
+            return
+
+        on_mobile = ctx.message.author.is_on_mobile()
+        for team_name in team_names:
+            team_matches = await self.get_team_matches(ctx, team_name, str(match_day))
+            for match in team_matches:
+                if on_mobile:
+                    message = await self._format_match_message(ctx, match, team_name)
+                    await ctx.message.author.send(message)
+                else:
+                    embed = await self._format_match_embed(ctx, match, team_name)
+                    await ctx.message.author.send(embed=embed)
+
+            if not team_matches:
+                await ctx.message.author.send(
+                    "No matches on day {0} for {1}".format(
+                        match_day, team_name)
+                )
+
+        await ctx.message.delete()
+
+    @commands.command(aliases=['lobbyup', 'up', 'ready'])
+    @commands.guild_only()
+    async def lobbyready(self, ctx):
+        """Informs players of the opposing team that the private match lobby is ready and joinable."""
+        match_day = await self._match_day(ctx)
+        team_size = await self._get_game_team_size(ctx.guild)
+        if team_size != 3:
+            return None
+
+        teams = await self.team_manager.teams_for_user(ctx, ctx.author)
+
+        if not (match_day and teams):
+            return
+
+        team_name = teams[0]
+        # TODO: handle more gracefully for 2s league, simplify logic
+        match_data = await self.get_team_matches(ctx, team_name, match_day)[0]
+
+        if not match_data:
+            return await ctx.send(":x: Match could not be found")
+
+        opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
+
+        opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
+        opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
+        opposing_roster = self.team_manager.members_from_team(
+            ctx, opp_franchise_role, tier_role)
+        # opposing_roster.remove(opp_captain)
+
+        message = "Please join your match against the **{}** with the following lobby information:".format(
+            opposing_team)
+        message += "\n\n**Name:** {}".format(match_data['roomName'])
+        message += "\n**Password:** {}".format(match_data['roomPass'])
+
+        embed = discord.Embed(title="Your RSC Opponents are ready!",
+                              color=tier_role.color, description=message)
+
+        for opponent in opposing_roster:
+            await opponent.send(embed)
+
+# Helper Functions
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
         """Does the actual work to save match data."""
         # Process inputs to normalize the data (e.g. convert team names to
@@ -361,10 +325,16 @@ class Match(commands.Cog):
             title=title, description=description, color=tier_role.color)
 
         player_ratings = self.bot.get_cog("PlayerRatings")
-        if player_ratings and await player_ratings.guild_has_players(ctx):
+        game_team_size = 3
+
+        ones_league_matches = player_ratings and player_ratings.guild_has_players(
+            ctx) and game_team_size == 1
+
+        if ones_league_matches:
             return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
 
-        return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away)
+        # 2s, 3s
+        return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away, )
 
     async def _format_match_message(self, ctx, match, user_team_name):
         # Match format:
@@ -391,7 +361,6 @@ class Match(commands.Cog):
         message += await self._create_normal_match_message(ctx, match, user_team_name, home, away)
         return message
 
-    # new!
     async def get_team_matches(self, ctx, team_name, match_day=None):
         franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
         schedule = await self._schedule(ctx)
@@ -412,8 +381,7 @@ class Match(commands.Cog):
 
         return team_matches
 
-    # outdated
-    def _create_additional_info(self, user_team_name, home, away, is_playoffs=False):
+    async def _create_additional_info(self, guild, user_team_name, home, away, is_playoffs=False):
         additional_info = ""
         if user_team_name:
             if user_team_name == home:
@@ -422,9 +390,19 @@ class Match(commands.Cog):
                 additional_info += config.away_info
 
         # TODO: Add other info (complaint form, disallowed maps, enable crossplay, etc.)
+
+        matchup_type = await self._get_matchup_type(guild)
+
+        parsed_matchup_type = self.parse_matchup_type(matchup_type)
+        if parsed_matchup_type:
+            match_type, game_count, matchup_type_str = parsed_matchup_type
+        else:
+            matchup_type_str = "4-game series"
+
         # REGULAR SEASON INFO
         additional_info += config.regular_info.format(
-            series_type="4-game series")
+            series_type=matchup_type_str)
+
         # PLAYOFF INFO
         #additional_info += config.playoff_info
         return additional_info
@@ -438,11 +416,9 @@ class Match(commands.Cog):
                         value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
         try:
-            additional_info = self._create_additional_info(
-                user_team_name, home, away)
+            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away)
         except KeyError:
-            additional_info = self._create_additional_info(
-                user_team_name, home, away)
+            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away)
 
         embed.add_field(name="Additional Info:", value=additional_info)
         return embed
@@ -454,10 +430,9 @@ class Match(commands.Cog):
         message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
 
         try:
-            message += self._create_additional_info(
-                user_team_name, home, away)
+            message += await self._create_additional_info(ctx.guild, user_team_name, home, away)
         except KeyError:
-            message += self._create_additional_info(user_team_name, home, away)
+            message += await self._create_additional_info(ctx.guild, user_team_name, home, away)
 
         return message
 
@@ -567,6 +542,25 @@ class Match(commands.Cog):
                         playing = not activity.end
                     return playing
 
+    def parse_matchup_type(self, matchup_code):
+        args = matchup_code.upper().split('-')
+        match_type = args[0]
+        try:
+            game_count = int(args[1])
+        except:
+            return None
+
+        if match_type == "GS":
+            match_type = "game series"
+            formatted = "{}-{}".format(game_count, match_type)
+        elif match_type == "BO":
+            match_type = "best-of"
+            formatted = "{}-{}".format(match_type, game_count)
+        else:
+            return None
+
+        match_type, game_count, formatted
+
 # json
     async def _schedule(self, ctx):
         return await self.config.guild(ctx.guild).Schedules()
@@ -588,6 +582,18 @@ class Match(commands.Cog):
 
     async def _save_match_day(self, ctx, match_day):
         await self.config.guild(ctx.guild).MatchDay.set(match_day)
+
+    async def _save_game_team_size(self, guild, team_size):
+        await self.config.guild(guild).GameTeamSize.set(team_size)
+
+    async def _get_game_team_size(self, guild):
+        return await self.config.guild(guild).GameTeamSize()
+
+    async def _save_matchup_type(self, guild, series_type):
+        await self.config.guild(guild).MatchupType.set(series_type)
+
+    async def _get_matchup_type(self, guild):
+        return await self.config.guild(guild).MatchupType()
 
     async def _save_guild_game(self, guild, game):
         await self.config.guild(guild).Game.set(game)

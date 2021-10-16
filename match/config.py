@@ -1,31 +1,31 @@
 
 class config:
     home_info = ("You are the **home** team. You will create the "
-                "room using the above information. Contact the "
-                "other team when your team is ready to begin the "
-                "match. Do not join a team before the away team does. "
-                "\nRemember to ask before the match begins if the other "
-                "team would like to switch server region after 2 "
-                "games.")
+                 "room using the above information. Contact the "
+                 "other team when your team is ready to begin the "
+                 "match. Do not join a team before the away team does. "
+                 "\nRemember to ask before the match begins if the other "
+                 "team would like to switch server region after 2 "
+                 "games.")
 
     away_info = ("You are the **away** team. You will join the room "
-                "using the above information once the other team "
-                "contacts you. Do not begin joining a team until "
-                "your entire team is ready to begin playing.")
+                 "using the above information once the other team "
+                 "contacts you. Do not begin joining a team until "
+                 "your entire team is ready to begin playing.")
 
     solo_home_info = ("You are on the **home** team. You are the {0} seed. "
-                "You are responsible for hosting the lobby for all of "
-                "your matches with the following lobby information: ")
+                      "You are responsible for hosting the lobby for all of "
+                      "your matches with the following lobby information: ")
 
     solo_away_info = ("You are on the **away** team. You are the {0} seed. "
-                "You will participate in the following matchups: ")
-                
+                      "You will participate in the following matchups: ")
+
     solo_home_match_info = ("Your {0} will be against `{1}` at {2}.\n\n")
 
     solo_away_match_info = ("Your {0} will be against `{1}` at "
-                "{2} with the following lobby info: "
-                "\nName: **{3}**"
-                "\nPassword: **{4}**")
+                            "{2} with the following lobby info: "
+                            "\nName: **{3}**"
+                            "\nPassword: **{4}**")
 
     first_match_descr = ("first **one game** match")
 
@@ -42,22 +42,23 @@ class config:
     solo_matchup = ("{away_player:25s} vs.\t{home_player}")
 
     stream_info = ("**This match is scheduled to play on stream ** "
-                "(Time slot {time_slot}: {time})"
-                "\nYou are the **{home_or_away}** team. "
-                "A member of the Media Committee will inform you when the lobby is ready. "
-                "Do not join the lobby unless you are playing in the upcoming game. "
-                "Players should not join until instructed to do so via in-game chat. "
-                "\nRemember to inform the Media Committee what server "
-                "region your team would like to play on before games begin."
-                "\n\nLive Stream: <{live_stream}>")
-                
+                   "(Time slot {time_slot}: {time})"
+                   "\nYou are the **{home_or_away}** team. "
+                   "A member of the Media Committee will inform you when the lobby is ready. "
+                   "Do not join the lobby unless you are playing in the upcoming game. "
+                   "Players should not join until instructed to do so via in-game chat. "
+                   "\nRemember to inform the Media Committee what server "
+                   "region your team would like to play on before games begin."
+                   "\n\nLive Stream: <{live_stream}>")
+
     regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
                     "and screenshots of the end-of-game scoreboard. Do not leave "
                     "the game until screenshots have been taken. "
                     "These must be uploaded by one member of your team after the {series_type} "
-                    "is over. Remember that the deadline to reschedule matches is "
-                    "at 10 minutes before the currently scheduled match time. They "
-                    "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
+                    "is over.\n\n")
+    #  Remember that the deadline to reschedule matches is "
+    # "at 10 minutes before the currently scheduled match time. They "
+    # "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")
 
     playoff_info = ("Playoff matches are a best of 5 series for every round until the finals. "
                     "Screenshots and replays do not need to be uploaded to the website for "
