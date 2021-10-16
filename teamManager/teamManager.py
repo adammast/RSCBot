@@ -684,6 +684,8 @@ class TeamManager(commands.Cog):
         return False
 
     def is_subbed_out(self, member):
+        if self.is_IR(member):
+            return True
         for role in member.roles:
             if role.name == self.SUBBED_OUT_ROLE:
                 return True
@@ -745,6 +747,7 @@ class TeamManager(commands.Cog):
                 subbed_out_message += "  {0}\n".format(user_message)
             else:
                 message += "  {0}\n".format(user_message)
+
         if not team_members:
             message += "\nNo members found."
         if not subbed_out_message == "":
