@@ -4,7 +4,7 @@ class config:
                  "room using the above information. Contact the "
                  "other team when your team is ready to begin the "
                  "match. Do not join a team before the away team does. "
-                 "\nRemember to ask before the match begins if the other "
+                 "Remember to ask before the match begins if the other "
                  "team would like to switch server region after 2 "
                  "games.")
 
@@ -51,11 +51,17 @@ class config:
                    "region your team would like to play on before games begin."
                    "\n\nLive Stream: <{live_stream}>")
 
-    regular_info = ("\n\nBe sure that **crossplay is enabled**. Be sure to save replays "
-                    "and screenshots of the end-of-game scoreboard. Do not leave "
-                    "the game until screenshots have been taken. "
-                    "These must be uploaded by one member of your team after the {series_type} "
-                    "is over.\n\n")
+    rl_regular_info = ("Be sure that **crossplay is enabled**.")
+
+    rl_upload_info = ("Be sure to save replays and screenshots of the end-of-game scoreboard. "
+                      "Do not leave the game until screenshots have been taken. "
+                      "These must be uploaded by one member of your team after the {series_type} "
+                      "is over.")
+
+    rsc_upload_embed_info = ("Be sure to save replays and screenshots of the end-of-game scoreboard. Do not leave "
+                             "the game until screenshots have been taken. These must be uploaded to the "
+                             "[RSC Website](https://www.rocketsoccarconfederation.com/replay-and-screenshot-uploads) "
+                             "by one member of your team after the {series_type} is over.")
     #  Remember that the deadline to reschedule matches is "
     # "at 10 minutes before the currently scheduled match time. They "
     # "can be scheduled no later than 11:59 PM ET on the original match day.\n\n")

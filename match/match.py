@@ -104,6 +104,15 @@ class Match(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
+    async def clearSchedule(self, ctx):
+        """Clear all scheduled matches."""
+        await self._save_schedule(ctx, {})
+        await ctx.send("Done.")
+
+    # region match settings
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
     async def printScheduleData(self, ctx):
         """Print all raw schedule data.
 
@@ -121,10 +130,49 @@ class Match(commands.Cog):
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def clearSchedule(self, ctx):
-        """Clear all scheduled matches."""
-        await self._save_schedule(ctx, {})
-        await ctx.send("Done.")
+    async def setMatchupType(self, ctx, *, matchup_type):
+        """Sets the matchup types for scheduled matches.
+
+        Example:
+            - [p]setMatchupType BO-5
+            - [p]setMatchupType GS-4
+        """
+        try:
+            match_type, match_count = matchup_type.split('-')
+            matchup_type = "{}-{}".format(match_type.upper(), int(match_count))
+            await self._save_matchup_type(ctx.guild, matchup_type)
+            await ctx.send("Done")
+        except:
+            await ctx.send(":x: An error has occured.")
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setGame(self, ctx, *, game):
+        """Sets the game for the guild. The game determines the match info provided.
+
+        Supported games: Rocket League, CSGO
+        """
+        msg = 'Done'
+        if game.title() == "Rocket League":
+            await self._save_guild_game(ctx.guild, "Rocket League")
+        elif game.upper() == "CSGO" or game.title() == "Counter-Strike":
+            await self._save_guild_game(ctx.guild, "CSGO")
+        else:
+            msg = '**{}** is not a supported game, but it has been saved.'.format(
+                game)
+            await self._save_guild_game(ctx.guild, game)
+        await ctx.send(msg)
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setGameTeamSize(self, ctx, num_players: int):
+        """Sets the number of players on each team in matches (Default: 3)"""
+        await self._save_game_team_size(ctx.guild, num_players)
+        await ctx.send("Done")
+
+    # endregion
 
 # General Info Commands
     @commands.command()
@@ -207,7 +255,7 @@ class Match(commands.Cog):
         """Informs players of the opposing team that the private match lobby is ready and joinable."""
         match_day = await self._match_day(ctx)
         team_size = await self._get_game_team_size(ctx.guild)
-        if team_size != 3:
+        if team_size not in [3]:
             return None
 
         teams = await self.team_manager.teams_for_user(ctx, ctx.author)
@@ -216,19 +264,20 @@ class Match(commands.Cog):
             return
 
         team_name = teams[0]
-        # TODO: handle more gracefully for 2s league, simplify logic
-        match_data = await self.get_team_matches(ctx, team_name, match_day)[0]
 
+        match_data = (await self.get_team_matches(ctx, team_name, match_day))
+
+        # TODO: handle more gracefully for 2s league, simplify logic
         if not match_data:
             return await ctx.send(":x: Match could not be found")
 
+        match_data = match_data[0]
+
         opposing_team = match_data['home'] if team_name == match_data['away'] else match_data['away']
 
-        opp_franchise_role, tier_role = await self._roles_for_team(ctx, opposing_team)
-        opp_captain = await self.team_manager(ctx, opp_franchise_role, tier_role)
+        opp_franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, opposing_team)
         opposing_roster = self.team_manager.members_from_team(
             ctx, opp_franchise_role, tier_role)
-        # opposing_roster.remove(opp_captain)
 
         message = "Please join your match against the **{}** with the following lobby information:".format(
             opposing_team)
@@ -239,7 +288,10 @@ class Match(commands.Cog):
                               color=tier_role.color, description=message)
 
         for opponent in opposing_roster:
-            await opponent.send(embed)
+            if not self.team_manager.is_subbed_out(opponent):
+                await opponent.send(embed=embed)
+
+        await ctx.send("Done")
 
 # Helper Functions
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
@@ -325,7 +377,7 @@ class Match(commands.Cog):
             title=title, description=description, color=tier_role.color)
 
         player_ratings = self.bot.get_cog("PlayerRatings")
-        game_team_size = 3
+        game_team_size = await self._get_game_team_size(ctx.guild)
 
         ones_league_matches = player_ratings and player_ratings.guild_has_players(
             ctx) and game_team_size == 1
@@ -334,7 +386,7 @@ class Match(commands.Cog):
             return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
 
         # 2s, 3s
-        return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away, )
+        return await self._create_normal_match_embed(ctx, embed, match, user_team_name, home, away, game_team_size)
 
     async def _format_match_message(self, ctx, match, user_team_name):
         # Match format:
@@ -381,7 +433,7 @@ class Match(commands.Cog):
 
         return team_matches
 
-    async def _create_additional_info(self, guild, user_team_name, home, away, is_playoffs=False):
+    async def _create_additional_info(self, guild, user_team_name, home, away, is_playoffs=False, is_embed=False):
         additional_info = ""
         if user_team_name:
             if user_team_name == home:
@@ -391,6 +443,9 @@ class Match(commands.Cog):
 
         # TODO: Add other info (complaint form, disallowed maps, enable crossplay, etc.)
 
+        game = await self._get_guild_game(guild)
+
+        # Determine Format
         matchup_type = await self._get_matchup_type(guild)
 
         parsed_matchup_type = self.parse_matchup_type(matchup_type)
@@ -399,15 +454,23 @@ class Match(commands.Cog):
         else:
             matchup_type_str = "4-game series"
 
-        # REGULAR SEASON INFO
-        additional_info += config.regular_info.format(
-            series_type=matchup_type_str)
+        if game == "Rocket League":
+            # REGULAR SEASON INFO
+            additional_info += "\n\n"
+            additional_info += config.rl_regular_info + " "
+            if is_embed:
+                print("HI")
+                additional_info += config.rsc_upload_embed_info.format(
+                    series_type=matchup_type_str)
+            else:
+                additional_info += config.rl_upload_info.format(
+                    series_type=matchup_type_str)
 
-        # PLAYOFF INFO
-        #additional_info += config.playoff_info
-        return additional_info
+            # PLAYOFF INFO
+            #additional_info += config.playoff_info
+            return additional_info
 
-    async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away):
+    async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away, game_team_size):
         embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
                         .format(match['roomName'], match['roomPass']), inline=False)
         embed.add_field(name="**Home Team:**",
@@ -416,9 +479,10 @@ class Match(commands.Cog):
                         value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
         try:
-            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away)
+            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away, is_embed=True)
         except KeyError:
-            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away)
+            # TODO: this doesn't make sense
+            additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away, is_embed=True)
 
         embed.add_field(name="Additional Info:", value=additional_info)
         return embed
@@ -430,9 +494,9 @@ class Match(commands.Cog):
         message += "**Away Team:**\n{0}\n".format(await self.team_manager.format_roster_info(ctx, away))
 
         try:
-            message += await self._create_additional_info(ctx.guild, user_team_name, home, away)
+            message += await self._create_additional_info(ctx.guild, user_team_name, home, away, is_embed=False)
         except KeyError:
-            message += await self._create_additional_info(ctx.guild, user_team_name, home, away)
+            message += await self._create_additional_info(ctx.guild, user_team_name, home, away, is_embed=False)
 
         return message
 
@@ -587,7 +651,7 @@ class Match(commands.Cog):
         await self.config.guild(guild).GameTeamSize.set(team_size)
 
     async def _get_game_team_size(self, guild):
-        return await self.config.guild(guild).GameTeamSize()
+        return int(await self.config.guild(guild).GameTeamSize())
 
     async def _save_matchup_type(self, guild, series_type):
         await self.config.guild(guild).MatchupType.set(series_type)
