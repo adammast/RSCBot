@@ -256,12 +256,13 @@ class Match(commands.Cog):
         match_day = await self._match_day(ctx)
         team_size = await self._get_game_team_size(ctx.guild)
         if team_size not in [3]:
-            return None
+            await ctx.message.add_reaction("\U0000274C")
+            return await ctx.send(":x: This command is not supported for this game mode.")
 
         teams = await self.team_manager.teams_for_user(ctx, ctx.author)
 
         if not (match_day and teams):
-            return
+            return await ctx.message.add_reaction("\U0000274C")
 
         team_name = teams[0]
 
@@ -269,6 +270,7 @@ class Match(commands.Cog):
 
         # TODO: handle more gracefully for 2s league, simplify logic
         if not match_data:
+            await ctx.message.add_reaction("\U0000274C")
             return await ctx.send(":x: Match could not be found")
 
         match_data = match_data[0]
@@ -291,7 +293,7 @@ class Match(commands.Cog):
             if not self.team_manager.is_subbed_out(opponent):
                 await opponent.send(embed=embed)
 
-        await ctx.send("Done")
+        await ctx.message.add_reaction("\U00002705")
 
 # Helper Functions
     async def _add_match(self, ctx, match_day, match_date, home, away, *args):
@@ -459,7 +461,6 @@ class Match(commands.Cog):
             additional_info += "\n\n"
             additional_info += config.rl_regular_info + " "
             if is_embed:
-                print("HI")
                 additional_info += config.rsc_upload_embed_info.format(
                     series_type=matchup_type_str)
             else:
