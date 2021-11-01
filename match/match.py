@@ -281,6 +281,10 @@ class Match(commands.Cog):
         opposing_roster = self.team_manager.members_from_team(
             ctx, opp_franchise_role, tier_role)
 
+        if not opposing_roster:
+            await ctx.message.add_reaction("\U0000274C")
+            await ctx.send(":x: No roster found for the **{}**".format(opposing_team))
+
         message = "Please join your match against the **{}** with the following lobby information:".format(
             opposing_team)
         message += "\n\n**Name:** {}".format(match_data['roomName'])
