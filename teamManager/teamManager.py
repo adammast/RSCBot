@@ -550,21 +550,29 @@ class TeamManager(commands.Cog):
 
         perm_fa_role = self._find_role_by_name(ctx, self.PERM_FA_ROLE)
 
-        message = "```"
+        # Get all of the PermFA and FAs in a dictionary object.
+        fa_Dictionary = {"PermFA": [], "FA": []}
+
         for member in ctx.message.guild.members:
             if fa_role in member.roles:
                 if filter:  # Optional filter for PermFA and signable FAs
                     if filter.lower() in perm_fa_filters:
                         if perm_fa_role is not None and perm_fa_role in member.roles:
-                            message += "\n{0} {1}".format(
-                                member.display_name, ("(Permanent FA)"))
+                            fa_Dictionary["PermFA"].append(member.display_name)
                     elif filter.lower() in signable_fa_filters:
                         if perm_fa_role is not None and perm_fa_role not in member.roles:
-                            message += "\n{0}".format(member.display_name)
+                            fa_Dictionary["FA"].append(member.display_name)
                 else:
-                    message += "\n{0}".format(member.display_name)
                     if perm_fa_role is not None and perm_fa_role in member.roles:
-                        message += " (Permanent FA)"
+                        fa_Dictionary["PermFA"].append(member.display_name)
+                    else:
+                        fa_Dictionary["FA"].append(member.display_name)
+
+        message = "```"
+        for fa in sorted(fa_Dictionary["FA"], key=str.casefold):
+            message += "\n{0}".format(fa)
+        for permFA in sorted(fa_Dictionary["PermFA"], key=str.casefold):
+            message += "\n{0} {1}".format(permFA, "(Permanent FA)")
         message += "```"
 
         color = discord.Colour.blue()
