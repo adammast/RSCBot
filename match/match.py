@@ -441,24 +441,26 @@ class Match(commands.Cog):
 
     async def _create_additional_info(self, guild, user_team_name, home, away, is_playoffs=False, is_embed=False):
         additional_info = ""
+
+        # Determine Format
+        matchup_type = await self._get_matchup_type(guild)
+        parsed_matchup_type = self.parse_matchup_type(matchup_type)
+
+        if parsed_matchup_type:
+            matchup_type_str = parsed_matchup_type[2]
+        else:
+            matchup_type_str = "4 game series"
+
         if user_team_name:
             if user_team_name == home:
-                additional_info += config.home_info
+                additional_info += config.home_info.format(
+                    series_switch_num=int(parsed_matchup_type[1]/2))
             elif user_team_name == away:
                 additional_info += config.away_info
 
         # TODO: Add other info (complaint form, disallowed maps, enable crossplay, etc.)
 
         game = await self._get_guild_game(guild)
-
-        # Determine Format
-        matchup_type = await self._get_matchup_type(guild)
-
-        parsed_matchup_type = self.parse_matchup_type(matchup_type)
-        if parsed_matchup_type:
-            match_type, game_count, matchup_type_str = parsed_matchup_type
-        else:
-            matchup_type_str = "4-game series"
 
         if game == "Rocket League":
             # REGULAR SEASON INFO
@@ -476,12 +478,10 @@ class Match(commands.Cog):
             return additional_info
 
     async def _create_normal_match_embed(self, ctx, embed, match, user_team_name, home, away, game_team_size):
-        embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**"
-                        .format(match['roomName'], match['roomPass']), inline=False)
-        embed.add_field(name="**Home Team:**",
-                        value=await self.team_manager.format_roster_info(ctx, home), inline=False)
-        embed.add_field(name="**Away Team:**",
-                        value=await self.team_manager.format_roster_info(ctx, away), inline=False)
+        embed.add_field(name="Lobby Info", value="Name: **{0}**\nPassword: **{1}**".format(
+            match['roomName'], match['roomPass']), inline=False)
+        embed.add_field(name="**Home Team:**", value=await self.team_manager.format_roster_info(ctx, home), inline=False)
+        embed.add_field(name="**Away Team:**", value=await self.team_manager.format_roster_info(ctx, away), inline=False)
 
         try:
             additional_info = await self._create_additional_info(ctx.guild, user_team_name, home, away, is_embed=True)
@@ -617,6 +617,7 @@ class Match(commands.Cog):
         try:
             game_count = int(args[1])
         except:
+            print('fricked')
             return None
 
         if match_type == "GS":
@@ -628,7 +629,7 @@ class Match(commands.Cog):
         else:
             return None
 
-        match_type, game_count, formatted
+        return match_type, int(game_count), formatted
 
 # json
     async def _schedule(self, ctx):

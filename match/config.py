@@ -5,7 +5,7 @@ class config:
                  "other team when your team is ready to begin the "
                  "match. Do not join a team before the away team does. "
                  "Remember to ask before the match begins if the other "
-                 "team would like to switch server region after 2 "
+                 "team would like to switch server region after {series_switch_num} "
                  "games.")
 
     away_info = ("You are the **away** team. You will join the room "
