@@ -134,7 +134,7 @@ class Transactions(commands.Cog):
                         embed.set_thumbnail(url=ctx.guild.icon_url)
                     except:
                         pass
-                    await ctx.send(embed=embed)
+                    await user.send(embed=embed)
 
                 await ctx.send("Done")
             except KeyError:
