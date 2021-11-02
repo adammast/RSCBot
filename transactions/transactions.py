@@ -122,7 +122,20 @@ class Transactions(commands.Cog):
                 message = "{0} was cut by the {1} ({2} - {3})".format(
                     user.mention, team_name, gm_name, tier_role.name)
                 await trans_channel.send(message)
-                await self._maybe_send_dev_league_dm(ctx, user, tier_role)
+
+                cut_message = await self._get_cut_message(ctx.guild)
+                if cut_message:
+                    # await ctx.send("```\n{}```".format(cut_message))
+                    embed = discord.Embed(
+                        title="A Message from {}".format(ctx.guild.name),
+                        description=cut_message
+                    )
+                    try:
+                        embed.set_thumbnail(url=ctx.guild.icon_url)
+                    except:
+                        pass
+                    await ctx.send(embed=embed)
+
                 await ctx.send("Done")
             except KeyError:
                 await ctx.send(":x: Free agent role not found in dictionary")
@@ -273,6 +286,41 @@ class Transactions(commands.Cog):
         await self._save_trans_channel(ctx, None)
         await ctx.send("Done")
 
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setCutMessage(self, ctx, *, cut_message: str):
+        """Sets the message to be sent to players when they are cut."""
+        await self._save_cut_message(ctx.guild, cut_message)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command(aliases=["clearCutMessage"])
+    @checks.admin_or_permissions(manage_guild=True)
+    async def unsetCutMessage(self, ctx):
+        """Clears the cut message. When a cut message is not set, cut players will not receive a DM from the bot."""
+        await self._save_cut_message(ctx.guild, None)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getCutMessage(self, ctx):
+        cut_message = await self._get_cut_message(ctx.guild)
+        if cut_message:
+            # await ctx.send("```\n{}```".format(cut_message))
+            embed = discord.Embed(
+                title="A Message from {}".format(ctx.guild.name),
+                description=cut_message
+            )
+            try:
+                embed.set_thumbnail(url=ctx.guild.icon_url)
+            except:
+                pass
+            await ctx.send(embed=embed)
+        else:
+            await ctx.send(":x: No cut message has been set.")
+
     async def add_player_to_team(self, ctx, user, team_name):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         leagueRole = self.team_manager_cog._find_role_by_name(ctx, "League")
@@ -365,3 +413,9 @@ class Transactions(commands.Cog):
 
     async def _save_trans_channel(self, ctx, trans_channel):
         await self.config.guild(ctx.guild).TransChannel.set(trans_channel)
+
+    async def _get_cut_message(self, guild):
+        return await self.config.guild(guild).CutMessage()
+
+    async def _save_cut_message(self, guild, message):
+        await self.config.guild(guild).CutMessage.set(message)
