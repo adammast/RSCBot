@@ -13,16 +13,18 @@ k_factor = 40
 
 defaults = {"Players": {}, "Results": [], "SelfReportFlag": False}
 
+
 class PlayerRatings(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.config = Config.get_conf(self, identifier=1234567870, force_registration=True)
+        self.config = Config.get_conf(
+            self, identifier=1234567870, force_registration=True)
         self.config.register_guild(**defaults)
         self.players = []
         self.team_manager = bot.get_cog("TeamManager")
 
-#region commmands
+# region commmands
 
     @commands.command()
     @commands.guild_only()
@@ -88,7 +90,7 @@ class PlayerRatings(commands.Cog):
         players = self.players
 
         players.clear()
-        
+
         await self._save_players(ctx, players)
         await ctx.send("Done.")
 
@@ -97,7 +99,7 @@ class PlayerRatings(commands.Cog):
     async def reportResult(self, ctx, member_1: discord.Member, member_1_wins: int, member_2_wins: int, member_2: discord.Member):
         """Submits the result of the game between two players. Should be used in the score report channel for your tier.
         Both players need to agree on the result before it is finalized. 
-        
+
         This command may be disabled by admins to prevent erroneous reporting."""
         if not self._self_report_flag(ctx):
             await ctx.send("Score reporting for this server is currently set to admin only.")
@@ -173,22 +175,41 @@ class PlayerRatings(commands.Cog):
             await ctx.send("{} has no player information at this time".format(member.name))
             return
         team_name = await self.team_manager.get_current_team_name(ctx, member)
-        franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
+        tier_role = None
+        if not team_name:
+            team_name = "(Unknown)"
+
+            tiers = await self.team_manager.tiers(ctx)
+            tier_roles = [self.team_manager._get_tier_role(
+                ctx, tier) for tier in tiers]
+
+            for role in member.roles:
+                if role in tier_roles:
+                    tier_role = role
+                if role.name == "Free Agent":
+                    team_name = "Free Agent"
+                elif role.name.lower() == "permfa":
+                    team_name = "Permanent Free Agent"
+                    break
+
+        else:
+            franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team_name)
+
         await ctx.send(embed=self.embed_player_info(player, team_name, tier_role))
 
     @commands.guild_only()
     @commands.command(aliases=["plb"])
-    async def playerLeaderboard(self, ctx, tier = None):
+    async def playerLeaderboard(self, ctx, tier=None):
         """Shows the top ten players in terms of current Elo rating. If tier is specified it only looks at players in that tier."""
         await self.load_players(ctx)
         players = self.players
         if not players:
             ctx.send("There are no players at this time")
             return
-        
+
         tier_role = None
 
-        #Filter list by tier if given
+        # Filter list by tier if given
         if tier:
             tier_role = self.team_manager._get_tier_role(ctx, tier)
             if tier_role:
@@ -227,7 +248,8 @@ class PlayerRatings(commands.Cog):
         messages = []
         message = ""
         for player in players:
-            player_string = "{0.member.id}:{0.wins}:{0.losses}:{0.elo_rating}\n".format(player)
+            player_string = "{0.member.id}:{0.wins}:{0.losses}:{0.elo_rating}\n".format(
+                player)
             if len(message + player_string) < 2000:
                 message += player_string
             else:
@@ -238,15 +260,15 @@ class PlayerRatings(commands.Cog):
             if msg:
                 await ctx.send("{0}{1}{0}".format("```", msg))
 
-    
-#endregion
 
-#region helper methods
+# endregion
+
+# region helper methods
 
     async def _add_player(self, ctx, member, wins, losses, elo_rating):
         await self.load_players(ctx)
         players = self.players
-        
+
         wins = int(wins)
         losses = int(losses)
         elo_rating = int(elo_rating)
@@ -268,7 +290,7 @@ class PlayerRatings(commands.Cog):
             errors.append("Elo rating not found.")
         if errors:
             await ctx.send(":x: Errors with input:\n\n  "
-                               "* {0}\n".format("\n  * ".join(errors)))
+                           "* {0}\n".format("\n  * ".join(errors)))
             return
 
         try:
@@ -278,7 +300,7 @@ class PlayerRatings(commands.Cog):
             return False
         await self._save_players(ctx, players)
         return True
-    
+
     async def _remove_player(self, ctx, member: discord.Member):
         await self.load_players(ctx)
         players = self.players
@@ -311,7 +333,7 @@ class PlayerRatings(commands.Cog):
 
     async def verify_game_results(self, ctx, member_1: discord.Member, member_2: discord.Member, member_1_wins: int, member_2_wins: int, verifier: discord.Member):
         msg = await ctx.send("{0} Please verify the results:\n**{1}** {2} - {3} **{4}**".format(verifier.mention, member_1.name,
-            member_1_wins, member_2_wins, member_2.name))
+                                                                                                member_1_wins, member_2_wins, member_2.name))
         start_adding_reactions(msg, ReactionPredicate.YES_OR_NO_EMOJIS)
         pred = ReactionPredicate.yes_or_no(msg, verifier)
         try:
@@ -324,14 +346,17 @@ class PlayerRatings(commands.Cog):
         except asyncio.TimeoutError:
             await ctx.send(":x: Result not verified in time. To report the result you will need to use the `{0}reportResult` command again.".format(ctx.prefix))
             return False
-    
+
     async def finish_game(self, ctx, player_1, player_2, player_1_wins: int, player_2_wins: int):
-        player_1_new_elo, player_2_new_elo = self.update_elo(player_1.elo_rating, player_2.elo_rating, player_1_wins / (player_1_wins + player_2_wins))
+        player_1_new_elo, player_2_new_elo = self.update_elo(
+            player_1.elo_rating, player_2.elo_rating, player_1_wins / (player_1_wins + player_2_wins))
         await ctx.send(embed=self.embed_game_results(player_1, player_2, player_1_wins, player_2_wins, player_1_new_elo, player_2_new_elo))
-        self.update_player_info(player_1, player_1_wins, player_2_wins, player_1_new_elo)
-        self.update_player_info(player_2, player_2_wins, player_1_wins, player_2_new_elo)
+        self.update_player_info(player_1, player_1_wins,
+                                player_2_wins, player_1_new_elo)
+        self.update_player_info(player_2, player_2_wins,
+                                player_1_wins, player_2_new_elo)
         await self._save_players(ctx, self.players)
-    
+
     def update_elo(self, player_1_elo: int, player_2_elo: int, result: float):
         """Calculates and returns the new Elo ratings for the two players based on their match results and the K-factor.
         Result param should be a decimal between 0 and 1 relating to the match results for player 1, i.e. a result of 1 
@@ -339,10 +364,12 @@ class PlayerRatings(commands.Cog):
         elo_dif = int(player_1_elo) - int(player_2_elo)
         exponent = -1 * (elo_dif / 100)
         expectation = 1 / (1 + pow(10, exponent))
-        player_1_new_elo = round(int(player_1_elo) + (k_factor * (result - expectation)))
-        player_2_new_elo = round(int(player_2_elo) + (k_factor * ((1 - result) - (1 - expectation))))
+        player_1_new_elo = round(
+            int(player_1_elo) + (k_factor * (result - expectation)))
+        player_2_new_elo = round(
+            int(player_2_elo) + (k_factor * ((1 - result) - (1 - expectation))))
         return player_1_new_elo, player_2_new_elo
-    
+
     def update_player_info(self, player, new_wins, new_losses, new_elo_rating):
         player.wins += new_wins
         player.losses += new_losses
@@ -429,7 +456,8 @@ class PlayerRatings(commands.Cog):
         players = []
         for member in member_list:
             players.append(self.get_player_by_id(self.players, member.id))
-        players.sort(key=lambda player: max(player.elo_rating, player.temp_rating), reverse=True)
+        players.sort(key=lambda player: max(
+            player.elo_rating, player.temp_rating), reverse=True)
         sorted_members = []
         for player in players:
             sorted_members.append(player.member)
@@ -438,8 +466,10 @@ class PlayerRatings(commands.Cog):
     async def set_player_temp_rating(self, ctx, subbed_member, subbed_out_member):
         await self.load_players(ctx)
         if self.players:
-            subbed_player = self.get_player_by_id(self.players, subbed_member.id)
-            subbed_out_player = self.get_player_by_id(self.players, subbed_out_member.id)
+            subbed_player = self.get_player_by_id(
+                self.players, subbed_member.id)
+            subbed_out_player = self.get_player_by_id(
+                self.players, subbed_out_member.id)
             if subbed_player and subbed_out_player:
                 subbed_player.temp_rating = subbed_out_player.elo_rating
                 await self._save_players(ctx, self.players)
@@ -455,20 +485,25 @@ class PlayerRatings(commands.Cog):
                 await self._save_players(ctx, self.players)
         return False
 
-#endregion
+# endregion
 
-#region embed methods
+# region embed methods
 
     def embed_player_info(self, player, team_name, tier_role):
         embed_color = discord.Colour.blue()
         if tier_role:
             embed_color = tier_role.color
-        embed = discord.Embed(title="{0}".format(player.member.display_name), color=embed_color)
+        embed = discord.Embed(title="{0}".format(
+            player.member.display_name), color=embed_color)
         embed.set_thumbnail(url=player.member.avatar_url)
-        embed.add_field(name="Games Played", value="{}\n".format(player.wins + player.losses), inline=False)
-        embed.add_field(name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
-        embed.add_field(name="Elo Rating", value="{}\n".format(player.elo_rating), inline=False)
-        embed.add_field(name="Team", value="{}\n".format(team_name), inline=False)
+        embed.add_field(name="Games Played", value="{}\n".format(
+            player.wins + player.losses), inline=False)
+        embed.add_field(
+            name="Record", value="{0} - {1}\n".format(player.wins, player.losses), inline=False)
+        embed.add_field(name="Elo Rating", value="{}\n".format(
+            player.elo_rating), inline=False)
+        embed.add_field(name="Team", value="{}\n".format(
+            team_name), inline=False)
         return embed
 
     def embed_leaderboard(self, ctx, sorted_players, tier_role):
@@ -477,43 +512,49 @@ class PlayerRatings(commands.Cog):
         if tier_role:
             embed_color = tier_role.color
             embed_name = tier_role.name
-        embed = discord.Embed(title="{0} Player Leaderboard".format(embed_name), color=embed_color)
-        
+        embed = discord.Embed(title="{0} Player Leaderboard".format(
+            embed_name), color=embed_color)
+
         index = 1
         playerStrings = []
         statStrings = []
         for player in sorted_players:
-            playerStrings.append("`{0}` **{1}:**".format(index, player.member.display_name))
+            playerStrings.append(
+                "`{0}` **{1}:**".format(index, player.member.display_name))
             statStrings.append("Elo Rating: `{0:4d}`  Record: `{1:2d} - {2:2d}`  Games Played: `{3:2d}`".format(player.elo_rating,
-                player.wins, player.losses, player.wins + player.losses))
-            
+                                                                                                                player.wins, player.losses, player.wins + player.losses))
+
             index += 1
             if index > 10:
                 break
 
-        embed.add_field(name="Player", value="{}\n".format("\n".join(playerStrings)), inline=True)
-        embed.add_field(name="Stats", value="{}\n".format("\n".join(statStrings)), inline=True)
+        embed.add_field(name="Player", value="{}\n".format(
+            "\n".join(playerStrings)), inline=True)
+        embed.add_field(name="Stats", value="{}\n".format(
+            "\n".join(statStrings)), inline=True)
         return embed
 
     def embed_game_results(self, player_1, player_2, player_1_wins: int, player_2_wins: int, player_1_new_elo, player_2_new_elo):
-        embed = discord.Embed(title="{0} vs. {1}".format(player_1.member.display_name, player_2.member.display_name), color=discord.Colour.blue())
-        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(player_1.member.display_name, player_1_wins, player_2_wins, player_2.member.display_name), inline=False)
+        embed = discord.Embed(title="{0} vs. {1}".format(
+            player_1.member.display_name, player_2.member.display_name), color=discord.Colour.blue())
+        embed.add_field(name="Result", value="**{0}** {1} - {2} **{3}**\n".format(
+            player_1.member.display_name, player_1_wins, player_2_wins, player_2.member.display_name), inline=False)
         embed.add_field(name="Updated Elo Rating", value="**{0}** = {1} ({2})\n**{3}** = {4} ({5})\n".format(player_1.member.display_name, player_1_new_elo, player_1_new_elo - int(player_1.elo_rating),
-            player_2.member.display_name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
+                                                                                                             player_2.member.display_name, player_2_new_elo, player_2_new_elo - int(player_2.elo_rating)), inline=False)
         return embed
 
-#endregion
+# endregion
 
-#region load/save methods
+# region load/save methods
 
-    async def load_players(self, ctx, force_load = False):
+    async def load_players(self, ctx, force_load=False):
         players = await self._players(ctx)
         player_list = []
         remove_player = False
         for value in players.values():
             member = ctx.guild.get_member(value["Id"])
             if not member:
-                # Member not found in server, don't add to list of players and 
+                # Member not found in server, don't add to list of players and
                 # re-save list at the end to ensure they get removed
                 remove_player = True
                 continue
@@ -545,7 +586,8 @@ class PlayerRatings(commands.Cog):
     async def _self_report_flag(self, guild):
         return await self.config.guild(guild).SelfReportFlag()
 
-#endregion
+# endregion
+
 
 class Player:
     def __init__(self, member, wins: int, losses: int, elo_rating: int, temp_rating: int):
