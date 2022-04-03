@@ -188,6 +188,7 @@ class Game:
         self.get_new_captains_from_teams()
         await self.update_player_perms()
         await self.update_game_info()
+        await self._notify(Strings.ONGOING_GS)
 
     async def self_picking_teams(self):
         embed = self._get_spt_embed()
@@ -295,6 +296,7 @@ class Game:
             self.reset_players()
             await self.update_player_perms()
             await self.update_game_info()
+            await self._notify(Strings.ONGOING_GS)
         
         return teams_complete
     
