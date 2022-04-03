@@ -131,7 +131,7 @@ class Game:
                     pass
 
         for player in self.blue:
-            await general_vc.set_permission(player, connect=True)
+            await general_vc.set_permissions(player, connect=True)
             await blue_vc.set_permissions(player, connect=True)
             await orange_vc.set_permissions(player, connect=False)
 
