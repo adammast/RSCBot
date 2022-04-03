@@ -120,7 +120,7 @@ class Game:
         blue_vc, orange_vc, general_vc = self.voiceChannels
         
         for player in self.orange:
-            await general_vc.set_permission(player, connect=True)
+            await general_vc.set_permissions(player, connect=True)
             await blue_vc.set_permissions(player, connect=False)
             await orange_vc.set_permissions(player, connect=True)
 
