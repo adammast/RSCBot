@@ -424,7 +424,6 @@ class SixMans(commands.Cog):
             embed.add_field(name="Lobby Info", value="```{} // {}```".format(game.roomName, game.roomPass), inline=False)
             embed.set_footer(text="Game ID: {}".format(game.id))
             await ctx.send(embed=embed)
-            await ctx.send(':)')
             await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
             # except:
             #     await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
@@ -1200,6 +1199,11 @@ class SixMans(commands.Cog):
 
     def _get_opposing_captain(self, player: discord.Member, game: Game):
         opposing_captain = None
+        if game.state == Strings.TEAM_SELECTION_GS:
+            players = list(game.players)
+            players.remove(player)
+            return random.choice(players)
+
         if player in game.blue:
             opposing_captain = game.captains[1] #Orange team captain
         elif player in game.orange:
