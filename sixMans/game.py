@@ -120,7 +120,7 @@ class Game:
         blue_vc, orange_vc, general_vc = self.voiceChannels
         
         for player in self.orange:
-            await general_vc.set_permission(player, connect=True)
+            await general_vc.set_permissions(player, connect=True)
             await blue_vc.set_permissions(player, connect=False)
             await orange_vc.set_permissions(player, connect=True)
 
@@ -129,6 +129,7 @@ class Game:
                     await player.move_to(orange_vc)
                 except:
                     pass
+
         for player in self.blue:
             await general_vc.set_permission(player, connect=True)
             await blue_vc.set_permissions(player, connect=True)
@@ -269,7 +270,7 @@ class Game:
         # add to correct team, update teams embed
         self.blue.add(player_picked) if pick == 'blue' else self.orange.add(player_picked)
         
-        # TODO: automatically process last pick
+        # automatically process last pick
         picks_remaining = list(self.react_player_picks.keys())
         if len(picks_remaining) > 1:
             embed = self._get_captains_embed(pick_order[pick_i+1])
