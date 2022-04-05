@@ -600,6 +600,7 @@ class Game:
         return ord(emoji)
 
     async def report_winner(self, winner):
+        self.winner = winner
         await self.color_embed_for_winners(winner)
         self.scoreReported = True
         await self._notify(new_state=Strings.GAME_OVER_GS)

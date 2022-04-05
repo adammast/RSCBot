@@ -889,7 +889,7 @@ class SixMans(commands.Cog):
         if queue_name:
             for queue in self.queues[ctx.guild]:
                 if queue.name.lower() == queue_name.lower():
-                    await ctx.send(embed=self.embed_queue_info(queue))
+                    await ctx.send(embed=self.embed_queue_info(queue, await self._get_q_lobby_vc(ctx.guild)))
                     return
             await ctx.send(":x: No queue set up with name: {0}".format(queue_name))
             return
@@ -899,7 +899,7 @@ class SixMans(commands.Cog):
             await ctx.send(":x: No queue set up in this channel")
             return
         
-        await ctx.send(embed=self.embed_queue_info(six_mans_queue))
+        await ctx.send(embed=self.embed_queue_info(six_mans_queue, await self._get_q_lobby_vc(ctx.guild)))
 
     @commands.guild_only()
     @commands.command()
@@ -924,7 +924,7 @@ class SixMans(commands.Cog):
         action = "reactions" if react_to_vote else "commands"
         message = "Members of popped {0} Mans queues will vote for team reactions with **{1}**.".format(self.queueMaxSize[ctx.guild], action)
         await ctx.send(message)
-    
+
     @commands.guild_only()
     @commands.command(aliases=['setTeamSelection'])
     @checks.admin_or_permissions(manage_guild=True)
@@ -1439,7 +1439,7 @@ class SixMans(commands.Cog):
         embed.add_field(name="Players in Queue", value=player_list, inline=False)
         return embed
 
-    def embed_queue_info(self, queue: SixMansQueue):
+    def embed_queue_info(self, queue: SixMansQueue, default_lobby_vc=None):
         embed = discord.Embed(title="{0} {1} Mans Info".format(queue.name, queue.maxSize), color=discord.Colour.blue())
         emoji = queue.get_ts_emoji()
         if emoji:
@@ -1447,6 +1447,11 @@ class SixMans(commands.Cog):
         else:
             embed.add_field(name="Team Selection", value=queue.teamSelection, inline=False)
         embed.add_field(name="Channels", value="{}\n".format(", ".join([channel.mention for channel in queue.channels])), inline=False)
+        if queue.lobby_vc:
+            embed.add_field(name="Lobby VC", value=default_lobby_vc.name, inline=False)
+        elif default_lobby_vc:
+            embed.add_field(name="Lobby VC", value=default_lobby_vc.name, inline=False)
+
         embed.add_field(name="Games Played", value="{}\n".format(queue.gamesPlayed), inline=False)
         embed.add_field(name="Unique Players All-Time", value="{}\n".format(len(queue.players)), inline=False)
         embed.add_field(name="Point Breakdown", value="**Per Series Played:** {0}\n**Per Series Win:** {1}"
@@ -1481,12 +1486,25 @@ class SixMans(commands.Cog):
                 member: discord.Member = await commands.MemberConverter().convert(ctx, player[0])
             except:
                 await ctx.send(":x: Can't find player with id: {}".format(player[0]))
-                return
+                continue
 
             player_info = player[1]
             playerStrings.append("`{0}` **{1:25s}:**".format(index, member.display_name))
-            statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(player_info[Strings.PLAYER_POINTS_KEY],
-                player_info[Strings.PLAYER_WINS_KEY], player_info[Strings.PLAYER_GP_KEY]))
+            try:
+                player_wins = player_info[Strings.PLAYER_WINS_KEY]
+                player_gp = player_info[Strings.PLAYER_GP_KEY]
+                player_wp = round(player_wins/player_gp*100, 1)
+                player_wp = f"{player_wp}%" if player_wp != 100 else "100%"
+            except ZeroDivisionError:
+                player_wp = "N/A"
+
+            statStrings.append("Points: `{0:4d}`  Wins: `{1:3d}`  GP: `{2:3d}` WP: `{3:5s}`".format(
+                player_info[Strings.PLAYER_POINTS_KEY],
+                player_wins,
+                player_gp,
+                player_wp
+                )
+            )
             
             index += 1
             if index > 10:
@@ -1498,8 +1516,20 @@ class SixMans(commands.Cog):
             if author_index is not None and author_index > 9:
                 author_info = sorted_players[author_index][1]
                 playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name))
-                statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  Games Played: `{2:3d}`".format(author_info[Strings.PLAYER_POINTS_KEY],
-                author_info[Strings.PLAYER_WINS_KEY], author_info[Strings.PLAYER_GP_KEY]))
+                try:
+                    player_wins = player_info[Strings.PLAYER_WINS_KEY]
+                    player_gp = player_info[Strings.PLAYER_GP_KEY]
+                    player_wp = round(player_wins/player_gp*100, 1)
+                    player_wp = f"{player_wp}%" if player_wp != 100 else "100%"
+                except ZeroDivisionError:
+                    player_wp = "N/A"
+
+                statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  GP: `{2:3d}` WP: `{3:5s}`".format(
+                    player_info[Strings.PLAYER_POINTS_KEY],
+                    player_wins,
+                    player_gp,
+                    player_wp
+                ))
         except Exception:
             pass
 
@@ -1567,9 +1597,9 @@ class SixMans(commands.Cog):
                     category = None
                 
                 if default_lobby_vc:
-                    lobby_vc = guild.get_channel(value.setdefault("Category", default_lobby_vc.id))
-                elif "Category" in value and value["Category"]:
-                    lobby_vc = value["Category"]
+                    lobby_vc = guild.get_channel(value.setdefault("LobbyVC", default_lobby_vc.id))
+                elif "LobbyVC" in value and value["LobbyVC"]:
+                    lobby_vc = value["LobbyVC"]
                 else:
                     lobby_vc = None
                 six_mans_queue = SixMansQueue(queue_name, guild, queue_channels, 
