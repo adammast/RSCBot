@@ -421,7 +421,7 @@ class Game:
         score_total = 0
         for player, p_data in player_scores.items():
             score_total += p_data['Score']
-        avg_team_score = score_total/(len(self.players)//2)
+        avg_team_score = score_total/2
 
         # Determine balanced teams
         balanced_teams = []
