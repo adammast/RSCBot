@@ -489,6 +489,125 @@ class Game:
 
         return scores 
 
+    async def report_winner(self, winner):
+        self.winner = winner
+        await self.color_embed_for_winners(winner)
+        self.scoreReported = True
+        await self._notify(new_state=Strings.GAME_OVER_GS)
+
+    def _get_pick_reaction(self, int_or_hex):
+        try:
+            if type(int_or_hex) == int:
+                return struct.pack('<I', int_or_hex).decode('utf-32le')
+            if type(int_or_hex) == str:
+                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
+        except:
+            return None
+    
+    def _get_pickable_players_str(self):
+        players = ""
+        for react_hex, player in self.react_player_picks.items():
+            react = self._get_pick_reaction(int(react_hex, base=16))
+            players += "{} {}\n".format(react, player.mention)
+        return players
+
+# Embeds & Emojis
+    async def update_game_info(self, prefix='?'):
+        embed = discord.Embed(
+            title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
+            color=discord.Colour.green()
+        )
+        ts_emoji = self._get_ts_emoji()
+        embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, self.teamSelection), inline=False)
+
+        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.add_field(name="Blue", value="{}\n".format("\n".join([player.mention for player in self.blue])), inline=True)
+        embed.add_field(name="Orange", value="{}\n".format("\n".join([player.mention for player in self.orange])), inline=True)
+
+        embed.add_field(name="Lobby Info", value="```{} // {}```".format(self.roomName, self.roomPass), inline=False)
+
+        embed.add_field(name="Commands", value=Strings.sixmans_highlight_commands.format(prefix=prefix))
+
+        if self.helper_role:
+            embed.add_field(name="Help", value=Strings.more_sixmans_info_helper.format(helper=self.helper_role.mention), inline=False)
+
+        embed.set_footer(text="Game ID: {}".format(self.id))
+        self.info_message = await self.textChannel.send(embed=embed)
+
+    async def post_more_lobby_info(self, helper_role=None, invalid=False, prefix='?'):
+        if not helper_role:
+            helper_role = self.helper_role
+        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
+        embed_color = discord.Colour.green()
+        if invalid:
+            sm_title += " :x: [Teams Changed]"
+            embed_color = discord.Colour.red()
+        embed = discord.Embed(title=sm_title, color=embed_color)
+        embed.set_thumbnail(url=self.queue.guild.icon_url)
+
+        if self.queue.teamSelection == Strings.VOTE_TS:
+            ts_emoji = self._get_ts_emoji()
+            team_selection = self.teamSelection
+            if team_selection == Strings.BALANCED_TS:
+                try:
+                    team_selection += "\n\nBalance Score: {}".format(round(self.balance_score/2, 2))
+                    team_selection += "\n_Lower Balance Scores = More Balanced_"
+                except:
+                    pass 
+            embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, team_selection), inline=False)
+        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.blue])), inline=False)
+        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.orange])), inline=False)
+        if not invalid:
+            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(self.captains[0].mention, self.captains[1].mention), inline=False)
+        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(self.roomName, self.roomPass), inline=False)
+        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
+            .format(self.queue.points[Strings.PP_PLAY_KEY], self.queue.points[Strings.PP_WIN_KEY]), inline=False)
+        if not invalid:
+            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
+                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
+                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
+                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
+                "cancel the game.".format(prefix), inline=False)
+        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
+        if helper_role:
+            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
+        embed.add_field(name="Help", value=help_message, inline=False)
+        embed.set_footer(text="Game ID: {}".format(self.id))
+        
+        self.info_message = await self.textChannel.send(embed=embed)
+
+    async def post_lobby_info(self):
+        embed = discord.Embed(
+            title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
+            color=discord.Colour.green()
+        )
+        embed.set_thumbnail(url=self.queue.guild.icon_url)
+        embed.add_field(name="Blue", value="{}\n".format("\n".join([player.mention for player in self.blue])), inline=True)
+        embed.add_field(name="Orange", value="{}\n".format("\n".join([player.mention for player in self.orange])), inline=True)
+
+        embed.add_field(name="Lobby Info", value="```{} // {}```".format(self.roomName, self.roomPass), inline=False)
+        embed.set_footer(text="Game ID: {}".format(self.id))
+        await self.textChannel.send(embed=embed)
+
+    def _hex_i_from_emoji(self, emoji):
+        return ord(emoji)
+
+    async def color_embed_for_winners(self, winner):
+        if self.info_message is not None:
+            winner = winner.lower()
+            if winner == 'blue':
+                color = discord.Colour.blue()
+            elif winner == 'orange':
+                color = discord.Colour.orange()
+            else:
+                color = discord.Colour.green()  # catch all for errors hopefully
+
+            embed = self.info_message.embeds[0]
+            embed_dict = embed.to_dict()
+            embed_dict['color'] = color.value
+            embed = discord.Embed.from_dict(embed_dict)
+            await self.info_message.edit(embed=embed)
+
     def _get_vote_embed(self, vote: dict={}, winning_vote=None):
         # Count Votes, prep embed fields
         vote_options = []
@@ -595,32 +714,7 @@ class Game:
         
         embed.set_footer(text="Game ID: {}".format(self.id))
         return embed
-
-    def _hex_i_from_emoji(self, emoji):
-        return ord(emoji)
-
-    async def report_winner(self, winner):
-        self.winner = winner
-        await self.color_embed_for_winners(winner)
-        self.scoreReported = True
-        await self._notify(new_state=Strings.GAME_OVER_GS)
-
-    async def color_embed_for_winners(self, winner):
-        if self.info_message is not None:
-            winner = winner.lower()
-            if winner == 'blue':
-                color = discord.Colour.blue()
-            elif winner == 'orange':
-                color = discord.Colour.orange()
-            else:
-                color = discord.Colour.green()  # catch all for errors hopefully
-
-            embed = self.info_message.embeds[0]
-            embed_dict = embed.to_dict()
-            embed_dict['color'] = color.value
-            embed = discord.Embed.from_dict(embed_dict)
-            await self.info_message.edit(embed=embed)
-
+    
     def _get_player_from_reaction_emoji(self, emoji):
         target_key = None
         target_value = None
@@ -633,70 +727,12 @@ class Game:
             del self.react_player_picks[target_key]
         return target_value
 
-    def _get_pick_reaction(self, int_or_hex):
-        try:
-            if type(int_or_hex) == int:
-                return struct.pack('<I', int_or_hex).decode('utf-32le')
-            if type(int_or_hex) == str:
-                return struct.pack('<I', int(int_or_hex, base=16)).decode('utf-32le') # i == react_hex
-        except:
-            return None
-    
-    def _get_pickable_players_str(self):
-        players = ""
-        for react_hex, player in self.react_player_picks.items():
-            react = self._get_pick_reaction(int(react_hex, base=16))
-            players += "{} {}\n".format(react, player.mention)
-        return players
-
-    async def update_game_info(self, helper_role=None, invalid=False, prefix='?'):
-        if not helper_role:
-            helper_role = self.helper_role
-        sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
-        embed_color = discord.Colour.green()
-        if invalid:
-            sm_title += " :x: [Teams Changed]"
-            embed_color = discord.Colour.red()
-        embed = discord.Embed(title=sm_title, color=embed_color)
-        embed.set_thumbnail(url=self.queue.guild.icon_url)
-
-        if self.queue.teamSelection == Strings.VOTE_TS:
-            ts_emoji = self._get_ts_emoji()
-            team_selection = self.teamSelection
-            if team_selection == Strings.BALANCED_TS:
-                try:
-                    team_selection += "\n\nBalance Score: {}".format(round(self.balance_score/2, 2))
-                    team_selection += "\n_Lower Balance Scores = More Balanced_"
-                except:
-                    pass 
-            embed.add_field(name="Team Selection", value="{} {}".format(ts_emoji, team_selection), inline=False)
-        embed.add_field(name="Blue Team", value="{}\n".format(", ".join([player.mention for player in self.blue])), inline=False)
-        embed.add_field(name="Orange Team", value="{}\n".format(", ".join([player.mention for player in self.orange])), inline=False)
-        if not invalid:
-            embed.add_field(name="Captains", value="**Blue:** {0}\n**Orange:** {1}".format(self.captains[0].mention, self.captains[1].mention), inline=False)
-        embed.add_field(name="Lobby Info", value="**Name:** {0}\n**Password:** {1}".format(self.roomName, self.roomPass), inline=False)
-        embed.add_field(name="Point Breakdown", value="**Playing:** {0}\n**Winning Bonus:** {1}"
-            .format(self.queue.points[Strings.PP_PLAY_KEY], self.queue.points[Strings.PP_WIN_KEY]), inline=False)
-        if not invalid:
-            embed.add_field(name="Additional Info", value="Feel free to play whatever type of series you want, whether a bo3, bo5, or any other.\n\n"
-                "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
-                "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
-                "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-                "cancel the game.".format(prefix), inline=False)
-        help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
-        if helper_role:
-            help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
-        embed.add_field(name="Help", value=help_message, inline=False)
-        embed.set_footer(text="Game ID: {}".format(self.id))
-        
-        self.info_message = await self.textChannel.send(embed=embed)
-        # await self._notify(new_state=Strings.ONGOING_GS)
-
-# General Helper Commands
     def _get_ts_emoji(self):
         for key, value in SELECTION_MODES.items():
             if value == self.teamSelection:
                 return self._get_pick_reaction(key)
+
+# General Helper Commands
 
     def full_player_reset(self):
         self.reset_players()
