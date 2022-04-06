@@ -412,21 +412,8 @@ class SixMans(commands.Cog):
         game = self._get_game_by_text_channel(ctx.channel)
         player = ctx.message.author
         if game:
-            # try:
-            embed = discord.Embed(
-                title="{0} {1} Mans Game Info".format(game.queue.name, game.queue.maxSize),
-                color=discord.Colour.green()
-            )
-            embed.set_thumbnail(url=ctx.guild.icon_url)
-            embed.add_field(name="Blue", value="{}\n".format("\n".join([player.mention for player in game.blue])), inline=True)
-            embed.add_field(name="Orange", value="{}\n".format("\n".join([player.mention for player in game.orange])), inline=True)
-
-            embed.add_field(name="Lobby Info", value="```{} // {}```".format(game.roomName, game.roomPass), inline=False)
-            embed.set_footer(text="Game ID: {}".format(game.id))
-            await ctx.send(embed=embed)
-            await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT) # white_check_mark
-            # except:
-            #     await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
+            await game.post_lobby_info()
+            await ctx.message.add_reaction(Strings.WHITE_CHECK_REACT)
         else:
             await ctx.message.add_reaction(Strings.WHITE_X_REACT) # negative_squared_cross_mark
             await ctx.send("{}, you must run this command from within your queue lobby channel.".format(player.mention))
@@ -548,6 +535,17 @@ class SixMans(commands.Cog):
         await game.report_winner(winning_team)
         await ctx.send("Done. Thanks for playing!\n**This channel and the team voice channels will be deleted in {} seconds**".format(CHANNEL_SLEEP_TIME))
         await self._finish_game(ctx.guild, game, six_mans_queue, winning_team)
+
+    @commands.guild_only()
+    @commands.command(aliases=["moreinfo", "mi"])
+    async def moreInfo(self, ctx: Context):
+        """Provides more in-depth information regarding the Six Mans series"""
+        game = self._get_game_by_text_channel(ctx.channel)
+        if game is None:
+            await ctx.send(":x: This command can only be used in a {} Mans game channel.".format(self.queueMaxSize[ctx.guild]))
+            return
+        
+        await game.post_more_lobby_info(prefix=ctx.prefix)
 
     # team selection
     @commands.guild_only()
@@ -1517,18 +1515,18 @@ class SixMans(commands.Cog):
                 author_info = sorted_players[author_index][1]
                 playerStrings.append("\n`{0}` **{1:25s}:**".format(author_index + 1, author.display_name))
                 try:
-                    player_wins = player_info[Strings.PLAYER_WINS_KEY]
-                    player_gp = player_info[Strings.PLAYER_GP_KEY]
-                    player_wp = round(player_wins/player_gp*100, 1)
-                    player_wp = f"{player_wp}%" if player_wp != 100 else "100%"
+                    author_wins = author_info[Strings.PLAYER_WINS_KEY]
+                    author_gp = author_info[Strings.PLAYER_GP_KEY]
+                    author_wp = round(author_wins/author_gp*100, 1)
+                    author_wp = f"{author_wp}%" if author_wp != 100 else "100%"
                 except ZeroDivisionError:
-                    player_wp = "N/A"
+                    author_wp = "N/A"
 
                 statStrings.append("\nPoints: `{0:4d}`  Wins: `{1:3d}`  GP: `{2:3d}` WP: `{3:5s}`".format(
-                    player_info[Strings.PLAYER_POINTS_KEY],
-                    player_wins,
-                    player_gp,
-                    player_wp
+                    author_info[Strings.PLAYER_POINTS_KEY],
+                    author_wins,
+                    author_gp,
+                    author_wp
                 ))
         except Exception:
             pass
