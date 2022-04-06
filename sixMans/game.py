@@ -434,7 +434,7 @@ class Game:
             team_diff = abs(avg_team_score - team_score)
             if balance_diff:
                 if team_diff < balance_diff:
-                    balance_diff == team_diff
+                    balance_diff = team_diff
                     balanced_teams = [a_team]
                 elif team_diff == balance_diff:
                     balanced_teams.append(a_team)
