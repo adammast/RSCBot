@@ -439,7 +439,7 @@ class Game:
                 elif team_diff == balance_diff:
                     balanced_teams.append(a_team)
             else:
-                balance_diff == team_diff
+                balance_diff = team_diff
                 balanced_teams = [a_team]
         
         # return balanced team
