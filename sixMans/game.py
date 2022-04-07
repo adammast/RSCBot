@@ -582,6 +582,7 @@ class Game:
         for player in self.orange:
             player_scores_str += f"{player}: {player_scores.get(player)}"
         
+        embed.description = player_scores_str
         self.info_message = await self.textChannel.send(embed=embed)
 
     async def post_lobby_info(self):
