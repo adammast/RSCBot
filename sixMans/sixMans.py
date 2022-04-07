@@ -41,7 +41,8 @@ defaults = {
     "Queues": {},
     "GamesPlayed": 0,
     "Players": {},
-    "Scores": []
+    "Scores": [],
+    "QueuesEnabled": True
 }
 
 class SixMans(commands.Cog):
@@ -54,6 +55,7 @@ class SixMans(commands.Cog):
         self.games: dict[list[Game]] = {}
         self.queueMaxSize: dict[int] = {}
         self.player_timeout_time: dict[int] = {}
+        self.queues_enabled: dict[bool] = {}
 
         asyncio.create_task(self._pre_load_data())
         self.timeout_tasks = {}
@@ -84,7 +86,6 @@ class SixMans(commands.Cog):
         else:
             await ctx.send(":x: Data **not** cleared.")
 
-    #region admin commands
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_guild=True)
@@ -260,6 +261,30 @@ class SixMans(commands.Cog):
         else:
             await ctx.send("{} is not in queue.".format(player.display_name))
 
+    @commands.guild_only()
+    @commands.command(aliases=["eq"])
+    async def enableQueues(self, ctx: Context):
+        """Remove someone else from the queue"""
+        if not await self.has_perms(ctx.author):
+            return
+
+        await self._save_queues_enabled(ctx.guild, True)
+        self.queues_enabled[ctx.guild] = True
+
+        await ctx.send("Queueing has been enabled.")
+    
+    @commands.guild_only()
+    @commands.command(aliases=["stopQueue", "sq"])
+    async def disableQueues(self, ctx: Context):
+        """Remove someone else from the queue"""
+        if not await self.has_perms(ctx.author):
+            return
+        
+        await self._save_queues_enabled(ctx.guild, False)
+        self.queues_enabled[ctx.guild] = False
+
+        await ctx.send("Queueing has been disabled.")
+
     # team selection
     @commands.guild_only()
     @commands.command(aliases=["fts"])
@@ -425,6 +450,9 @@ class SixMans(commands.Cog):
         """Add yourself to the queue"""
         six_mans_queue = self._get_queue_by_text_channel(ctx.channel)
         player = ctx.message.author
+
+        if not self.queues_enabled[ctx.guild]:
+            return await ctx.send(":x: Queueing is currently disabled.")
 
         if player in six_mans_queue.queue.queue:
             await ctx.send(":x: You are already in the {0} queue".format(six_mans_queue.name))
@@ -673,15 +701,14 @@ class SixMans(commands.Cog):
     async def overall(self, ctx: Context, *, queue_name: str = None):
         """All-time leader board"""
         players = None
-        queue = await self._get_queue_by_name(ctx.guild, queue_name)
-        
+        queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
+        queue_name = queue.name if queue else ctx.guild.name
+
         if queue:
-            queue_name = queue.name
             players = queue.players
             games_played = queue.gamesPlayed
         else:
             players = await self._players(ctx.guild)
-            queue_name = ctx.guild.name
             games_played = await self._games_played(ctx.guild)
 
         if not players:
@@ -689,7 +716,7 @@ class SixMans(commands.Cog):
             return
 
         sorted_players = self._sort_player_dict(players)
-        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue, games_played, "All-time"))
+        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "All-time"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["daily"])
@@ -708,7 +735,7 @@ class SixMans(commands.Cog):
             return
 
         sorted_players = self._sort_player_dict(players)
-        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue, games_played, "Daily"))
+        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Daily"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["weekly", "wk"])
@@ -727,7 +754,7 @@ class SixMans(commands.Cog):
 
         queue_name = queue.name if queue else ctx.guild.name
         sorted_players = self._sort_player_dict(players)
-        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue, games_played, "Weekly"))
+        await ctx.send(embed=await self.embed_leaderboard(ctx, sorted_players, queue_name, games_played, "Weekly"))
 
     @commands.guild_only()
     @queueLeaderBoard.command(aliases=["monthly", "mnth"])
@@ -1573,6 +1600,8 @@ class SixMans(commands.Cog):
             self.games[guild] = []
 
             # Preload General Data
+            saved_queues_enabled = await self._get_queues_enabled(guild)
+            self.queues_enabled[guild] = saved_queues_enabled if (saved_queues_enabled is not None) else True
             self.queueMaxSize[guild] = await self._get_queue_max_size(guild)
             self.player_timeout_time[guild] = await self._player_timeout(guild) ## if not DEBUG else PLAYER_TIMEOUT_TIME
 
@@ -1750,5 +1779,11 @@ class SixMans(commands.Cog):
     
     async def _team_selection(self, guild: discord.Guild):
         return await self.config.guild(guild).DefaultTeamSelection()
+    
+    async def _save_queues_enabled(self, guild: discord.Guild, enabled: bool):
+        return await self.config.guild(guild).QueuesEnabled.set(enabled)
+
+    async def _get_queues_enabled(self, guild: discord.Guild):
+        return await self.config.guild(guild).QueuesEnabled()
 
 #endregion
