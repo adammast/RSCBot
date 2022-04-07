@@ -574,15 +574,16 @@ class Game:
         embed.add_field(name="Help", value=help_message, inline=False)
         embed.set_footer(text="Game ID: {}".format(self.id))
 
-        player_scores = self.get_player_scores()
+        # player_scores = self.get_player_scores()
+        # new_player_stats = self.queue.get_player_summary(player)
 
-        player_scores_str = ""
-        for player in self.blue:
-            player_scores_str += f"{player}: {player_scores.get(player)}"
-        for player in self.orange:
-            player_scores_str += f"{player}: {player_scores.get(player)}"
+        # player_scores_str = ""
+        # for player in self.blue:
+        #     player_scores_str += f"{player}: {player_scores.get(player)}: {new_player_stats}"
+        # for player in self.orange:
+        #     player_scores_str += f"{player}: {player_scores.get(player)}: {new_player_stats}"
         
-        embed.description = player_scores_str
+        # embed.description = player_scores_str
         self.info_message = await self.textChannel.send(embed=embed)
 
     async def post_lobby_info(self):

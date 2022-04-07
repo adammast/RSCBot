@@ -673,7 +673,7 @@ class SixMans(commands.Cog):
     async def overall(self, ctx: Context, *, queue_name: str = None):
         """All-time leader board"""
         players = None
-        queue = await self._get_queue_by_name(ctx.guild, queue_name) if queue_name else None
+        queue = await self._get_queue_by_name(ctx.guild, queue_name)
         
         if queue:
             queue_name = queue.name
