@@ -550,7 +550,7 @@ class Game:
             team_selection = self.teamSelection
             if team_selection == Strings.BALANCED_TS:
                 try:
-                    team_selection += "\n\nBalance Score: {}".format(round(self.balance_score/2, 2))
+                    team_selection += "\n\nBalance Score: {}".format(self.balance_score)
                     team_selection += "\n_Lower Balance Scores = More Balanced_"
                 except:
                     pass 
@@ -573,6 +573,14 @@ class Game:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
         embed.add_field(name="Help", value=help_message, inline=False)
         embed.set_footer(text="Game ID: {}".format(self.id))
+
+        player_scores = self.get_player_scores()
+
+        player_scores_str = ""
+        for player in self.blue:
+            player_scores_str += f"{player}: {player_scores.get(player)}"
+        for player in self.orange:
+            player_scores_str += f"{player}: {player_scores.get(player)}"
         
         self.info_message = await self.textChannel.send(embed=embed)
 
