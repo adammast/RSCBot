@@ -443,7 +443,7 @@ class Game:
                 balanced_teams = [a_team]
         
         # return balanced team
-        await self._notify(Strings.ONGOING_GS)
+        self._notify(Strings.ONGOING_GS)
         return balanced_teams, team_diff
 
     def get_player_scores(self):
