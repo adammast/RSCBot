@@ -215,6 +215,7 @@ class Game:
         self.get_new_captains_from_teams()
         await self.update_player_perms()
         await self.update_game_info()
+        await self._notify(Strings.ONGOING_GS)
    
     async def shuffle_players(self):
         await self.pick_random_teams()
