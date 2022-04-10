@@ -748,8 +748,10 @@ class TeamManager(commands.Cog):
 
         embed = discord.Embed(description=message, color=tier_role.color)
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
-        if(emoji):
+        if emoji:
             embed.set_thumbnail(url=emoji.url)
+        else:
+            embed.set_thumbnail(url=ctx.guild.icon_url)
         return embed
 
     async def format_roster_info(self, ctx, team_name: str):
@@ -820,8 +822,10 @@ class TeamManager(commands.Cog):
             "\n".join(captains_username)), inline=True)     # name = Username
 
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
-        if(emoji):
+        if emoji:
             embed.set_thumbnail(url=emoji.url)
+        else:
+            embed.set_thumbnail(url=ctx.guild.icon_url)
         return embed
 
     async def _format_tier_captains(self, ctx, tier: str):
@@ -914,8 +918,10 @@ class TeamManager(commands.Cog):
             "\n".join(teams)), inline=True)
 
         emoji = await self._get_franchise_emoji(ctx, franchise_role)
-        if(emoji):
+        if emoji:
             embed.set_thumbnail(url=emoji.url)
+        else:
+            embed.set_thumbnail(url=ctx.guild.icon_url)
         return embed
 
     async def _format_teams_for_tier(self, ctx, tier):
