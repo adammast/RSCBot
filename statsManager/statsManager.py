@@ -7,6 +7,7 @@ from redbot.core import checks
 from discord.ext.commands import Context
 
 import requests
+from urllib.parse import quote as encodeurl
 from teamManager import TeamManager
 from .statsReference import StatsReference as sr
 
@@ -28,8 +29,13 @@ class StatsManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setStatsUrl(self, ctx: Context, base_url: str):
-        if 'https://' not in base_url:
-            base_url = f"https://{base_url}"
+        """Sets url for stats retrieval. Do not include "https://" or closing slashes (/).
+        
+        Example:
+        [p]setStatsUrl api.rscstream.com
+        """
+        if base_url[:8] == "https://":
+            base_url = base_url[8:]
         await self._save_url(ctx.guild, base_url)
         await ctx.send(sr.DONE)
     
@@ -37,33 +43,22 @@ class StatsManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setLeagueHeader(self, ctx: Context, league_header: str):
+        """Sets "League" request header. This is used to enable stats for non-standard
+        Leagues such as 2v2
+        
+        Example:
+        [p]setLeagueHeader twos
+        """
         await self._save_league_header(ctx.guild, league_header)
         await ctx.send(sr.DONE)
 
 # endregion
 
 # region General Commands
-    @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
-    @commands.guild_only()
-    async def playerStats(self, ctx, *, player: discord.Member=None):
-        if not player:
-            player = ctx.author
-        
-        if sr.LEAGUE_ROLE_NAME not in [role.name for role in player.roles]:
-            return await ctx.send(":x: This command is only supported for active players.")
-
-        teams = await self.team_manager.teams_for_user(ctx, player)
-        team = teams[0] if teams else None
-        stats = await self.get_player_stats(ctx.guild, player, team)
-
-        # if not stats:
-        #     return await ctx.send(f":x: No stats found for **{player.nick}**")
-        embed = await self.get_player_stats_embed(ctx, player, team, stats)
-        await ctx.send(embed=embed)
-
     @commands.command(aliases=['ts', 'teamStatsCard', 'tsc'])
     @commands.guild_only()
     async def teamStats(self, ctx, *, team: str):
+        """Retrieves Team Stats for the current season"""
         try:
             franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
         except LookupError:
@@ -74,6 +69,24 @@ class StatsManager(commands.Cog):
         # if not stats:
         #     return await ctx.send(f":x: No stats found for **{player.nick}**")
         embed = await self.get_team_stats_embed(ctx, team, franchise_role, tier_role, stats)
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
+    @commands.guild_only()
+    async def playerStats(self, ctx, *, player: discord.Member=None):
+        """Retrieves Player Stats for the current season"""
+        if not player:
+            player = ctx.author
+        
+        if sr.LEAGUE_ROLE_NAME not in [role.name for role in player.roles]:
+            return await ctx.send(":x: This command is only supported for active players.")
+            
+        team = await self.team_manager.get_current_team_name(ctx, player)
+        stats = await self.get_player_stats(ctx.guild, player, team)
+
+        # if not stats:
+        #     return await ctx.send(f":x: No stats found for **{player.nick}**")
+        embed = await self.get_player_stats_embed(ctx, player, team, stats)
         await ctx.send(embed=embed)
 
 # endregion
@@ -97,7 +110,7 @@ class StatsManager(commands.Cog):
         loop = asyncio.get_event_loop()
         future = loop.run_in_executor(
             None, lambda: requests.get(
-                full_url,
+                f"https://{encodeurl(full_url)}",
                 headers={'League': self.league_headers[guild]}
             )
         )
@@ -125,7 +138,7 @@ class StatsManager(commands.Cog):
         loop = asyncio.get_event_loop()
         future = loop.run_in_executor(
             None, lambda: requests.get(
-                full_url,
+                f"https://{encodeurl(full_url)}",
                 headers={'League': self.league_headers[guild]}
             )
         )
@@ -141,6 +154,9 @@ class StatsManager(commands.Cog):
 
         return {}
     
+    # async def team_gm_match(self, ctx, player: discord.Member):
+    #     return await self.team_manager.get_current_team_name(ctx, player)
+
     def get_code_title(self, code):
         return sr.DATA_CODE_NAME_MAP.get(code.lower(), code)
 
