@@ -7,6 +7,8 @@ class StatsReference:
 
     DONE = "Done"
     NO_FA_STATS_MSG = "Unfortunately player stats can only be\nretrieved for rostered players at this time."
+    NO_STATS_FOUND_MSG = """We couldn't find any stats for this player. This 
+    is likely because of a recent name change. """
     
     # Awards
     TROPHY_EMOJI = "\U0001F3C6" # :trophy:
