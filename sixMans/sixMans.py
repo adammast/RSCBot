@@ -1284,7 +1284,7 @@ class SixMans(commands.Cog):
         return sorted(sorted_players, key=lambda x: x[1][Strings.PLAYER_POINTS_KEY], reverse=True)
 
     async def _pop_queue(self, ctx: Context, six_mans_queue: SixMansQueue):
-        game = await self._create_game(ctx.guild, six_mans_queue)
+        game = await self._create_game(ctx.guild, six_mans_queue, prefix=ctx.prefix)
         if game is None:
             return False
         
@@ -1301,7 +1301,7 @@ class SixMans(commands.Cog):
         await self._save_games(ctx.guild, self.games[ctx.guild])
         return True
 
-    async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue):
+    async def _create_game(self, guild: discord.Guild, six_mans_queue: SixMansQueue, prefix="?"):
         if not six_mans_queue._queue_full():
             return None
         players = [six_mans_queue._get() for _ in range(six_mans_queue.maxSize)]
@@ -1314,7 +1314,8 @@ class SixMans(commands.Cog):
             helper_role=await self._helper_role(guild),
             automove=await self._get_automove(guild),
             use_reactions=await self._is_react_to_vote(guild),
-            observers=self.observers
+            observers=self.observers,
+            prefix=prefix
         )
         await game.create_game_channels(await self._category(guild))
         await game.process_team_selection_method()
@@ -1356,7 +1357,7 @@ class SixMans(commands.Cog):
             return None, None
 
     def _get_game_by_text_channel(self, channel: discord.TextChannel):
-        for game in self.games[channel.guild]:
+        for game in self.games.get(channel.guild, []):
             if game.textChannel == channel:
                 return game
         return None
@@ -1664,6 +1665,8 @@ class SixMans(commands.Cog):
                 game.roomName = value["RoomName"]
                 game.roomPass = value["RoomPass"]
                 game.use_reactions = value["UseReactions"]
+                game.prefix = value["Prefix"]
+
                 try:
                     game.info_message = await game.textChannel.fetch_message(value["InfoMessage"])
                     game.teamSelection = value["TeamSelection"]
