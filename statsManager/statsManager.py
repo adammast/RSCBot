@@ -57,19 +57,30 @@ class StatsManager(commands.Cog):
 # region General Commands
     @commands.command(aliases=['ts', 'teamStatsCard', 'tsc'])
     @commands.guild_only()
-    async def teamStats(self, ctx, *, team: str):
+    async def teamStats(self, ctx, *, team_name: str):
         """Retrieves Team Stats for the current season"""
-        try:
-            franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
-        except LookupError:
-            return await ctx.send(f":x: No team found with name {team}")
+        team, found = await self.team_manager._match_team_name(ctx, team_name)
+        if found:
+            try:
+                franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
+            except LookupError:
+                return await ctx.send(f":x: No team found with name {team}")
 
-        stats = await self.get_team_stats(ctx.guild, team, tier_role.name)
+            stats = await self.get_team_stats(ctx.guild, team, tier_role.name)
 
-        # if not stats:
-        #     return await ctx.send(f":x: No stats found for **{player.nick}**")
-        embed = await self.get_team_stats_embed(ctx, team, franchise_role, tier_role, stats)
-        await ctx.send(embed=embed)
+            # if not stats:
+            #     return await ctx.send(f":x: No stats found for **{player.nick}**")
+            embed = await self.get_team_stats_embed(ctx, team, franchise_role, tier_role, stats)
+            await ctx.send(embed=embed)
+        else:
+            possible_teams = team
+            all_teams = await self.team_manager._teams(ctx)
+            message = "No team with name: {0}".format(team_name)
+            if possible_teams:
+                message += "\nDo you mean one of these teams:"
+                for possible_team in possible_teams:
+                    message += " `{0}`".format(possible_team)
+            await ctx.send(message)
 
     @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
     @commands.guild_only()
@@ -214,9 +225,12 @@ class StatsManager(commands.Cog):
         embed.add_field(name="Team Info", value=team_info, inline=False)
 
         if under_contract:
-            for stat in sr.INCLUDE_PLAYER_STATS:
-                stat_title = self.get_code_title(stat)
-                embed.add_field(name=stat_title, value=player_stats.get(stat, "N/A")) # , inline=False)
+            if player_stats:
+                for stat in sr.INCLUDE_PLAYER_STATS:
+                    stat_title = self.get_code_title(stat)
+                    embed.add_field(name=stat_title, value=player_stats.get(stat, "N/A")) # , inline=False)
+            else:
+                embed.add_field(name="No Stats, Sorry!", value=sr.NO_STATS_FOUND_MSG)
         else:
             embed.add_field(name="No Stats, Sorry!", value=sr.NO_FA_STATS_MSG)
 
