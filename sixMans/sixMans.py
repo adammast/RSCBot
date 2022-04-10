@@ -14,7 +14,7 @@ from .game import Game
 from .queue import SixMansQueue
 from .strings import Strings
 
-DEBUG = True
+DEBUG = False
 MINIMUM_GAME_TIME = 600                         # Seconds (10 Minutes)
 PLAYER_TIMEOUT_TIME = 10 if DEBUG else 14400    # How long players can be in a queue in seconds (4 Hours)
 LOOP_TIME = 5                                   # How often to check the queues in seconds
