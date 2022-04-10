@@ -29,6 +29,11 @@ class StatsManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setStatsUrl(self, ctx: Context, base_url: str):
+        """Sets url for stats retrieval. Do not include "https://" or closing slashes (/).
+        
+        Example:
+        [p]setStatsUrl api.rscstream.com
+        """
         if base_url[:8] == "https://":
             base_url = base_url[8:]
         await self._save_url(ctx.guild, base_url)
@@ -38,6 +43,12 @@ class StatsManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setLeagueHeader(self, ctx: Context, league_header: str):
+        """Sets "League" request header. This is used to enable stats for non-standard
+        Leagues such as 2v2
+        
+        Example:
+        [p]setLeagueHeader twos
+        """
         await self._save_league_header(ctx.guild, league_header)
         await ctx.send(sr.DONE)
 
@@ -47,6 +58,7 @@ class StatsManager(commands.Cog):
     @commands.command(aliases=['ts', 'teamStatsCard', 'tsc'])
     @commands.guild_only()
     async def teamStats(self, ctx, *, team: str):
+        """Retrieves Team Stats for the current season"""
         try:
             franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
         except LookupError:
@@ -62,6 +74,7 @@ class StatsManager(commands.Cog):
     @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
     @commands.guild_only()
     async def playerStats(self, ctx, *, player: discord.Member=None):
+        """Retrieves Player Stats for the current season"""
         if not player:
             player = ctx.author
         
