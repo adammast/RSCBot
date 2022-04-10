@@ -18,12 +18,10 @@ from discord.ext.commands import Context
 
 import requests
 from teamManager import TeamManager
-
+from .statsReference import StatsReference as sr
 
 defaults = {"BaseUrl": None, "LeagueHeader": None}
 verify_timeout = 30
-
-DONE = "Done"
 
 class StatsManager(commands.Cog):
     """Enables access to Player and Team Stats"""
@@ -36,35 +34,56 @@ class StatsManager(commands.Cog):
         asyncio.create_task(self._pre_load_data())
 
 # region Admin Commands
-    @commands.command(aliases=['setURL', 'seturl'])
+    @commands.command(aliases=['setStatsURL', 'setstatsurl'])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def setUrl(self, ctx: Context, base_url: str):
+    async def setStatsUrl(self, ctx: Context, base_url: str):
         if 'https://' not in base_url:
             base_url = f"https://{base_url}"
         await self._save_url(ctx.guild, base_url)
-        await ctx.send(DONE)
+        await ctx.send(sr.DONE)
     
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setLeagueHeader(self, ctx: Context, league_header: str):
         await self._save_url(ctx.guild, league_header)
-        await ctx.send(DONE)
+        await ctx.send(sr.DONE)
 
 # endregion
 
 # region General Commands
-    @commands.command(aliases=['setURL', 'seturl'])
+    @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
     @commands.guild_only()
     async def playerStats(self, ctx, player: discord.Member=None):
         if not player:
             player = ctx.author
         
-        team = (await self.team_manager.teams_for_user(ctx, player))[0]
-        stats = await self.get_player_stats(ctx.guild, player, team)
-        embed = self.get_player_stats_embed(ctx, player, stats)
+        if sr.LEAGUE_ROLE_NAME not in [role.name for role in player.roles]:
+            return await ctx.send(":x: This command is only supported for active players.")
 
+        teams = await self.team_manager.teams_for_user(ctx, player)
+        team = teams[0] if teams else None
+        stats = await self.get_player_stats(ctx.guild, player, team)
+
+        # if not stats:
+        #     return await ctx.send(f":x: No stats found for **{player.nick}**")
+        embed = await self.get_player_stats_embed(ctx, player, team, stats)
+        await ctx.send(embed=embed)
+
+    @commands.command(aliases=['ts', 'teamStatsCard', 'tsc'])
+    @commands.guild_only()
+    async def teamStats(self, ctx, team: str):
+        try:
+            franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
+        except LookupError:
+            return await ctx.send(f":x: No team found with name {team}")
+
+        stats = await self.get_team_stats(ctx.guild, team, tier_role.name)
+
+        # if not stats:
+        #     return await ctx.send(f":x: No stats found for **{player.nick}**")
+        embed = await self.get_team_stats_embed(ctx, team, franchise_role, tier_role, stats)
         await ctx.send(embed=embed)
 
 # endregion
@@ -96,45 +115,44 @@ class StatsManager(commands.Cog):
 
         data = response.json()
 
+        # from pprint import pprint as pp
+        # pp(data)
+
         player_name = self.get_name_components(player)[1]
-        player_data = {}
-        for p_data in data:
-            if p_data.get('playerName', '') == player_name:
-                player_data = p_data
-                break
 
-        return player_data
+        for player_data in data:
+            if player_data.get('playerName', '') == player_name:
+                return player_data
+
+        return {}
     
-    async def get_player_stats_embed(self, ctx, player, team, stats):
-        player_name = self.get_name_components(player)[1]
-        franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
-
-        embed = discord.Embed(title=f"{player_name} Player Stats", color=tier_role.color)
-
-        emoji = await self.team_manager._get_franchise_emoji(ctx, franchise_role)
-        if emoji:
-            embed.set_thumbnail(url=emoji.url)
-        else:
-            embed.set_thumbnail(url=ctx.guild.icon_url)
+    async def get_team_stats(self, guild: discord.Guild, team: str, tier: str):
+        if not self.base_urls.get(guild, False):
+            return None
         
-        include_stats = ["GP", "GW", "GL", "wPct", "pts", "goals", "assists", "saves", "shots", "shotPct", "ppg", "cycles", "hatTricks", "playmakers", "saviors"]
-        for stat in include_stats:
-            stat_title = self.get_stat_title(stat)
-            embed.add_field(name=stat_title, value=stats.get(include_stats, "N/A")) # , inline=False)
+        full_url = f"{self.base_urls[guild]}/teams/{tier}"
         
-        return embed
+        loop = asyncio.get_event_loop()
+        future = loop.run_in_executor(
+            None, lambda: requests.get(
+                full_url,
+                headers={'League': self.league_headers[guild]}
+            )
+        )
+        response = await future
+
+        data = response.json()
+
+        # from pprint import pprint as pp
+        # pp(data)
+        for team_data in data:
+            if team_data.get('teamName', '') == team:
+                return team_data
+
+        return {}
     
-    def get_stat_title(self, stat_code):
-        stat_code_titles = {
-            "gp": "GP",
-            "hattricks": "Hat Tricks",
-            "playmakers": "Play Makers",
-            "goals": "Goals",
-            "assists": "Assists",
-            "shots": "Shots",
-            "cycles": "Cycles"
-        }
-        return stat_code_titles.get(stat_code.lower(), stat_code)
+    def get_code_title(self, code):
+        return sr.DATA_CODE_NAME_MAP.get(code.lower(), code)
 
     def get_name_components(self, member: discord.Member):
         if member.nick:
@@ -147,7 +165,7 @@ class StatsManager(commands.Cog):
         player_name = ""
         awards = ""
         for char in name[::-1]:
-            if char not in self.LEAGUE_AWARDS:
+            if char not in sr.LEAGUE_AWARDS:
                 break
             awards = char + awards
 
@@ -155,6 +173,84 @@ class StatsManager(commands.Cog):
 
         return prefix.strip(), player_name.strip(), awards.strip()
 
+# endregion
+
+# region Embeds
+    async def get_player_stats_embed(self, ctx, player, team, player_stats):
+        under_contract = bool(team)
+        player_name = self.get_name_components(player)[1]
+        player_name = player_name.replace(player_name[0], player_name[0].upper())
+        
+        if under_contract:
+            franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
+            emoji = await self.team_manager._get_franchise_emoji(ctx, franchise_role)
+        else:
+            tier_role = await self.team_manager.get_current_tier_role(ctx, player)
+            emoji = None
+
+        embed = discord.Embed(title=f"{player_name}'s Player Stats Card", color=tier_role.color)
+
+        if emoji:
+            embed.set_thumbnail(url=emoji.url)
+        else:
+            embed.set_thumbnail(url=ctx.guild.icon_url)
+        
+        team_info = ""
+        team_info += f"**Tier:** {tier_role.mention}"
+
+        if under_contract:
+            team_info += f"\n**Franchise:** {franchise_role.name}"
+            team_info += f"\n**Team:** {team}"
+        else:
+            contract =  "Permanent Free Agent" if sr.PERM_FA_ROLE_NAME in [role.name for role in player.roles] else "Free Agent"
+            team_info += f"\n**Contract:** {contract}"
+        
+        embed.add_field(name="Team Info", value=team_info, inline=False)
+
+        if under_contract:
+            for stat in sr.INCLUDE_PLAYER_STATS:
+                stat_title = self.get_code_title(stat)
+                embed.add_field(name=stat_title, value=player_stats.get(stat, "N/A")) # , inline=False)
+        else:
+            embed.add_field(name="No Stats, Sorry!", value=sr.NO_FA_STATS_MSG)
+
+        return embed
+    
+    async def get_team_stats_embed(self, ctx, team, franchise_role: discord.Role, tier_role: discord.Role, team_stats):
+        
+        embed = discord.Embed(title=f"{team}'s Team Stats", color=tier_role.color)
+
+        emoji = await self.team_manager._get_franchise_emoji(ctx, franchise_role)
+        if emoji:
+            embed.set_thumbnail(url=emoji.url)
+        else:
+            embed.set_thumbnail(url=ctx.guild.icon_url)
+        
+        # Team Info
+        team_info = f"**Tier:** {tier_role.mention}"
+        for tli in sr.TEAM_LEAGUE_INFO:
+            info = team_stats.get(tli)
+
+            if info:
+                if tli.lower() == "gm":
+                    team_info += f"\n**{tli.upper()}**: {info}"
+                else:
+                    team_info += f"\n**{tli.title()}**: {info}"
+            
+        embed.add_field(name="Team Info", value=team_info, inline=False)
+
+        # Current Roster
+        roster = self.team_manager.members_from_team(ctx, franchise_role, tier_role)
+        roster_str = "```\n{}\n```".format('\n'.join(player.nick for player in roster))
+        embed.add_field(name="Current Roster", value=roster_str, inline=False)
+
+        # Stats
+        for stat in sr.INCLUDE_TEAM_STATS:
+            stat_title = self.get_code_title(stat)
+            embed.add_field(name=stat_title, value=team_stats.get(stat, "N/A")) # , inline=False)
+
+        return embed
+    
 # endregion 
 
 # region JSON
