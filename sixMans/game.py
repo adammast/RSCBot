@@ -27,7 +27,8 @@ class Game:
             voice_channels: List[discord.VoiceChannel]=[],
             info_message: discord.Message=None,
             use_reactions=True,
-            observers=None):
+            observers=None,
+            prefix="?"):
         self.id = uuid.uuid4().int
         self.players = set(players)
         self.captains = []
@@ -40,6 +41,7 @@ class Game:
         self.scoreReported = False
         self.teamSelection = queue.teamSelection
         self.state = Strings.TEAM_SELECTION_GS
+        self.prefix=prefix
         
         # Optional params
         self.helper_role = helper_role
@@ -305,6 +307,19 @@ class Game:
         if self.state != Strings.TEAM_SELECTION_GS:
             return False
         
+        if user not in set(list(self.blue) + list(self.orange) + list(self.players)):
+            try:
+                if ord(emoji) in [Strings.ORANGE_REACT, Strings.BLUE_REACT]:
+                    self.info_message = await self.textChannel.fetch_message(self.info_message.id)
+                    for reaction in self.info_message.reactions:
+                        reacted_members = await reaction.users().flatten()
+                        if reaction.emoji == emoji and user in reacted_members:
+                            await reaction.remove(user)
+                            break
+            except TypeError:
+                pass 
+            return
+
         if added:
             if ord(emoji) == Strings.ORANGE_REACT:
                 if len(self.orange) < self.queue.maxSize//2:
@@ -513,7 +528,7 @@ class Game:
         return players
 
 # Embeds & Emojis
-    async def update_game_info(self, prefix='?'):
+    async def update_game_info(self):
         embed = discord.Embed(
             title="{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize),
             color=discord.Colour.green()
@@ -527,7 +542,7 @@ class Game:
 
         embed.add_field(name="Lobby Info", value="```{} // {}```".format(self.roomName, self.roomPass), inline=False)
 
-        embed.add_field(name="Commands", value=Strings.sixmans_highlight_commands.format(prefix=prefix))
+        embed.add_field(name="Commands", value=Strings.sixmans_highlight_commands.format(prefix=self.prefix))
 
         if self.helper_role:
             embed.add_field(name="Help", value=Strings.more_sixmans_info_helper.format(helper=self.helper_role.mention), inline=False)
@@ -535,7 +550,7 @@ class Game:
         embed.set_footer(text="Game ID: {}".format(self.id))
         self.info_message = await self.textChannel.send(embed=embed)
 
-    async def post_more_lobby_info(self, helper_role=None, invalid=False, prefix='?'):
+    async def post_more_lobby_info(self, helper_role=None, invalid=False):
         if not helper_role:
             helper_role = self.helper_role
         sm_title = "{0} {1} Mans Game Info".format(self.queue.name, self.queue.maxSize)
@@ -568,7 +583,7 @@ class Game:
                 "When you are done playing with the current teams please report the winning team using the command `{0}sr [winning_team]` where "
                 "the `winning_team` parameter is either `Blue` or `Orange`. Both teams will need to verify the results.\n\nIf you wish to cancel "
                 "the game and allow players to queue again you can use the `{0}cg` command. Both teams will need to verify that they wish to "
-                "cancel the game.".format(prefix), inline=False)
+                "cancel the game.".format(self.prefix), inline=False)
         help_message = "If you think the bot isn't working correctly or have suggestions to improve it, please contact adammast."
         if helper_role:
             help_message = "If you need any help or have questions please contact someone with the {0} role. ".format(helper_role.mention) + help_message
@@ -826,7 +841,8 @@ class Game:
             "ScoreReported": self.scoreReported,
             "TeamSelection": self.teamSelection,
             "UseReactions": self.use_reactions,
-            "State": self.state
+            "State": self.state,
+            "Prefix": self.prefix
         }
         if self.info_message:
             game_dict["InfoMessage"] = self.info_message.id
