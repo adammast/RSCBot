@@ -1,24 +1,13 @@
-from sys import prefix
-from turtle import pd
-from typing import NewType
 import discord
-import re
-import ast
 import asyncio
-import difflib
 
 from redbot.core import Config
 from redbot.core import commands
 from redbot.core import checks
-from collections import Counter
-from redbot.core.utils.predicates import MessagePredicate
-from redbot.core.utils.predicates import ReactionPredicate
-from redbot.core.utils.menus import start_adding_reactions
 from discord.ext.commands import Context
 
 import requests
 from teamManager import TeamManager
-
 
 defaults = {"BaseUrl": None, "LeagueHeader": None}
 verify_timeout = 30
