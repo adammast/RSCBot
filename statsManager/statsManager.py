@@ -37,7 +37,7 @@ class StatsManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def setLeagueHeader(self, ctx: Context, league_header: str):
-        await self._save_url(ctx.guild, league_header)
+        await self._save_league_header(ctx.guild, league_header)
         await ctx.send(sr.DONE)
 
 # endregion
