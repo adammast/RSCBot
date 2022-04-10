@@ -45,7 +45,7 @@ class StatsManager(commands.Cog):
 # region General Commands
     @commands.command(aliases=['ps', 'statsCard', 'sc', 'psc'])
     @commands.guild_only()
-    async def playerStats(self, ctx, player: discord.Member=None):
+    async def playerStats(self, ctx, *, player: discord.Member=None):
         if not player:
             player = ctx.author
         
@@ -63,7 +63,7 @@ class StatsManager(commands.Cog):
 
     @commands.command(aliases=['ts', 'teamStatsCard', 'tsc'])
     @commands.guild_only()
-    async def teamStats(self, ctx, team: str):
+    async def teamStats(self, ctx, *, team: str):
         try:
             franchise_role, tier_role = await self.team_manager._roles_for_team(ctx, team)
         except LookupError:
