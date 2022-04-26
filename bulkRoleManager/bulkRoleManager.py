@@ -2,15 +2,20 @@ import discord
 import csv
 import os
 
-from redbot.core import commands
-from redbot.core import Config
-from redbot.core import checks
+from redbot.core import commands, Config, checks
 from discord import File
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
+from teamManager import TeamManager
+
 defaults = {"DraftEligibleMessage": None, "PermFAMessage": None}
 
+TROPHY_EMOJI = "\U0001F3C6" # :trophy:
+GOLD_MEDAL_EMOJI = "\U0001F3C5" # gold medal
+FIRST_PLACE_EMOJI = "\U0001F947" # first place medal
+STAR_EMOJI = "\U00002B50" # :star:
+LEAGUE_AWARDS = [TROPHY_EMOJI, GOLD_MEDAL_EMOJI, FIRST_PLACE_EMOJI, STAR_EMOJI]
 
 class BulkRoleManager(commands.Cog):
     """Used to manage roles role for large numbers of members"""
@@ -21,9 +26,11 @@ class BulkRoleManager(commands.Cog):
         self.config = Config.get_conf(
             self, identifier=1234567897, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager_cog = bot.get_cog("TeamManager")
+        self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
+        # self.team_manager_cog = bot.get_cog("TeamManager")
         self.discord_bot = bot
 
+# region general
     @commands.command()
     @commands.guild_only()
     async def getAllWithRole(self, ctx, role: discord.Role, getNickname=False):
@@ -141,6 +148,87 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role removed".format(removed)
         await ctx.send(message)
 
+    @commands.command()
+    @commands.guild_only()
+    async def getId(self, ctx, *userList):
+        """Gets the id for any user that can be found from the userList"""
+        found = []
+        notFound = []
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+                if member in ctx.guild.members:
+                    nickname = self.get_player_nickname(member)
+                    found.append(
+                        "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname))
+            except:
+                notFound.append(user)
+                found.append(None)
+
+        # Double Check not found (search by nickname without prefix):
+        for player in ctx.guild.members:
+            player_nick = self.get_player_nickname(player)
+            if player_nick in notFound:
+                while player_nick in notFound:
+                    notFound.remove(player_nick)
+                match_indicies = [i for i, x in enumerate(
+                    userList) if x == player_nick]
+                for match in match_indicies:
+                    found[match] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(
+                        player, player_nick)
+
+        if notFound:
+            notFoundMessage = ":x: Couldn't find:\n"
+            for user in notFound:
+                notFoundMessage += "{0}\n".format(user)
+            await ctx.send(notFoundMessage)
+
+        messages = []
+        if found:
+            message = ""
+            for member_line in found:
+                if member_line and len(message + member_line) < 2000:
+                    message += member_line
+                else:
+                    messages.append(message)
+                    message = member_line
+            messages.append(message)
+        for msg in messages:
+            if msg:
+                await ctx.send("{0}{1}{0}".format("```", msg))
+
+    @commands.command()
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_roles=True)
+    async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
+        """Gives the roleToGive to every member who already has the currentRole"""
+        count = 0
+        hadRoleCount = 0
+        countGiven = 0
+
+        for member in currentRole.members:
+            count += 1
+            if roleToGive in member.roles:
+                hadRoleCount += 1
+            else:
+                await member.add_roles(roleToGive)
+                countGiven += 1
+        if count == 0:
+            message = ":x: Nobody has the {0} role".format(currentRole.name)
+        else:
+            message = ":white_check_mark: {0} user(s) had the {1} role".format(
+                count, currentRole.name)
+            if hadRoleCount > 0:
+                message += ". {0} user(s) already had the {1} role".format(
+                    hadRoleCount, roleToGive.name)
+            if countGiven > 0:
+                message += ". {0} user(s) had the {1} role added to them".format(
+                    countGiven, roleToGive.name)
+        await ctx.send(message)
+
+# endregion
+
+# region general admin use
     @commands.command(aliases=["addMissingServerRoles"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
@@ -161,6 +249,81 @@ class BulkRoleManager(commands.Cog):
             return
         await ctx.send("All required roles already exist in the server.")
 
+    @commands.command()
+    @commands.guild_only()
+    async def getIdsWithRole(self, ctx, role: discord.Role, spreadsheet: bool = False):
+        """Gets the id for any user that has the given role"""
+        messages = []
+        message = ""
+        if spreadsheet:
+            Outputcsv = "./tmp/Ids.csv"
+            header = ["Nickname", "Name", "Id"]
+            csvwrite = open(Outputcsv, 'w', newline='', encoding='utf-8')
+            w = csv.writer(csvwrite, delimiter=',')
+            w.writerow(header)
+            for member in role.members:
+                nickname = self.get_player_nickname(member)
+                newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(
+                    member), "{0.id}".format(member)]
+                w.writerow(newrow)
+            csvwrite.close()
+            await ctx.send("Done", file=File(Outputcsv))
+            os.remove(Outputcsv)
+        else:
+            for member in role.members:
+                nickname = self.get_player_nickname(member)
+                message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(
+                    member, nickname)
+                if len(message) > 1900:
+                    messages.append(message)
+                    message = ""
+            if message:
+                messages.append(message)
+            for msg in messages:
+                await ctx.send("{0}{1}{0}".format("```", msg))
+
+# endregion
+
+# region Message Configuration
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setDEMessage(self, ctx, *, message):
+        """Sets the draft eligible message. This message will be sent to anyone who is made a DE via the makeDE command"""
+        await self._save_draft_eligible_message(ctx, message)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getDEMessage(self, ctx):
+        """Gets the draft eligible message"""
+        try:
+            await ctx.send("Draft eligible message set to: {0}".format((await self._draft_eligible_message(ctx))))
+        except:
+            await ctx.send(":x: Draft eligible message not set")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def setPermFAMessage(self, ctx, *, message):
+        """Sets the permanent free agent message. This message will be sent to anyone who is made a permFA via the makePermFA command"""
+        await self._save_perm_fa_message(ctx, message)
+        await ctx.send("Done")
+
+    @commands.guild_only()
+    @commands.command()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def getPermFAMessage(self, ctx):
+        """Gets the permFA message"""
+        try:
+            await ctx.send("PermFA message set to: {0}".format((await self._perm_fa_message(ctx))))
+        except:
+            await ctx.send(":x: PermFA message not set")
+
+# endregion
+
+# region league related
     @commands.command()
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
@@ -322,6 +485,75 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) had the role added to them".format(added)
         await ctx.send(message)
 
+    @commands.command(aliases=['makeFA'])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def expireContracts(self, ctx, *userList):
+        """Makes each member that can be found from the userList a Free Agent for the given tier"""
+        empty = True
+        free_agents = 0
+        notFound = 0
+        message = ""
+        fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
+        league_role = self.team_manager_cog._find_role_by_name(ctx, "League")
+
+        roles_to_remove = [
+            self.team_manager_cog._find_role_by_name(ctx, "Draft Eligible"),
+            self.team_manager_cog._find_role_by_name(ctx, self.PERM_FA_ROLE),
+            self.team_manager_cog._find_role_by_name(ctx, "Former Player")
+        ]
+
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+
+                # For each user in guild
+                if member in ctx.guild.members:
+
+                    # prep roles to remove
+                    franchise_role = self.team_manager_cog.get_current_franchise_role(member)
+                    removable_roles = [franchise_role] if franchise_role else []
+                    for role in roles_to_remove:
+                        if role in member.roles:
+                            removable_roles.append(role)
+                    
+                    # prep roles to add
+                    tier_role = await self.team_manager_cog.get_current_tier_role(ctx, member)
+
+                    if tier_role:
+                        tier_fa_role = self.team_manager_cog._find_role_by_name(ctx, tier_role.name + "FA")
+                        add_roles = [league_role, fa_role, tier_fa_role]
+                    else:
+                        add_roles = [league_role, fa_role]
+
+                    # performs role updates
+                    await member.remove_roles(*removable_roles)
+                    await member.add_roles(*add_roles)
+
+                    # Updates Name
+                    prefix, name, awards = self._get_name_components(member)
+                    new_name = self._generate_new_name('FA', name, awards)
+
+                    if member.nick != new_name:
+                        await member.edit(nick=new_name)
+
+                    empty = False
+            except Exception as e:
+                await ctx.send(f"Error: {e}")
+                if notFound == 0:
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody was set as a free agent."
+        else:
+            message += ":white_check_mark: everyone that was found from list is now a free agent"
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if free_agents > 0:
+            message += ". {0} user(s) have been set as a free agent.".format(free_agents)
+        await ctx.send(message)
+
     @commands.command(aliases=["retirePlayer", "retirePlayers", "setFormerPlayer"])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_roles=True)
@@ -382,153 +614,9 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) have been set as former players.".format(retired)
         await ctx.send(message)
 
-    @commands.command()
-    @commands.guild_only()
-    async def getId(self, ctx, *userList):
-        """Gets the id for any user that can be found from the userList"""
-        found = []
-        notFound = []
-        for user in userList:
-            try:
-                member = await commands.MemberConverter().convert(ctx, user)
-                if member in ctx.guild.members:
-                    nickname = self.get_player_nickname(member)
-                    found.append(
-                        "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(member, nickname))
-            except:
-                notFound.append(user)
-                found.append(None)
+# endregion
 
-        # Double Check not found (search by nickname without prefix):
-        for player in ctx.guild.members:
-            player_nick = self.get_player_nickname(player)
-            if player_nick in notFound:
-                while player_nick in notFound:
-                    notFound.remove(player_nick)
-                match_indicies = [i for i, x in enumerate(
-                    userList) if x == player_nick]
-                for match in match_indicies:
-                    found[match] = "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(
-                        player, player_nick)
-
-        if notFound:
-            notFoundMessage = ":x: Couldn't find:\n"
-            for user in notFound:
-                notFoundMessage += "{0}\n".format(user)
-            await ctx.send(notFoundMessage)
-
-        messages = []
-        if found:
-            message = ""
-            for member_line in found:
-                if member_line and len(message + member_line) < 2000:
-                    message += member_line
-                else:
-                    messages.append(message)
-                    message = member_line
-            messages.append(message)
-        for msg in messages:
-            if msg:
-                await ctx.send("{0}{1}{0}".format("```", msg))
-
-    @commands.command()
-    @commands.guild_only()
-    async def getIdsWithRole(self, ctx, role: discord.Role, spreadsheet: bool = False):
-        """Gets the id for any user that has the given role"""
-        messages = []
-        message = ""
-        if spreadsheet:
-            Outputcsv = "./tmp/Ids.csv"
-            header = ["Nickname", "Name", "Id"]
-            csvwrite = open(Outputcsv, 'w', newline='', encoding='utf-8')
-            w = csv.writer(csvwrite, delimiter=',')
-            w.writerow(header)
-            for member in role.members:
-                nickname = self.get_player_nickname(member)
-                newrow = ["{0}".format(nickname), "{0.name}#{0.discriminator}".format(
-                    member), "{0.id}".format(member)]
-                w.writerow(newrow)
-            csvwrite.close()
-            await ctx.send("Done", file=File(Outputcsv))
-            os.remove(Outputcsv)
-        else:
-            for member in role.members:
-                nickname = self.get_player_nickname(member)
-                message += "{1}:{0.name}#{0.discriminator}:{0.id}\n".format(
-                    member, nickname)
-                if len(message) > 1900:
-                    messages.append(message)
-                    message = ""
-            if message:
-                messages.append(message)
-            for msg in messages:
-                await ctx.send("{0}{1}{0}".format("```", msg))
-
-    @commands.command()
-    @commands.guild_only()
-    @checks.admin_or_permissions(manage_roles=True)
-    async def giveRoleToAllWithRole(self, ctx, currentRole: discord.Role, roleToGive: discord.Role):
-        """Gives the roleToGive to every member who already has the currentRole"""
-        count = 0
-        hadRoleCount = 0
-        countGiven = 0
-
-        for member in currentRole.members:
-            count += 1
-            if roleToGive in member.roles:
-                hadRoleCount += 1
-            else:
-                await member.add_roles(roleToGive)
-                countGiven += 1
-        if count == 0:
-            message = ":x: Nobody has the {0} role".format(currentRole.name)
-        else:
-            message = ":white_check_mark: {0} user(s) had the {1} role".format(
-                count, currentRole.name)
-            if hadRoleCount > 0:
-                message += ". {0} user(s) already had the {1} role".format(
-                    hadRoleCount, roleToGive.name)
-            if countGiven > 0:
-                message += ". {0} user(s) had the {1} role added to them".format(
-                    countGiven, roleToGive.name)
-        await ctx.send(message)
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setDEMessage(self, ctx, *, message):
-        """Sets the draft eligible message. This message will be sent to anyone who is made a DE via the makeDE command"""
-        await self._save_draft_eligible_message(ctx, message)
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getDEMessage(self, ctx):
-        """Gets the draft eligible message"""
-        try:
-            await ctx.send("Draft eligible message set to: {0}".format((await self._draft_eligible_message(ctx))))
-        except:
-            await ctx.send(":x: Draft eligible message not set")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def setPermFAMessage(self, ctx, *, message):
-        """Sets the permanent free agent message. This message will be sent to anyone who is made a permFA via the makePermFA command"""
-        await self._save_perm_fa_message(ctx, message)
-        await ctx.send("Done")
-
-    @commands.guild_only()
-    @commands.command()
-    @checks.admin_or_permissions(manage_guild=True)
-    async def getPermFAMessage(self, ctx):
-        """Gets the permFA message"""
-        try:
-            await ctx.send("PermFA message set to: {0}".format((await self._perm_fa_message(ctx))))
-        except:
-            await ctx.send(":x: PermFA message not set")
-
+# region Helper Commands
     def get_player_nickname(self, user: discord.Member):
         if user.nick:
             array = user.nick.split(' | ', 1)
@@ -557,3 +645,31 @@ class BulkRoleManager(commands.Cog):
         message = message.replace('[p]', command_prefix)
         message = message_title + message
         await member.send(message)
+
+    def _get_name_components(self, member: discord.Member):
+        if member.nick:
+            name = member.nick
+        else:
+            return "", member.name, ""
+        prefix = name[0:name.index(' | ')] if ' | ' in name else ''
+        if prefix:
+            name = name[name.index(' | ')+3:]
+        player_name = ""
+        awards = ""
+        for char in name[::-1]:
+            if char not in LEAGUE_AWARDS:
+                break
+            awards = char + awards
+
+        player_name = name.replace(" " + awards, "") if awards else name
+
+        return prefix.strip(), player_name.strip(), awards.strip()
+    
+    def _generate_new_name(self, prefix, name, awards):
+        new_name = "{} | {}".format(prefix, name) if prefix else name
+        if awards:
+            awards = ''.join(sorted(awards))
+            new_name += " {}".format(awards)
+        return new_name
+
+# endregion
