@@ -1,6 +1,7 @@
 import discord
 import csv
 import os
+import asyncio
 
 from redbot.core import commands, Config, checks
 from discord import File
@@ -26,8 +27,8 @@ class BulkRoleManager(commands.Cog):
         self.config = Config.get_conf(
             self, identifier=1234567897, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
         # self.team_manager_cog = bot.get_cog("TeamManager")
+        self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
         self.discord_bot = bot
 
 # region general
@@ -614,9 +615,83 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) have been set as former players.".format(retired)
         await ctx.send(message)
 
+    @commands.command(aliases=['updateTierForPlayers'])
+    @commands.guild_only()
+    @checks.admin_or_permissions(manage_guild=True)
+    async def updateTier(self, ctx, tier: discord.Role, *userList):
+        """Makes each member that can be found from the userList a Free Agent for the given tier"""
+        await ctx.send(f"Processing tier update for {len(userList)} users. This may take some time.")
+        asyncio.create_task(self.update_tiers(ctx, tier, userList))
+
 # endregion
 
-# region Helper Commands
+# region Helper Functions
+    async def update_tiers(self, ctx, tier_assignment, userList):
+        empty = True
+        updated = 0
+        notFound = 0
+        message = ""
+        league_role = self.team_manager_cog._find_role_by_name(ctx, "League")
+        fa_role = self.team_manager_cog._find_role_by_name(ctx, "Free Agent")
+
+        # get role groups
+        roles_to_remove = []
+        tiers = await self.team_manager_cog.tiers(ctx)
+        tier_roles = [self.team_manager_cog._get_tier_role(ctx, tier) for tier in tiers]
+        tiers_fa_roles = [self.team_manager_cog._find_role_by_name(ctx, "{0}FA".format(tier)) for tier in tiers]
+        
+        # validate tier
+        if tier_assignment not in tier_roles:
+            return await ctx.send(f":x: {tier_assignment} is not a valid tier.")
+
+        tier_assign_fa_role = self.team_manager_cog._find_role_by_name(ctx, tier_assignment.name + "FA")
+
+        # Prep roles to remove
+        roles_to_remove = tier_roles + tiers_fa_roles
+        roles_to_remove.remove(tier_assignment)
+        roles_to_remove.remove(tier_assign_fa_role)
+
+        
+
+        for user in userList:
+            try:
+                member = await commands.MemberConverter().convert(ctx, user)
+
+                # For each user in guild
+                if member in ctx.guild.members:
+
+                    # prep roles to remove
+                    removable_roles = []
+                    for role in roles_to_remove:
+                        if role in member.roles:
+                            removable_roles.append(role)
+                    
+                    # prep roles to add
+                    add_roles = [tier_assignment]
+                    if fa_role in member.roles:
+                        add_roles.append(tier_assign_fa_role)
+
+                    # performs role updates
+                    await member.remove_roles(*removable_roles)
+                    await member.add_roles(*add_roles)
+
+                    empty = False
+            except Exception as e:
+                await ctx.send(f"Error: {e}")
+                if notFound == 0:
+                    message += "Couldn't find:\n"
+                message += "{0}\n".format(user)
+                notFound += 1
+        if empty:
+            message += ":x: Nobody was assigned to the **{}** tier.".format(tier_assignment.name)
+        else:
+            message += ":white_check_mark: everyone that was found from list is now registered to the **{}** tier.".format(tier_assignment.name)
+        if notFound > 0:
+            message += ". {0} user(s) were not found".format(notFound)
+        if updated > 0:
+            message += ". {0} user(s) have been assigned to the **{1}** tier.".format(updated, tier_assignment.name)
+        await ctx.send(message)
+
     def get_player_nickname(self, user: discord.Member):
         if user.nick:
             array = user.nick.split(' | ', 1)

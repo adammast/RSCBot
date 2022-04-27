@@ -632,8 +632,8 @@ class ModeratorLink(commands.Cog):
                 guild_role = self._guild_sister_role(guild, role)
                 guild_member = self._guild_member_from_id(guild, before.id)
                 channel = await self._event_log_channel(guild_member.guild)
-                if guild_role not in guild_member.roles and channel:
-                    await guild_member.add_roles(guild_role)
+                if guild_role and guild_role not in guild_member.roles and channel:
+                    await guild_member.add_roles(guild_role) # This was sometimes None? added 'guild_role and' to condition
                     await channel.send(role_assign_msg.format(guild_role.mention, guild_member.mention, before.guild.name))
 
     def _guild_member_from_id(self, guild, member_id):
