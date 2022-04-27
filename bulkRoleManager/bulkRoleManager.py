@@ -490,7 +490,7 @@ class BulkRoleManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def expireContracts(self, ctx, *userList):
-        """Makes each member that can be found from the userList a Free Agent for the given tier"""
+        """Displays each member that can be found from the userList a Free Agent in their respective tier"""
         empty = True
         free_agents = 0
         notFound = 0
@@ -619,7 +619,7 @@ class BulkRoleManager(commands.Cog):
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
     async def updateTier(self, ctx, tier: discord.Role, *userList):
-        """Makes each member that can be found from the userList a Free Agent for the given tier"""
+        """Re-assigns every guild member to the provided tier"""
         await ctx.send(f"Processing tier update for {len(userList)} users. This may take some time.")
         asyncio.create_task(self.update_tiers(ctx, tier, userList))
 
