@@ -615,10 +615,10 @@ class BulkRoleManager(commands.Cog):
             message += ". {0} user(s) have been set as former players.".format(retired)
         await ctx.send(message)
 
-    @commands.command(aliases=['updateTier'])
+    @commands.command(aliases=['updateTierForPlayers'])
     @commands.guild_only()
     @checks.admin_or_permissions(manage_guild=True)
-    async def updateTiers(self, ctx, tier: discord.Role, *userList):
+    async def updateTier(self, ctx, tier: discord.Role, *userList):
         """Makes each member that can be found from the userList a Free Agent for the given tier"""
         await ctx.send(f"Processing tier update for {len(userList)} users. This may take some time.")
         asyncio.create_task(self.update_tiers(ctx, tier, userList))
