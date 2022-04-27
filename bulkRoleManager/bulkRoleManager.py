@@ -8,7 +8,7 @@ from discord import File
 from redbot.core.utils.predicates import ReactionPredicate
 from redbot.core.utils.menus import start_adding_reactions
 
-# from teamManager import TeamManager
+from teamManager import TeamManager
 
 defaults = {"DraftEligibleMessage": None, "PermFAMessage": None}
 
@@ -27,8 +27,8 @@ class BulkRoleManager(commands.Cog):
         self.config = Config.get_conf(
             self, identifier=1234567897, force_registration=True)
         self.config.register_guild(**defaults)
-        # self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
-        self.team_manager_cog = bot.get_cog("TeamManager")
+        # self.team_manager_cog = bot.get_cog("TeamManager")
+        self.team_manager_cog: TeamManager = bot.get_cog("TeamManager")
         self.discord_bot = bot
 
 # region general
