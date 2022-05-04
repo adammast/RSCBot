@@ -6,9 +6,9 @@ import json
 import discord
 from .config import config
 
-from redbot.core import Config
-from redbot.core import commands
-from redbot.core import checks
+from redbot.core import Config, commands, checks
+
+from teamManager import TeamManager
 
 defaults = {"MatchDay": 0, "Schedules": {}, "Segment": "Regular Season",
             "Game": "Rocket League", "GameTeamSize": 3, "MatchupType": "GS-4"}
@@ -24,7 +24,7 @@ class Match(commands.Cog):
         self.config = Config.get_conf(
             self, identifier=1234567893, force_registration=True)
         self.config.register_guild(**defaults)
-        self.team_manager = bot.get_cog("TeamManager")
+        self.team_manager: TeamManager = bot.get_cog("TeamManager")
 
         # TODO: Data Setup on startup - guild[field] = x -> match dates, time zone, gameTeamSize, SeriesType
 
@@ -215,14 +215,12 @@ class Match(commands.Cog):
                            "the server.")
             return
         team_names = []
-        user_team_names = await self.team_manager.teams_for_user(
-            ctx, ctx.message.author)
 
         team_names_provided = len(args) > 1
         if team_names_provided:
             team_names = args[1:]
         else:
-            team_names = user_team_names
+            team_names = await self.team_manager.teams_for_user(ctx, ctx.message.author)
 
         if not team_names:
             await ctx.send("No teams found. If you provided teams, "
@@ -230,22 +228,26 @@ class Match(commands.Cog):
                            "roles corresponding to a team.")
             return
 
+        franchise_role = self.team_manager.get_current_franchise_role(ctx.message.author)
+        send_to_channel = await self.get_franchise_match_channel(franchise_role)
+
         on_mobile = ctx.message.author.is_on_mobile()
         for team_name in team_names:
             team_matches = await self.get_team_matches(ctx, team_name, str(match_day))
             for match in team_matches:
                 if on_mobile:
                     message = await self._format_match_message(ctx, match, team_name)
-                    await ctx.message.author.send(message)
+                    # await ctx.message.author.send(message)
+                    await send_to_channel.send(ctx.author.mention)
+                    await send_to_channel.send(message)
                 else:
                     embed = await self._format_match_embed(ctx, match, team_name)
-                    await ctx.message.author.send(embed=embed)
+                    # await ctx.message.author.send(embed=embed)
+                    await send_to_channel.send(ctx.author.mention, embed=embed)
 
             if not team_matches:
-                await ctx.message.author.send(
-                    "No matches on day {0} for {1}".format(
-                        match_day, team_name)
-                )
+                # await ctx.message.author.send("No matches on day {0} for {1}".format(match_day, team_name))
+                await send_to_channel.send(f"{ctx.author.mention}, No matches on day {match_day} for {team_name}")
 
         await ctx.message.delete()
 
@@ -385,8 +387,7 @@ class Match(commands.Cog):
         player_ratings = self.bot.get_cog("PlayerRatings")
         game_team_size = await self._get_game_team_size(ctx.guild)
 
-        ones_league_matches = player_ratings and player_ratings.guild_has_players(
-            ctx) and game_team_size == 1
+        ones_league_matches = player_ratings and (await player_ratings.guild_has_players(ctx)) and game_team_size == 1
 
         if ones_league_matches:
             return await self._create_solo_match_embed(ctx, embed, match, player_ratings, user_team_name, home, away)
@@ -630,6 +631,32 @@ class Match(commands.Cog):
             return None
 
         return match_type, int(game_count), formatted
+
+    async def get_franchise_match_channel(self, franchise_role: discord.Role):
+        guild = franchise_role.guild
+        franchise_name = self.team_manager._extract_franchise_name_from_role(franchise_role)
+        franchise_channel_name = franchise_name.replace(' ', '-').lower()
+        CAT_NAME = "Match Info"
+
+        match_cat = None
+        for cat in guild.categories:
+            if cat.name == CAT_NAME:
+                match_cat = cat 
+                break
+        
+        if not match_cat:
+            match_cat = await guild.create_category(CAT_NAME)
+        
+        for team_channel in match_cat.channels:
+            if team_channel.name == franchise_channel_name:
+                return team_channel
+        
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            franchise_role: discord.PermissionOverwrite(view_channel=True)
+        }
+
+        return await match_cat.create_text_channel(franchise_channel_name, overwrites=overwrites)
 
 # json
     async def _schedule(self, ctx):
