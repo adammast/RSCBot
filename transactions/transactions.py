@@ -108,7 +108,7 @@ class Transactions(commands.Cog):
         franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
         trans_channel = await self._trans_channel(ctx)
         gm_name = self._get_gm_name(ctx, franchise_role)
-        message = "{0} was signed by the {1} ({2} - {3})".format(
+        message = "{0} was re-signed by the {1} ({2} - {3})".format(
             user.mention, team_name, gm_name, tier_role.name)
 
         if franchise_role in user.roles and tier_role in user.roles:
