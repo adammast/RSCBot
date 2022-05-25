@@ -99,6 +99,34 @@ class Transactions(commands.Cog):
             except Exception as e:
                 await ctx.send(e)
 
+
+    @commands.guild_only()
+    @commands.command(aliases=['re-sign', "rs"])
+    @checks.admin_or_permissions(manage_roles=True)
+    async def resign(self, ctx, user: discord.Member, team_name: str):
+        """Re-signs a user to a given team, and if necessary, reapplys roles before posting to the assigned channel"""
+        franchise_role, tier_role = await self.team_manager_cog._roles_for_team(ctx, team_name)
+        trans_channel = await self._trans_channel(ctx)
+        gm_name = self._get_gm_name(ctx, franchise_role)
+        message = "{0} was re-signed by the {1} ({2} - {3})".format(
+            user.mention, team_name, gm_name, tier_role.name)
+
+        if franchise_role not in user.roles or tier_role not in user.roles:
+            try:
+                await self.add_player_to_team(ctx, user, team_name)
+                free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
+                if len(free_agent_roles) > 0:
+                    for role in free_agent_roles:
+                        await user.remove_roles(role)
+            except Exception as e:
+                await ctx.send(e)
+
+        if trans_channel:
+            await trans_channel.send(message)
+            await ctx.send('Done')
+        else:
+            await ctx.send("Unable to complete transaction as transaction channel is not set.")
+
     @commands.guild_only()
     @commands.command()
     @checks.admin_or_permissions(manage_roles=True)
