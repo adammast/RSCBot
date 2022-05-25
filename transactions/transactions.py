@@ -111,7 +111,7 @@ class Transactions(commands.Cog):
         message = "{0} was re-signed by the {1} ({2} - {3})".format(
             user.mention, team_name, gm_name, tier_role.name)
 
-        if franchise_role not in user.roles and tier_role not in user.roles:
+        if franchise_role not in user.roles or tier_role not in user.roles:
             try:
                 await self.add_player_to_team(ctx, user, team_name)
                 free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
