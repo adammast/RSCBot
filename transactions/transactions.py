@@ -101,7 +101,7 @@ class Transactions(commands.Cog):
 
 
     @commands.guild_only()
-    @commands.command()
+    @commands.command(aliases=['re-sign', "rs"])
     @checks.admin_or_permissions(manage_roles=True)
     async def resign(self, ctx, user: discord.Member, team_name: str):
         """Re-signs a user to a given team, and if necessary, reapplys roles before posting to the assigned channel"""
@@ -112,11 +112,11 @@ class Transactions(commands.Cog):
             user.mention, team_name, gm_name, tier_role.name)
 
         if franchise_role in user.roles and tier_role in user.roles:
-            trans_channel.send(message)
+            await trans_channel.send(message)
             await ctx.send("Done")
             return
 
-        if trans_channel is not None:
+        if trans_channel:
             try:
                 await self.add_player_to_team(ctx, user, team_name)
                 free_agent_roles = await self.find_user_free_agent_roles(ctx, user)
