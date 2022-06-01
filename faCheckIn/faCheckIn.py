@@ -12,6 +12,8 @@ from redbot.core.utils.menus import start_adding_reactions
 defaults = {"CheckIns": {}}
 verify_timeout = 30
 
+WHITE_CHECK_REACT = "\U00002705"
+
 class FaCheckIn(commands.Cog):
 
     def __init__(self, bot):
@@ -27,7 +29,7 @@ class FaCheckIn(commands.Cog):
         match_day = await self.match_cog._match_day(ctx)
         tier = await self._find_tier_from_fa_role(ctx, user)
 
-        await ctx.message.delete()
+        # await ctx.message.delete()
 
         if tier is not None:
             tier_data = await self._tier_data(ctx, match_day, tier)
@@ -116,7 +118,9 @@ class FaCheckIn(commands.Cog):
         embed.add_field(name="Match Day", value=match_day, inline=True)
         embed.add_field(name="Tier", value=tier, inline=True)
 
-        react_msg = await user.send(embed=embed)
+        # react_msg = await user.send(embed=embed)
+        react_msg = await ctx.send(embed=embed)
+
         start_adding_reactions(react_msg, ReactionPredicate.YES_OR_NO_EMOJIS)
 
         try:
@@ -124,11 +128,13 @@ class FaCheckIn(commands.Cog):
             await ctx.bot.wait_for("reaction_add", check=pred, timeout=verify_timeout)
             if pred.result is True:
                 await self._register_user(ctx, user, match_day, tier)
-                await user.send("Thank you for checking in! GMs will now be able to see that you're available.")
+                # await user.send("Thank you for checking in! GMs will now be able to see that you're available.")
+                await ctx.send(f"{user.mention} Thank you for checking in! GMs will now be able to see that you're available.")
             else:
-                await user.send("Not checked in. If you wish to check in use the command again.")
+                # await user.send("Not checked in. If you wish to check in use the command again.")
+                await ctx.send(f"{user.mention} Not checked in. If you wish to check in use the command again.")
         except asyncio.TimeoutError:
-            await user.send("Sorry, you didn't react quick enough. Please try again.")
+            await user.send(f"{user.mention} Sorry, you didn't react quick enough. Please try again.")
 
     async def _send_check_out_message(self, ctx, user, match_day, tier):
         embed = discord.Embed(title="Check Out", 
