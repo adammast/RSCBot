@@ -36,9 +36,9 @@ class FaCheckIn(commands.Cog):
             if user.id not in tier_data:
                 await self._send_check_in_message(ctx, user, match_day, tier)
             else:
-                await user.send("You've already checked in. If you want to check out, use the `{0}checkOut` command.".format(ctx.prefix))
+                await ctx.send("You've already checked in. If you want to check out, use the `{0}checkOut` command.".format(ctx.prefix))
         else:
-            await user.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
+            await ctx.send("Only free agents are allowed to check in. If you are a free agent and are unable to check in please message an admin.")
 
     @commands.guild_only()
     @commands.command(aliases=["co"])
