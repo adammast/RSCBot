@@ -42,8 +42,7 @@ class BulkRoleManager(commands.Cog):
         await ctx.send("Players with {0} role:\n".format(role.name))
         for member in role.members:
             if getNickname:
-                message += "{0.nick}: {0.name}#{0.discriminator}\n".format(
-                    member)
+                message += "{0.nick}: {0.name}#{0.discriminator}\n".format(member)
             else:
                 message += "{0.name}#{0.discriminator}\n".format(member)
             if len(message) > 1900:
@@ -465,9 +464,9 @@ class BulkRoleManager(commands.Cog):
                         await ctx.send("Cannot set nickname for {0}".format(member.name))
 
                 await member.add_roles(*roles_to_add)
-                permFAMessage = await self._perm_fa_message(ctx)
-                if permFAMessage:
-                    await self._send_member_message(ctx, member, permFAMessage)
+                # permFAMessage = await self._perm_fa_message(ctx)
+                # if permFAMessage:
+                #     await self._send_member_message(ctx, member, permFAMessage)
                 added += 1
 
         if len([userList]) and not empty:
@@ -719,7 +718,11 @@ class BulkRoleManager(commands.Cog):
         command_prefix = ctx.prefix
         message = message.replace('[p]', command_prefix)
         message = message_title + message
-        await member.send(message)
+        try:
+            await member.send(message)
+        except Exception as e:
+            # await ctx.send(f"Error in command: {e}")
+            pass
 
     def _get_name_components(self, member: discord.Member):
         if member.nick:
